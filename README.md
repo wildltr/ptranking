@@ -1,2 +1,2 @@
-# ptl2r.github.io
+# Learning to Rank in PyTorch
 TBA
