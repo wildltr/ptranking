@@ -7,8 +7,12 @@ This open-source project, referred to as **ptl2r** (Learning to Rank in PyTorch)
 # Installation
 
 # Data
+**[MQ2007](http://research.microsoft.com/en-us/um/beijing/projects/letor/LETOR4.0/Data/MQ2007.rar)**
+**MQ2008**: http://research.microsoft.com/en-us/um/beijing/projects/letor/LETOR4.0/Data/MQ2008.rar (files for supervised learning)
+**Yahoo! Learning to Rank Challenge**: http://webscope.sandbox.yahoo.com/catalog.php?datatype=c
+**MSLR-WEB10K**: http://research.microsoft.com/en-us/um/beijing/projects/mslr/data/MSLR-WEB10K.zip
+**MSLR-WEB30K**: http://research.microsoft.com/en-us/um/beijing/projects/mslr/data/MSLR-WEB30K.zip
 
-# Citation
 
 # Reference
 [1] RankNet: Chris Burges, Tal Shaked, Erin Renshaw, Ari Lazier, Matt Deeds, Nicole Hamilton, and Greg Hullender. 2005. Learning to rank using gradient descent. In Proceedings of the 22nd ICML. 89–96.
@@ -23,6 +27,8 @@ This open-source project, referred to as **ptl2r** (Learning to Rank in PyTorch)
 
 [6] AppoxNDCG: Tao Qin, Tie-Yan Liu, and Hang Li. 2010. A general approximation framework for direct optimization of information retrieval measures. Journal of Information Retrieval 13, 4 (2010), 375–397.
 
+# Contributors
+
 # Community
 
 **Slack**: [ptl2r group](https://ptl2r.slack.com)
@@ -30,6 +36,8 @@ This open-source project, referred to as **ptl2r** (Learning to Rank in PyTorch)
 **WeChat**:
 
 ![ptl2r](./img/wechat.png)
+
+# Acknowledgements
 
 # Call for Contribution and/or Collaboration
 Anyone who are interested in the following kinds of contributions and/or collaborations are warmly welcomed.
