@@ -8,10 +8,15 @@ This open-source project, referred to as **ptl2r** (Learning to Rank in PyTorch)
 
 **Slack**: [ptl2r group](https://ptl2r.slack.com)
 
-**WeChat**:
+**WeChat**: ptl2r
 
 # Call for Contribution and/or Collaboration
 Anyone who are interested in the following kinds of contributions and/or collaborations are warmly welcomed.
-**Contribution**: 
-**Collaboration**:
+
+**Contribution**: Adding one or more implementations of learning-to-rank models based on the current code base.
+
+**Collaboration**: Joint efforts in developping novel learning-to-rank models.
+
+# Relevant Resources
+
 
