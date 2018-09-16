@@ -13,9 +13,9 @@ This open-source project, referred to as **ptl2r** (Learning to Rank in PyTorch)
 
 **[Yahoo! Learning to Rank Challenge C14B](http://webscope.sandbox.yahoo.com/catalog.php?datatype=c)**
 
-**[MSLR-WEB10K](http://research.microsoft.com/en-us/um/beijing/projects/mslr/data/MSLR-WEB10K.zip)**
+**[MSLR-WEB10K](https://www.microsoft.com/en-us/research/project/mslr/)**
 
-**[MSLR-WEB30K](http://research.microsoft.com/en-us/um/beijing/projects/mslr/data/MSLR-WEB30K.zip)**
+**[MSLR-WEB30K](https://www.microsoft.com/en-us/research/project/mslr/)**
 
 
 # Reference
