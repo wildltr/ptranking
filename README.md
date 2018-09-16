@@ -30,5 +30,7 @@ Anyone who are interested in the following kinds of contributions and/or collabo
 # Relevant Resources
 
 **Java**: [Rank Lib](http://www.lemurproject.org/ranklib.php)
+
 **Python**: [LEROT](https://bitbucket.org/ilps/lerot)
+
 **C**: [Propensity SVM^Rank](http://www.cs.cornell.edu/people/tj/svm_light/svm_proprank.html)
