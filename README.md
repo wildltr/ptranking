@@ -18,7 +18,7 @@ This open-source project, referred to as **ptl2r** (Learning to Rank in PyTorch)
 
 **Slack**: [ptl2r group](https://ptl2r.slack.com)
 
-**WeChat**: [ptl2r](./img/wechat.png)
+**WeChat**: ![ptl2r](./img/wechat.png)
 
 # Call for Contribution and/or Collaboration
 Anyone who are interested in the following kinds of contributions and/or collaborations are warmly welcomed.
