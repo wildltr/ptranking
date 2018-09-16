@@ -12,10 +12,15 @@ This open-source project, referred to as **ptl2r** (Learning to Rank in PyTorch)
 
 # Reference
 [1] RankNet: Chris Burges, Tal Shaked, Erin Renshaw, Ari Lazier, Matt Deeds, Nicole Hamilton, and Greg Hullender. 2005. Learning to rank using gradient descent. In Proceedings of the 22nd ICML. 89–96.
+
 [2] LambdaRank: 
+
 [3] ListNet: 
+
 [4] ListMLE: 
+
 [5] RankCosine: 
+
 [6] AppoxNDCG: 
 
 # Contributors
