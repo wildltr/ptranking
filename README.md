@@ -33,8 +33,6 @@ Python (3.6)
 
 [6] AppoxNDCG: Tao Qin, Tie-Yan Liu, and Hang Li. 2010. A general approximation framework for direct optimization of information retrieval measures. Journal of Information Retrieval 13, 4 (2010), 375–397.
 
-# Contributors
-
 # Community
 
 **Slack**: [ptl2r group](https://ptl2r.slack.com)
@@ -44,6 +42,7 @@ Python (3.6)
 ![ptl2r](./img/wechat.png)
 
 # Acknowledgements
+Some parts of the code builds upon some other open-source projects, we would like to express our grateful thanks here. 
 
 # Call for Contribution and/or Collaboration
 Anyone who are interested in the following kinds of contributions and/or collaborations are warmly welcomed.
