@@ -1,6 +1,6 @@
 # ptl2r: Learning to Rank in PyTorch
 
-This open-source project, referred to as **ptl2r** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous methods. On the other hand, we can easily incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank. 
+This open-source project, referred to as **ptl2r** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank. 
 
 # Prerequisites
 
@@ -22,8 +22,6 @@ This open-source project, referred to as **ptl2r** (Learning to Rank in PyTorch)
 [5] RankCosine: Tao Qin, Xu-Dong Zhang, Ming-Feng Tsai, De-Sheng Wang, Tie-Yan Liu, and Hang Li. 2008. Query-level loss functions for information retrieval. Information Processing and Management 44, 2 (2008), 838–855.
 
 [6] AppoxNDCG: Tao Qin, Tie-Yan Liu, and Hang Li. 2010. A general approximation framework for direct optimization of information retrieval measures. Journal of Information Retrieval 13, 4 (2010), 375–397.
-
-# Contributors
 
 # Community
 
