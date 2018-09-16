@@ -6,7 +6,7 @@ This open-source project, referred to as **ptl2r** (Learning to Rank in PyTorch)
 
 # Community
 
-**Slack**:
+**Slack**: [ptl2r group](https://ptl2r.slack.com)
 
 **WeChat**:
 
