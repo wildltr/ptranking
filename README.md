@@ -8,8 +8,6 @@ PyTorch (4.0)
 
 Python (3.6)
 
-# Installation
-
 # Data
 **[MQ2007](http://research.microsoft.com/en-us/um/beijing/projects/letor/LETOR4.0/Data/MQ2007.rar)**
 
