@@ -1,8 +1,18 @@
-# Objective
+# ptl2r: Learning to Rank in PyTorch
 
 This open-source project, referred to as **ptl2r** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous methods. On the other hand, we can easily incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank. 
 
-# Members
+# Prerequisites
+
+# Installation
+
+# Data
+
+# Citation
+
+# Reference
+
+# Contributors
 
 # Community
 
@@ -19,4 +29,6 @@ Anyone who are interested in the following kinds of contributions and/or collabo
 
 # Relevant Resources
 
-
+**Java**: [Rank Lib](http://www.lemurproject.org/ranklib.php)
+**Python**: [LEROT](https://bitbucket.org/ilps/lerot)
+**C**: [Propensity SVM^Rank](http://www.cs.cornell.edu/people/tj/svm_light/svm_proprank.html)
