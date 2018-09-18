@@ -1,5 +1,3 @@
-# ptl2r: Learning to Rank in PyTorch
-
 This open-source project, referred to as **ptl2r** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank. 
 
 # Test Setting
