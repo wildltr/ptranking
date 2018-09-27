@@ -48,4 +48,4 @@ if __name__ == '__main__':
 		for model in to_run_models:
 			grid_run(data=data, model=model, dir_data=dir_data, dir_output=dir_output)
 	else:
-		point_run(data=data, model='RankNet', dir_data=dir_data, dir_output=dir_output)
+		point_run(data=data, model='ApproxNDCG', dir_data=dir_data, dir_output=dir_output)
