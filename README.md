@@ -58,4 +58,6 @@ Anyone who are interested in the following kinds of contributions and/or collabo
 
 **Python**: [LEROT](https://bitbucket.org/ilps/lerot)
 
+**Python + Chainer**: [Shoelace](https://github.com/rjagerman/shoelace)
+
 **C**: [Propensity SVM^Rank](http://www.cs.cornell.edu/people/tj/svm_light/svm_proprank.html)
