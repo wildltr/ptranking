@@ -43,7 +43,9 @@ This project is under construction, and is not formally released yet. Please ref
 ![ptl2r](./img/wechat.png)
 
 # Acknowledgements
-Some parts of the code builds upon some other open-source projects, we would like to express our grateful thanks here. 
+This research is partially supported by JSPS KAKENHI Grant Number JP17K12784.
+
+BTW, the implementation of ListMLE is inspired by the work [Shoelace](https://github.com/rjagerman/shoelace), we would like to express our grateful thanks here. 
 
 # Call for Contribution and/or Collaboration
 Anyone who are interested in the following kinds of contributions and/or collaborations are warmly welcomed.
