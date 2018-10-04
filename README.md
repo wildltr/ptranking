@@ -1,4 +1,4 @@
-This open-source project, referred to as **ptl2r** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank. 
+This open-source project, referred to as **PTL2R** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank. 
 
 # Test Setting
 
@@ -36,11 +36,11 @@ This project is under construction, and is not formally released yet. Please ref
 
 # Community
 
-**Slack**: [ptl2r group](https://ptl2r.slack.com)
+**Slack**: [PTL2R group](https://ptl2r.slack.com)
 
 **WeChat**:
 
-![ptl2r](./img/wechat.png)
+![PTL2R](./img/wechat.png)
 
 # Acknowledgements
 This research is partially supported by JSPS KAKENHI Grant Number JP17K12784.
@@ -58,7 +58,7 @@ Anyone who are interested in the following kinds of contributions and/or collabo
 
 | Name | Language | Deep Learning |
 |---|---|---|
-| [ptl2r](https://ptl2r.github.io/) | Python  |  [PyTorch](https://pytorch.org) | 
+| [PTL2R](https://ptl2r.github.io/) | Python  |  [PyTorch](https://pytorch.org) | 
 | [LEROT](https://bitbucket.org/ilps/lerot) | Python  | x  |
 | [Shoelace](https://github.com/rjagerman/shoelace)  |  Python | [Chainer](https://chainer.org) |
 |  [Rank Lib](http://www.lemurproject.org/ranklib.php) |  Java | x  |
