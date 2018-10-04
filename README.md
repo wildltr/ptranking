@@ -54,10 +54,10 @@ Anyone who are interested in the following kinds of contributions and/or collabo
 
 # Relevant Resources
 
-**Java**: [Rank Lib](http://www.lemurproject.org/ranklib.php)
-
-**Python**: [LEROT](https://bitbucket.org/ilps/lerot)
-
-**Python + Chainer**: [Shoelace](https://github.com/rjagerman/shoelace)
-
-**C**: [Propensity SVM^Rank](http://www.cs.cornell.edu/people/tj/svm_light/svm_proprank.html)
+| Name | Language | Deep Learning |
+|---|---|---|
+| [ptl2r](https://ptl2r.github.io/) | Python  |  [PyTorch] | 
+| [LEROT](https://bitbucket.org/ilps/lerot) | Python  | x  |
+| [Shoelace](https://github.com/rjagerman/shoelace)  |  Python | Chainer |
+|  [Rank Lib](http://www.lemurproject.org/ranklib.php) |  Java | x  |
+| [Propensity SVM^Rank](http://www.cs.cornell.edu/people/tj/svm_light/svm_proprank.html)  |  C | x  |
