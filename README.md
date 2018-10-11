@@ -61,5 +61,6 @@ Anyone who are interested in the following kinds of contributions and/or collabo
 | [PTL2R](https://ptl2r.github.io/) | Python  |  [PyTorch](https://pytorch.org) | 
 | [LEROT](https://bitbucket.org/ilps/lerot) | Python  | x  |
 | [Shoelace](https://github.com/rjagerman/shoelace)  |  Python | [Chainer](https://chainer.org) |
-|  [Rank Lib](http://www.lemurproject.org/ranklib.php) |  Java | x  |
+| [Rank Lib](http://www.lemurproject.org/ranklib.php) |  Java | x  |
 | [Propensity SVM^Rank](http://www.cs.cornell.edu/people/tj/svm_light/svm_proprank.html)  |  C | x  |
+| [QuickRank](http://quickrank.isti.cnr.it)  |  C++ | x  |
