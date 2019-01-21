@@ -7,15 +7,14 @@
 
 """
 
-import numpy as np
-
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 #from torch.nn.init import kaiming_normal_ as nr_init
 from torch.nn.init import xavier_normal_ as nr_init
 
-from org.archive.utils.pytorch.extensions import is_RK, ini_ReLU_K
+from org.archive.utils.pytorch.pt_extensions import is_RK, ini_ReLU_K, Exp
 
 
 def get_AF(af_str):
@@ -33,62 +32,73 @@ def get_AF(af_str):
         return nn.ReLU6()   #ReLU6(x)=min(max(0,x),6)
     elif is_RK(af_str):
         return ini_ReLU_K(af_str) #ReLU_K(x)=min(max(0,x),k)
+    elif af_str == 'E':
+        return Exp()
     else:
         raise NotImplementedError
 
+def get_rf_str(num_layers=None, HD_AF=None, HN_AF=None, TL_AF=None, join_str='.'):
+    assert num_layers >= 1
+    if 1 == num_layers:
+        return HD_AF
+    elif 2 == num_layers:
+        return join_str.join([HD_AF, TL_AF])
+    elif 3 == num_layers:
+        return join_str.join([HD_AF, HN_AF, TL_AF])
+    else:
+        h_str = HN_AF + str(num_layers-2)
+        return join_str.join([HD_AF, h_str, TL_AF])
 
-class NeuralFunction(nn.Module):
+
+class FFNNs(nn.Module):
     '''
-    A neural function based on a number of dense neural layers.
+    The building block of (deep) feed-forward neural networks.
     '''
     def __init__(self, f_para_dict=None):
-        super(NeuralFunction, self).__init__()
-        self.ini_neural_f(**f_para_dict)
+        super(FFNNs, self).__init__()
+        self.ffnns = self.ini_ffnns(**f_para_dict)
 
-    def ini_neural_f(self, num_features=None, h_dim=100, out_dim=1, num_layers=3, HD_AF='R', HN_AF='R', TL_AF='S', F2R=False):
+    def ini_ffnns(self, num_features=None, h_dim=100, out_dim=1, num_layers=3, HD_AF='R', HN_AF='R', TL_AF='S', apply_tl_af=True):
         head_AF, hidden_AF, tail_AF = get_AF(HD_AF), get_AF(HN_AF), get_AF(TL_AF)   #configurable activation functions
 
-        self.nr_ranker = nn.Sequential()
-        self.F2R = F2R
-
+        ffnns = nn.Sequential()
         if 1 == num_layers:
             nr_h1 = nn.Linear(num_features, out_dim)  # 1st layer
             nr_init(nr_h1.weight)
-            self.nr_ranker.add_module('L_1', nr_h1)
-            self.nr_ranker.add_module('ACT_1', tail_AF)
+            ffnns.add_module('L_1', nr_h1)
+
+            if apply_tl_af:
+                ffnns.add_module('ACT_1', tail_AF)
         else:
             nr_h1 = nn.Linear(num_features, h_dim)    # 1st layer
             nr_init(nr_h1.weight)
-            self.nr_ranker.add_module('L_1', nr_h1)
-            self.nr_ranker.add_module('ACT_1', head_AF)
+            ffnns.add_module('L_1', nr_h1)
+            ffnns.add_module('ACT_1', head_AF)
 
             if num_layers > 2:           # middle layers if needed
                 for i in range(2, num_layers):
-                    self.nr_ranker.add_module('_'.join(['DR', str(i)]), nn.Dropout(0.01))
+                    ffnns.add_module('_'.join(['DR', str(i)]), nn.Dropout(0.01))
                     nr_hi = nn.Linear(h_dim, h_dim)
                     nr_init(nr_hi.weight)
-                    self.nr_ranker.add_module('_'.join(['L', str(i)]), nr_hi)
-                    self.nr_ranker.add_module('_'.join(['ACT', str(i)]), hidden_AF)
+                    ffnns.add_module('_'.join(['L', str(i)]), nr_hi)
+                    ffnns.add_module('_'.join(['ACT', str(i)]), hidden_AF)
 
             nr_hn = nn.Linear(h_dim, out_dim)  #relevance prediction layer
             nr_init(nr_hn.weight)
-            self.nr_ranker.add_module('_'.join(['L', str(num_layers)]), nr_hn)
-            self.nr_ranker.add_module('_'.join(['ACT', str(num_layers)]), tail_AF)
+            ffnns.add_module('_'.join(['L', str(num_layers)]), nr_hn)
+            if apply_tl_af:
+                ffnns.add_module('_'.join(['ACT', str(num_layers)]), tail_AF)
+
+        return ffnns
 
 
     def forward(self, x):
         '''
-        Predict the relevance of documents within a ranking of documents
-        :param x: [batch, ranking_size, num_features]
+        :param x: [batch, ranking_size, num_features], the common shape of the input
         :return: [batch, ranking_size, 1]
         '''
-        if self.F2R:
-            nr_prediction = self.nr_ranker(tor_transform_to_rank_features(x))
-        else:
-            nr_prediction = self.nr_ranker(x)
-
-        return nr_prediction
-
+        res = self.ffnns(x)
+        return res
 
 def tor_transform_to_rank_features(x):
     # batch, ranking_size, num_features = x.size(0), x.size(1), x.size(2)
@@ -112,3 +122,14 @@ def tor_transform_to_rank_features(x):
 
     return rank_c
 
+
+
+if __name__ == '__main__':
+    #1
+    '''
+    ffnns = FFNNs(f_para_dict={'num_features':6})
+    #print(ffnns)
+    paras = ffnns.parameters()
+    for p in paras:
+        print(p)
+    '''

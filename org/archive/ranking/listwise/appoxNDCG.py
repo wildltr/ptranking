@@ -100,9 +100,8 @@ class ApproxNDCG_OP(torch.autograd.Function):
 		#chain rule
 		grad_output.unsqueeze_(1)
 		target_gradients = grad_output * batch_gradient2Sis
-		target_gradients.unsqueeze_(2)
+		#target_gradients.unsqueeze_(2)
 
-		#梯度的顺序和forward形参的顺序要对应。
 		# it is a must that keeping the same number w.r.t. the input of forward function
 		return target_gradients, None
 
@@ -114,6 +113,9 @@ def approxNDCG_loss_function(batch_preds=None, batch_stds=None):
 	batch_loss = -torch.mean(batch_approx_nDCG)
 	return batch_loss
 
+
+
+
 class AppoxNDCG(AbstractNeuralRanker):
 	'''
 	Tao Qin, Tie-Yan Liu, and Hang Li. 2010.
@@ -121,15 +123,18 @@ class AppoxNDCG(AbstractNeuralRanker):
 	Journal of Information Retrieval 13, 4 (2010), 375–397.
 	'''
 
-	def __init__(self, f_para_dict):
-		super(AppoxNDCG, self).__init__(f_para_dict)
+	def __init__(self, ranking_function=None):
+		super(AppoxNDCG, self).__init__(id='AppoxNDCG', ranking_function=ranking_function)
 
-	def inner_train(self, batch_preds, batch_stds):
+	def inner_train(self, batch_preds, batch_stds, **kwargs):
 		'''
 		:param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents within a ranking
 		:param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ranking
 		:return:
 		'''
+
+		#print('batch_stds', batch_stds.size())
+
 		batch_loss = approxNDCG_loss_function(batch_preds, batch_stds)
 
 		self.optimizer.zero_grad()

@@ -10,8 +10,6 @@
 import torch
 
 from org.archive.ranker.ranker import AbstractNeuralRanker
-from org.archive.utils.pytorch.extensions import flip
-
 
 class LogCumsumExp(torch.autograd.Function):
 	'''
@@ -32,7 +30,7 @@ class LogCumsumExp(torch.autograd.Function):
 		m, _ = torch.max(input, dim=1, keepdim=True)    #a transformation aiming for higher stability when computing softmax() with exp()
 		y = input - m
 		y = torch.exp(y)
-		y_cumsum_t2h = flip(torch.cumsum(flip(y, dim=1), dim=1), dim=1)    #row-wise cumulative sum, from tail to head
+		y_cumsum_t2h = torch.flip(torch.cumsum(torch.flip(y, dims=[1]), dim=1), dims=[1])    #row-wise cumulative sum, from tail to head
 		fd_output = torch.log(y_cumsum_t2h) + m # corresponding to the '-m' operation
 
 		ctx.save_for_backward(input, fd_output)
@@ -70,10 +68,10 @@ class ListMLE(AbstractNeuralRanker):
 	In Proceedings of the 25th ICML. 1192–1199.
 	'''
 
-	def __init__(self, f_para_dict):
-		super(ListMLE, self).__init__(f_para_dict)
+	def __init__(self, ranking_function=None):
+		super(ListMLE, self).__init__(id='ListMLE', ranking_function=ranking_function)
 
-	def inner_train(self, batch_preds, batch_stds):
+	def inner_train(self, batch_preds, batch_stds, **kwargs):
 		# loss function of ListMLE
 		batch_logcumsumexps = apply_LogCumsumExp(batch_preds)
 		batch_loss = torch.sum(batch_logcumsumexps - batch_preds)

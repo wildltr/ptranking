@@ -20,10 +20,10 @@ class RankCosine(AbstractNeuralRanker):
 	Query-level loss functions for information retrieval. Information Processing and Management 44, 2 (2008), 838–855.
 	'''
 
-	def __init__(self, f_para_dict):
-		super(RankCosine, self).__init__(f_para_dict)
+	def __init__(self, ranking_function=None):
+		super(RankCosine, self).__init__(id='RankCosine', ranking_function=ranking_function)
 
-	def inner_train(self, batch_preds, batch_stds):
+	def inner_train(self, batch_preds, batch_stds, **kwargs):
 		'''
 		:param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents within a ranking
 		:param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ranking

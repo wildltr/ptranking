@@ -53,13 +53,13 @@ class RankNet(AbstractNeuralRanker):
 	Learning to rank using gradient descent. In Proceedings of the 22nd ICML. 89–96.
 	'''
 
-	def __init__(self, f_para_dict, explicit_weighting=False):
-		super(RankNet, self).__init__(f_para_dict)
+	def __init__(self, ranking_function=None, explicit_weighting=False):
+		super(RankNet, self).__init__(id='RankNet', ranking_function=ranking_function)
 		self.explicit_weighting = explicit_weighting
 		if self.explicit_weighting:
 			raise NotImplementedError
 
-	def inner_train(self, batch_preds, batch_stds):
+	def inner_train(self, batch_preds, batch_stds, **kwargs):
 		'''
 		:param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents within a ranking
 		:param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ranking
@@ -72,3 +72,34 @@ class RankNet(AbstractNeuralRanker):
 		self.optimizer.step()
 
 		return batch_loss
+
+
+""" 
+
+class ContextRankNet(AbstractContextNeuralRanker):
+	'''
+	Chris Burges, Tal Shaked, Erin Renshaw, Ari Lazier, Matt Deeds, Nicole Hamilton, and Greg Hullender. 2005.
+	Learning to rank using gradient descent. In Proceedings of the 22nd ICML. 89–96.
+	'''
+
+	def __init__(self, in_para_dict=None, cnt_para_dict=None, com_para_dict=None, explicit_weighting=False):
+		super(ContextRankNet, self).__init__(in_para_dict, cnt_para_dict, com_para_dict, id='RankNet')
+		self.explicit_weighting = explicit_weighting
+		if self.explicit_weighting:
+			raise NotImplementedError
+
+	def inner_train(self, batch_preds, batch_stds, **kwargs):
+		'''
+		:param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents within a ranking
+		:param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ranking
+		:return:
+		'''
+		batch_loss = ranknet_loss_function(batch_preds, batch_stds)
+
+		self.optimizer.zero_grad()
+		batch_loss.backward()
+		self.optimizer.step()
+
+		return batch_loss
+
+"""

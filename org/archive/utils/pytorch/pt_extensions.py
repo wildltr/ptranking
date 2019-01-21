@@ -1,18 +1,99 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+from torch.distributions.multivariate_normal import MultivariateNormal
 
-def flip(x, dim):
+import math
+import numpy as np
+
+from org.archive.l2r_global import L2R_GLOBAL
+gpu, device = L2R_GLOBAL.global_gpu, L2R_GLOBAL.global_device
+
+
+def shuffle_ties(vec, descending=True):
     '''
-    flipping the entries along the specified dimension
+    namely, randomly permuate ties
+    :param vec:
+    :param descending: the sorting order w.r.t. the input vec
+    :return:
     '''
-    indices = [slice(None)] * x.dim()
-    indices[dim] = torch.arange(x.size(dim) - 1, -1, -1, dtype=torch.long, device=x.device)
-    return x[tuple(indices)]
+    if len(vec.size()) > 1:
+        raise NotImplementedError
+    else:
+        length = vec.size()[0]
+        perm = torch.randperm(length)
+        shuffled_vec, _ = torch.sort(vec[perm], descending=descending)
+        return shuffled_vec
+
+def arg_shuffle_ties(vec, descending=True):
+    ''' the same as shuffle_ties, but return the corresponding indice '''
+    if len(vec.size()) > 1:
+        raise NotImplementedError
+    else:
+        length = vec.size()[0]
+        perm = torch.randperm(length)
+        sorted_shuffled_vec_inds = torch.argsort(vec[perm], descending=descending)
+        shuffle_ties_inds = perm[sorted_shuffled_vec_inds]
+        return shuffle_ties_inds
+
+def test_shuffle_ties():
+    np_arr = np.asarray([0.8, 0.8, 0.7, 0.7, 0.5, 0.5])
+    vec = torch.from_numpy(np_arr)
+
+    shuffle_ties_inds = arg_shuffle_ties(vec=vec)
+    print(shuffle_ties_inds)
+
+    print(vec[shuffle_ties_inds])
+
+    print(shuffle_ties(vec=vec))
+
+
+def plackett_luce_sampling(probs, softmaxed=False):
+    '''
+    sample a ranking based on the Plackett-Luce model
+    :param vec: a vector of values, the higher, the more possible the corresponding entry will be sampled
+    :return: the indice of the corresponding ranking
+    '''
+    if softmaxed:
+        inds = torch.multinomial(probs, probs.size()[0], replacement=False)
+    else:
+        probs = F.softmax(probs, dim=0)
+        inds = torch.multinomial(probs, probs.size()[0], replacement=False)
+
+    return inds
+
+
+def soft_rank_sampling(loc, covariance_matrix=None, inds_style=True, descending=True):
+    '''
+    :param loc: mean of the distribution
+    :param covariance_matrix: positive-definite covariance matrix
+    :param inds_style: true means the indice leading to the ranking
+    :return:
+    '''
+    m = MultivariateNormal(loc, covariance_matrix)
+    vals = m.sample()
+    if inds_style:
+        sorted_inds = torch.argsort(vals, descending=descending)
+        return sorted_inds
+    else:
+        vals
+
+
+
+class Exp(nn.Module):
+    def __init__(self):
+        super(Exp, self).__init__()
+
+    def forward(self, x):
+        x = torch.exp(x)
+        return x
+
+
 
 
 class Power(torch.autograd.Function):
     '''
-    d(b^x)/dx = (b^x)ln(b)
+    d(b^x)/dx = (b^x)ln(b), now torch.pow() allows taking derivatives
     '''
 
     @staticmethod
@@ -25,8 +106,41 @@ class Power(torch.autograd.Function):
     def backward(ctx, grad_output):
         input_exped, base = ctx.saved_tensors
         grad = torch.mul(input_exped, torch.log(base))
-        return grad, None
+        return grad, None # todo ??? chain rule:
 
+
+ONEOVERSQRT2PI = 1.0 / math.sqrt(2*math.pi)
+
+from scipy.integrate import quad
+class Gaussian_Integral_0_Inf(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, MU, sigma):
+        '''
+        :param ctx:
+        :param mu:
+        :param sigma: a float value
+        :return:
+        '''
+        #print('MU', MU)
+        tmp_MU = MU.detach()
+        tmp_MU = tmp_MU.view(1, -1)
+        np_MU = tmp_MU.cpu().numpy() if gpu else tmp_MU.numpy()
+        #print('np_MU', np_MU)
+        np_integrated_probs = [quad(lambda y: ONEOVERSQRT2PI * np.exp(-0.5 * (y-mu/sigma) ** 2) / sigma, 0, np.inf)[0] for mu in np.ravel(np_MU)]
+        #print('np_integrated_probs', np_integrated_probs)
+        integrated_probs = torch.as_tensor(np_integrated_probs, dtype=MU.dtype)
+        integrated_probs = integrated_probs.view(MU.size())
+        #print('integrated_probs', integrated_probs)
+        ctx.save_for_backward(MU, torch.tensor([sigma]))
+        return integrated_probs
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        mu, sigma = ctx.saved_tensors
+        probs = ONEOVERSQRT2PI * torch.exp(-0.5 * (-mu/sigma) ** 2) / sigma  # point gaussian probabilities given mu and sigma
+        # chain rule
+        bk_output = grad_output * probs
+        return bk_output, None
 
 
 def sinkhorn_2D(x, num_iter=5):
@@ -74,7 +188,7 @@ def logsumexp(inputs, dim=None, keepdim=False):
         outputs = outputs.squeeze(dim)
     return outputs
 
-def sinkhorn_batch(batch_x, num_iter=20, eps=1e-10, tau=0.05):
+def sinkhorn_batch_(batch_x, num_iter=20, eps=1e-10, tau=0.05):
     '''
     Temperature (tau) -controlled Sinkhorn layer.
     By a theorem by Sinkhorn and Knopp [1], a sufficiently well-behaved  matrix with positive entries can be turned into a doubly-stochastic matrix
@@ -182,4 +296,7 @@ def pl_normalize(batch_scores=None):
 
 if __name__ == '__main__':
     #1
-    test_reluk()
+    #test_reluk()
+
+    #2
+    test_shuffle_ties()

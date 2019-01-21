@@ -23,16 +23,14 @@ torch.manual_seed(seed=L2R_GLOBAL.l2r_seed)
 
 if __name__ == '__main__':
 	"""
-	>>> model names <<<
-	pointwise:      RankMSE
-	pairwise:       RankNet | LambdaRank
-	listwise:       ListNet | ListMLE | RankCosine | ApproxNDCG
+    >>> Supported ranking models <<<
+    Pointwise:      RankMSE
+    Pairwise:       RankNet | LambdaRank
+    Listwise:       ListNet | ListMLE | RankCosine | ApproxNDCG | LambdaMART | WassRank
 
-	>>> data <<<
-	MQ2007_super | MQ2008_super | MSLRWEB10K | MSLRWEB30K
-	"""
-
-	print('-- ranking -- Kind notice: you are using * {} *'.format(L2R_GLOBAL.global_device))
+    >>> Supported datasets <<<
+    MQ2007_super | MQ2008_super | MQ2007_semi | MQ2008_semi | MSLRWEB10K | MSLRWEB30K | Yahoo_L2R_Set_1 (TBA) | Yahoo_L2R_Set_1 (TBA)
+    """
 
 	dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/'
 

@@ -139,7 +139,7 @@ def tor_discounted_cumu_gain_at_k(sorted_labels, cutoff, multi_level_rele=True):
     else:
         nums = sorted_labels[0:cutoff]  #the case like listwise ranking, where the relevance is labeled as (n-rank_position)
 
-    denoms = torch.log2(torch.arange(cutoff) + 2.0)   #discounting factor
+    denoms = torch.log2(torch.arange(cutoff, dtype=torch.float) + 2.0)   #discounting factor
     dited_cumu_gain = torch.sum(nums/denoms)   # discounted cumulative gain value
 
     return dited_cumu_gain
@@ -158,7 +158,7 @@ def tor_discounted_cumu_gain_at_ks(sorted_labels, max_cutoff, multi_level_rele=T
     else:
         nums = sorted_labels[0:max_cutoff]  #the case like listwise ranking, where the relevance is labeled as (n-rank_position)
 
-    denoms = torch.log2(torch.arange(max_cutoff) + 2.0)   #discounting factor
+    denoms = torch.log2(torch.arange(max_cutoff, dtype=torch.float) + 2.0)   #discounting factor
     dited_cumu_gains = torch.cumsum(nums/denoms, dim=0)   # discounted cumulative gain value w.r.t. each position
 
     return dited_cumu_gains
@@ -205,14 +205,14 @@ def np_metric_at_ks(ranker=None, test_Qs=None, ks=[1, 5, 10], multi_level_rele=T
     list_p_at_ks_per_q = []
 
     for entry in test_Qs:
-        tor_test_ranking, tor_test_std_label_vec = torch.squeeze(entry[0], dim=0), torch.squeeze(entry[1], dim=0)  # remove the size 1 of dim=0 from loader itself
+        tor_test_ranking, tor_test_std_label_vec = entry[0], torch.squeeze(entry[1], dim=0)  # remove the size 1 of dim=0 from loader itself
 
         if gpu:
-            tor_rele_pred = ranker(tor_test_ranking.to(device))
+            tor_rele_pred = ranker.predict(tor_test_ranking.to(device))
             tor_rele_pred = torch.squeeze(tor_rele_pred)
             tor_rele_pred = tor_rele_pred.cpu()
         else:
-            tor_rele_pred = ranker(tor_test_ranking)
+            tor_rele_pred = ranker.predict(tor_test_ranking)
             tor_rele_pred = torch.squeeze(tor_rele_pred)
 
         _, tor_sorted_inds = torch.sort(tor_rele_pred, descending=True)

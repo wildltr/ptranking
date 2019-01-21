@@ -46,7 +46,7 @@ def lambdaRank_loss_function(batch_preds=None, batch_stds=None):
 	batch_gains = torch.pow(2.0, batch_stds_sorted_via_preds) - 1.0
 	batch_n_gains = batch_gains / batch_idcgs  # normalised gains
 	batch_ng_diffs = torch.unsqueeze(batch_n_gains, dim=2) - torch.unsqueeze(batch_n_gains, dim=1)
-	batch_std_ranks = torch.arange(batch_stds_sorted_via_preds.size(1)).to(device) if gpu else torch.arange(batch_stds_sorted_via_preds.size(1))
+	batch_std_ranks = torch.arange(batch_stds_sorted_via_preds.size(1), dtype=torch.float).to(device) if gpu else torch.arange(batch_stds_sorted_via_preds.size(1), dtype=torch.float)
 	batch_dists = 1.0 / torch.log2(batch_std_ranks + 2.0)  # discount co-efficients
 	batch_dists = torch.unsqueeze(batch_dists, dim=0)
 	batch_dists_diffs = torch.unsqueeze(batch_dists, dim=2) - torch.unsqueeze(batch_dists, dim=1)
@@ -58,16 +58,18 @@ def lambdaRank_loss_function(batch_preds=None, batch_stds=None):
 
 	return batch_loss
 
+
+
 class LambdaRank(AbstractNeuralRanker):
 	'''
 	Christopher J.C. Burges, Robert Ragno, and Quoc Viet Le. 2006.
 	Learning to Rank with Nonsmooth Cost Functions. In Proceedings of NIPS conference. 193–200.
 	'''
 
-	def __init__(self, f_para_dict):
-		super(LambdaRank, self).__init__(f_para_dict)
+	def __init__(self, ranking_function=None):
+		super(LambdaRank, self).__init__(id='LambdaRank', ranking_function=ranking_function)
 
-	def inner_train(self, batch_preds, batch_stds):
+	def inner_train(self, batch_preds, batch_stds, **kwargs):
 		'''
 		:param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents within a ranking
 		:param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ranking

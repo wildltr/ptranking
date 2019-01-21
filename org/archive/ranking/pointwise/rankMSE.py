@@ -29,11 +29,11 @@ def rankMSE_loss_function(batch_preds=None, batch_stds=None, TL_AF=None):
 	return batch_loss
 
 class RankMSE(AbstractNeuralRanker):
-	def __init__(self, f_para_dict):
-		super(RankMSE, self).__init__(f_para_dict)
-		self.TL_AF = f_para_dict['TL_AF']
+	def __init__(self, ranking_function=None):
+		super(RankMSE, self).__init__(id='RankMSE', ranking_function=ranking_function)
+		self.TL_AF = self.ranking_function.get_tl_af()
 
-	def inner_train(self, batch_preds, batch_stds):
+	def inner_train(self, batch_preds, batch_stds, **kwargs):
 		'''
 		:param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents within a ranking
 		:param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ranking

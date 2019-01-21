@@ -21,13 +21,13 @@ def idcg_std(sorted_labels):
 	return idcgs
 	'''
 	nums = torch.pow(2.0, sorted_labels) - 1.0
-	a_range = torch.arange(sorted_labels.size(1)).to(device) if gpu else torch.arange(sorted_labels.size(1))
+	a_range = torch.arange(sorted_labels.size(1), dtype=torch.float).to(device) if gpu else torch.arange(sorted_labels.size(1), dtype=torch.float)
 	denoms = torch.log2(2.0 + a_range)
 	idcgs = torch.sum(nums / denoms, dim=1)
 
 	return idcgs
 
-def tor_ndcg_at_k(ranker=None, test_Qs=None, k=10, multi_level_rele=True):
+def tor_ndcg_at_k(ranker=None, test_Qs=None, k=10, multi_level_rele=True, query_aware=False, dict_query_cnts=None):
 	'''
 	There is no check based on the assumption (say light_filtering() is called)
 	that each test instance Q includes at least k documents, and at least one relevant document.
@@ -36,15 +36,22 @@ def tor_ndcg_at_k(ranker=None, test_Qs=None, k=10, multi_level_rele=True):
 	sum_ndcg_at_k = torch.zeros(1)
 	cnt = torch.zeros(1)
 	for entry in test_Qs:
-		tor_test_ranking, tor_test_std_label_vec = entry[0], torch.squeeze(entry[1], dim=0)  # remove the size 1 of dim=0 from loader itself
+		tor_test_ranking, tor_test_std_label_vec, qid = entry[0], torch.squeeze(entry[1], dim=0), entry[2][0]  # remove the size 1 of dim=0 from loader itself
 
 		if tor_test_std_label_vec.size(0) < k: continue	# skip the query if the number of associated documents is smaller than k
 		if gpu:
-			tor_rele_pred = ranker.predict(tor_test_ranking.to(device))
+			if query_aware:
+				tor_rele_pred = ranker.predict(tor_test_ranking.to(device), query_context=dict_query_cnts[qid])
+			else:
+				tor_rele_pred = ranker.predict(tor_test_ranking.to(device))
+
 			tor_rele_pred = torch.squeeze(tor_rele_pred)
 			tor_rele_pred = tor_rele_pred.cpu()
 		else:
-			tor_rele_pred = ranker.predict(tor_test_ranking)
+			if query_aware:
+				tor_rele_pred = ranker.predict(tor_test_ranking, query_context=dict_query_cnts[qid])
+			else:
+				tor_rele_pred = ranker.predict(tor_test_ranking)
 			tor_rele_pred = torch.squeeze(tor_rele_pred)
 
 		_, tor_sorted_inds = torch.sort(tor_rele_pred, descending=True)
@@ -60,7 +67,7 @@ def tor_ndcg_at_k(ranker=None, test_Qs=None, k=10, multi_level_rele=True):
 	return  avg_ndcg_at_k
 
 
-def tor_ndcg_at_ks(ranker=None, test_Qs=None, ks=[1, 5, 10], multi_level_rele=True):
+def tor_ndcg_at_ks(ranker=None, test_Qs=None, ks=[1, 5, 10], multi_level_rele=True, query_aware=False, dict_query_cnts=None):
 	'''
 	There is no check based on the assumption (say light_filtering() is called)
 	that each test instance Q includes at least k(k=max(ks)) documents, and at least one relevant document.
@@ -69,14 +76,22 @@ def tor_ndcg_at_ks(ranker=None, test_Qs=None, ks=[1, 5, 10], multi_level_rele=Tr
 	sum_ndcg_at_ks = torch.zeros(len(ks))
 	cnt = torch.zeros(1)
 	for entry in test_Qs:
-		tor_test_ranking, tor_test_std_label_vec = entry[0], torch.squeeze(entry[1], dim=0)  # remove the size 1 of dim=0 from loader itself
+		tor_test_ranking, tor_test_std_label_vec, qid = entry[0], torch.squeeze(entry[1], dim=0), entry[2][0]  # remove the size 1 of dim=0 from loader itself
 
 		if gpu:
-			tor_rele_pred = ranker.predict(tor_test_ranking.to(device))
+			if query_aware:
+				tor_rele_pred = ranker.predict(tor_test_ranking.to(device), query_context=dict_query_cnts[qid])
+			else:
+				tor_rele_pred = ranker.predict(tor_test_ranking.to(device))
+
 			tor_rele_pred = torch.squeeze(tor_rele_pred)
 			tor_rele_pred = tor_rele_pred.cpu()
 		else:
-			tor_rele_pred = ranker.predict(tor_test_ranking)
+			if query_aware:
+				tor_rele_pred = ranker.predict(tor_test_ranking, query_context=dict_query_cnts[qid])
+			else:
+				tor_rele_pred = ranker.predict(tor_test_ranking)
+
 			tor_rele_pred = torch.squeeze(tor_rele_pred)
 
 		_, tor_sorted_inds = torch.sort(tor_rele_pred, descending=True)

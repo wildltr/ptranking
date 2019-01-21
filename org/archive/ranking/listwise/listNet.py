@@ -18,10 +18,10 @@ class ListNet(AbstractNeuralRanker):
 	Learning to Rank: From Pairwise Approach to Listwise Approach. In Proceedings of the 24th ICML. 129–136.
 	'''
 
-	def __init__(self, f_para_dict):
-		super(ListNet, self).__init__(f_para_dict)
+	def __init__(self, ranking_function=None):
+		super(ListNet, self).__init__(id='ListNet', ranking_function=ranking_function)
 
-	def inner_train(self, batch_preds, batch_stds):
+	def inner_train(self, batch_preds, batch_stds, **kwargs):
 		'''
 		:param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents within a ranking
 		:param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ranking
