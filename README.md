@@ -58,6 +58,7 @@ Anyone who are interested in the following kinds of contributions and/or collabo
 |---|---|---|
 | [PTL2R](https://ptl2r.github.io/) | Python  |  [PyTorch](https://pytorch.org) | 
 | [TF-Ranking](https://github.com/tensorflow/ranking)  |  Python | [TensorFlow](https://tensorflow.org) |
+| [MatchZoo](https://github.com/NTMC-Community/MatchZoo) | Python  |  [Keras](https://github.com/keras-team/keras) [PyTorch](https://pytorch.org) | 
 | [Shoelace](https://github.com/rjagerman/shoelace)  |  Python | [Chainer](https://chainer.org) |
 | [LEROT](https://bitbucket.org/ilps/lerot) | Python  | x  |
 | [Rank Lib](http://www.lemurproject.org/ranklib.php) |  Java | x  |
