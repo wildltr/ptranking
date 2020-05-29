@@ -1,0 +1,16 @@
+
+
+""" Semi-supervised ranking: MQ2007-semi | MQ2008-semi """
+Semi-supervised rankingThe data format in this setting is the same as that in supervised ranking setting.
+The only difference is that the datasets in this setting contains both judged and undged query-document pair (*** in training set but not in validation and testing set ***)
+while the datasets in supervised ranking contain only judged query-document pair. The relevance label “-1” indicates the query-document pair is not judged.
+
+
+''' setting w.r.t. data-preprocess '''
+''' According to {Introducing {LETOR} 4.0 Datasets}, "QueryLevelNorm version: Conduct query level normalization based on data in MIN version. This data can be directly used for learning. We further provide 5 fold partitions of this version for cross fold validation".
+ --> Thus there is no need to perform query_level_scale again for {MQ2007_super | MQ2008_super | MQ2007_semi | MQ2008_semi}
+
+ --> But for {MSLRWEB10K | MSLRWEB30K}, the query-level normalization is ## not conducted yet##.
+
+ --> For {Yahoo_L2R_Set_1 | Yahoo_L2R_Set_1 }, the query-level normalization is already conducted.
+'''

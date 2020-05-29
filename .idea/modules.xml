@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/public-ptl2r.iml" filepath="$PROJECT_DIR$/.idea/public-ptl2r.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/ptl2r.iml" filepath="$PROJECT_DIR$/.idea/ptl2r.iml" />
     </modules>
   </component>
 </project>

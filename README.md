@@ -1,20 +1,18 @@
-This open-source project, referred to as **ptl2r** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank. 
+This open-source project, referred to as **PTL2R** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous learning-to-rank methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank. 
 
 # Test Setting
 
-PyTorch (4.0)
+PyTorch (1.0)
 
 Python (3.6)
 
 # Installation
-This project is under construction, and is not formally released yet. Please refer to **develop** branches for reference.
+This project is under construction, and is not formally released yet.
 
 # Data
 **[MQ2007](http://research.microsoft.com/en-us/um/beijing/projects/letor/LETOR4.0/Data/MQ2007.rar)**
 
 **[MQ2008](http://research.microsoft.com/en-us/um/beijing/projects/letor/LETOR4.0/Data/MQ2008.rar)**
-
-**[Yahoo! Learning to Rank Challenge C14B](http://webscope.sandbox.yahoo.com/catalog.php?datatype=c)**
 
 **[MSLR-WEB10K](https://www.microsoft.com/en-us/research/project/mslr/)**
 
@@ -34,16 +32,18 @@ This project is under construction, and is not formally released yet. Please ref
 
 [6] AppoxNDCG: Tao Qin, Tie-Yan Liu, and Hang Li. 2010. A general approximation framework for direct optimization of information retrieval measures. Journal of Information Retrieval 13, 4 (2010), 375–397.
 
+[7] WassRank: Hai-Tao Yu, Adam Jatowt, Hideo Joho, Joemon Jose, Xiao Yang and Long Chen. WassRank: Listwise Document Ranking Using Optimal Transport Theory. Proceedings of the 12th International Conference on Web Search and Data Mining (WSDM), 2019.
+
 # Community
 
-**Slack**: [ptl2r group](https://ptl2r.slack.com)
+**Slack**: [PTL2R group](https://ptl2r.slack.com)
 
 **WeChat**:
 
-![ptl2r](./img/wechat.png)
+![PTL2R](./img/wechat.png)
 
 # Acknowledgements
-Some parts of the code builds upon some other open-source projects, we would like to express our grateful thanks here. 
+This research is partially supported by JSPS KAKENHI Grant Number JP17K12784.
 
 # Call for Contribution and/or Collaboration
 Anyone who are interested in the following kinds of contributions and/or collaborations are warmly welcomed.
@@ -54,8 +54,12 @@ Anyone who are interested in the following kinds of contributions and/or collabo
 
 # Relevant Resources
 
-**Java**: [Rank Lib](http://www.lemurproject.org/ranklib.php)
-
-**Python**: [LEROT](https://bitbucket.org/ilps/lerot)
-
-**C**: [Propensity SVM^Rank](http://www.cs.cornell.edu/people/tj/svm_light/svm_proprank.html)
+| Name | Language | Deep Learning |
+|---|---|---|
+| [PTL2R](https://ptl2r.github.io/) | Python  |  [PyTorch](https://pytorch.org) | 
+| [TF-Ranking](https://github.com/tensorflow/ranking)  |  Python | [TensorFlow](https://tensorflow.org) |
+| [Shoelace](https://github.com/rjagerman/shoelace)  |  Python | [Chainer](https://chainer.org) |
+| [LEROT](https://bitbucket.org/ilps/lerot) | Python  | x  |
+| [Rank Lib](http://www.lemurproject.org/ranklib.php) |  Java | x  |
+| [Propensity SVM^Rank](http://www.cs.cornell.edu/people/tj/svm_light/svm_proprank.html)  |  C | x  |
+| [QuickRank](http://quickrank.isti.cnr.it)  |  C++ | x  |
