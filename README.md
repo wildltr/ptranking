@@ -21,13 +21,13 @@ TBA
 ## The widely used benchmark datasets listed below can be directly used once downloaded
 
 - **[LETOR4.0](https://www.microsoft.com/en-us/research/project/letor-learning-rank-information-retrieval/)**
-(including MQ2007 | MQ2008 | MQ2007-semi | MQ2008-semi | MQ2007-list | MQ2008-list )
+(including MQ2007 \| MQ2008 \| MQ2007-semi \| MQ2008-semi \| MQ2007-list \| MQ2008-list )
 
-- **[MSLR-WEB10K](https://www.microsoft.com/en-us/research/project/mslr/)** (including MSLR-WEB10K | MSLR-WEB30K)
+- **[MSLR-WEB10K](https://www.microsoft.com/en-us/research/project/mslr/)** (including MSLR-WEB10K \| MSLR-WEB30K)
 
-- **[Yahoo! LETOR](https://webscope.sandbox.yahoo.com/catalog.php?datatype=c)** (including Set1 | Set2)
+- **[Yahoo! LETOR](https://webscope.sandbox.yahoo.com/catalog.php?datatype=c)** (including Set1 \| Set2)
 
-- **[Istella](http://quickrank.isti.cnr.it/istella-dataset/)** (including Istella-S | Istella | Istella-X)
+- **[Istella](http://quickrank.isti.cnr.it/istella-dataset/)** (including Istella-S \| Istella \| Istella-X)
 
 ### Some notes on the above datasets
 
