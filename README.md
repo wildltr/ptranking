@@ -1,49 +1,92 @@
-This open-source project, referred to as **PTL2R** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous learning-to-rank methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank. 
+This open-source project, referred to as **PT-Ranking** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous learning-to-rank methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank. 
 
 # Test Setting
 
-PyTorch (1.0)
+PyTorch (1.3)
 
-Python (3.6)
+Python (3.7)
 
-# Installation
-This project is under construction, and is not formally released yet.
+# Demo Scripts
 
-# Data
-**[MQ2007](http://research.microsoft.com/en-us/um/beijing/projects/letor/LETOR4.0/Data/MQ2007.rar)**
+- JupyterLab Documentation
 
-**[MQ2008](http://research.microsoft.com/en-us/um/beijing/projects/letor/LETOR4.0/Data/MQ2008.rar)**
+- Colab Notebook
 
-**[MSLR-WEB10K](https://www.microsoft.com/en-us/research/project/mslr/)**
+# Developing a new learning-rto-rank method
 
-**[MSLR-WEB30K](https://www.microsoft.com/en-us/research/project/mslr/)**
+TBA
+
+# Supported Datasets and Format
+
+## The widely used benchmark datasets listed below can be directly used once downloaded
+
+- **[LETOR4.0](https://www.microsoft.com/en-us/research/project/letor-learning-rank-information-retrieval/)**
+(including MQ2007 | MQ2008 | MQ2007-semi | MQ2008-semi | MQ2007-list | MQ2008-list )
+
+- **[MSLR-WEB10K](https://www.microsoft.com/en-us/research/project/mslr/)** (including MSLR-WEB10K | MSLR-WEB30K)
+
+- **[Yahoo! LETOR](https://webscope.sandbox.yahoo.com/catalog.php?datatype=c)** (including Set1 | Set2)
+
+- **[Istella](http://quickrank.isti.cnr.it/istella-dataset/)** (including Istella-S | Istella | Istella-X)
+
+### Some notes on the above datasets
+
+- Semi-supervised datasets (MQ2007-semi | MQ2008-semi) have the same format as that for supervised ranking setting. The only difference is that the semi-supervised datasets in this setting contain both judged and undged query-document pairs
+ (**in training set but not in validation and testing set**)(The relevance label “-1” indicates the query-document pair is not judged) while the datasets for supervised ranking contain only judged query-document pair.
+
+- According to [Introducing LETOR 4.0 Datasets}](https://arxiv.org/abs/1306.2597), queryLevelNorm version refers to that: conduct query level normalization in the way of using MIN. This data can be directly used for learning. 
+They further provide 5-fold partitions of this version for cross fold validation. Thus there is no need to perform query_level_scale again for {MQ2007_super | MQ2008_super | MQ2007_semi | MQ2008_semi}. 
+But for {MSLRWEB10K | MSLRWEB30K}, the query-level normalization is **not conducted yet**.
+
+- For Yahoo! LETOR, the query-level normalization is already done.
+
+## PT-Ranking currently supports to ingest data with the LibSVM formats
+
+- LETOR datasets in LibSVM format
+
+\<ground-truth label int\> qid\:<query_id int> <feature_id int>:<feature_value float> ... <feature_id int>:<feature_value float>
+
+For example:
+
+4 qid:105 2:0.4  8:0.7   50:0.5
 
 
-# Reference
-[1] RankNet: Chris Burges, Tal Shaked, Erin Renshaw, Ari Lazier, Matt Deeds, Nicole Hamilton, and Greg Hullender. 2005. Learning to rank using gradient descent. In Proceedings of the 22nd ICML. 89–96.
+1 qid:105 5:0.5  30:0.7  32:0.4  48:0.53
 
-[2] LambdaRank: Christopher J.C. Burges, Robert Ragno, and Quoc Viet Le. 2006. Learning to Rank with Nonsmooth Cost Functions. In Proceedings of NIPS conference. 193–200.
+0 qid:210 4:0.9  38:0.01 39:0.5  45:0.7
 
-[3] ListNet: Zhe Cao, Tao Qin, Tie-Yan Liu, Ming-Feng Tsai, and Hang Li. 2007. Learning to Rank: From Pairwise Approach to Listwise Approach. In Proceedings of the 24th ICML. 129–136.
+1 qid:210 1:0.2  8:0.9   31:0.93 40:0.6
 
-[4] ListMLE: Fen Xia, Tie-Yan Liu, Jue Wang, Wensheng Zhang, and Hang Li. 2008. Listwise Approach to Learning to Rank: Theory and Algorithm. In Proceedings of the 25th ICML. 1192–1199.
+The above sample dataset includes two queries, the query "105" has 2 documents, the corresponding ground-truth labels are 4 and 1, respectively.
 
-[5] RankCosine: Tao Qin, Xu-Dong Zhang, Ming-Feng Tsai, De-Sheng Wang, Tie-Yan Liu, and Hang Li. 2008. Query-level loss functions for information retrieval. Information Processing and Management 44, 2 (2008), 838–855.
+- Converting LETOR datasets into LibSVM format with a corresponding **group** file
 
-[6] AppoxNDCG: Tao Qin, Tie-Yan Liu, and Hang Li. 2010. A general approximation framework for direct optimization of information retrieval measures. Journal of Information Retrieval 13, 4 (2010), 375–397.
+This functionality is required when using the implementation of LambdaMART provided in [LightGBM](https://lightgbm.readthedocs.io/en/latest/)  and [XGBoost](https://xgboost.readthedocs.io/en/latest/).
 
-[7] WassRank: Hai-Tao Yu, Adam Jatowt, Hideo Joho, Joemon Jose, Xiao Yang and Long Chen. WassRank: Listwise Document Ranking Using Optimal Transport Theory. Proceedings of the 12th International Conference on Web Search and Data Mining (WSDM), 2019.
+# Included Learning-To-Rank Methods & References
 
-# Community
+- **RankNet**: Chris Burges, Tal Shaked, Erin Renshaw, Ari Lazier, Matt Deeds, Nicole Hamilton, and Greg Hullender. 2005. Learning to rank using gradient descent. In Proceedings of the 22nd ICML. 89–96.
 
-**Slack**: [PTL2R group](https://ptl2r.slack.com)
+- **RankSVM**: Joachims, Thorsten. Optimizing Search Engines Using Clickthrough Data. Proceedings of the Eighth ACM SIGKDD International Conference on Knowledge Discovery and Data Mining, 133–142, 2002.
 
-**WeChat**:
+- **LambdaRank**: Christopher J.C. Burges, Robert Ragno, and Quoc Viet Le. 2006. Learning to Rank with Nonsmooth Cost Functions. In Proceedings of NIPS conference. 193–200.
 
-![PTL2R](./img/wechat.png)
+- **ListNet**: Zhe Cao, Tao Qin, Tie-Yan Liu, Ming-Feng Tsai, and Hang Li. 2007. Learning to Rank: From Pairwise Approach to Listwise Approach. In Proceedings of the 24th ICML. 129–136.
 
-# Acknowledgements
-This research is partially supported by JSPS KAKENHI Grant Number JP17K12784.
+- **ListMLE**: Fen Xia, Tie-Yan Liu, Jue Wang, Wensheng Zhang, and Hang Li. 2008. Listwise Approach to Learning to Rank: Theory and Algorithm. In Proceedings of the 25th ICML. 1192–1199.
+
+- **RankCosine**: Tao Qin, Xu-Dong Zhang, Ming-Feng Tsai, De-Sheng Wang, Tie-Yan Liu, and Hang Li. 2008. Query-level loss functions for information retrieval. Information Processing and Management 44, 2 (2008), 838–855.
+
+- **AppoxNDCG**: Tao Qin, Tie-Yan Liu, and Hang Li. 2010. A general approximation framework for direct optimization of information retrieval measures. Journal of Information Retrieval 13, 4 (2010), 375–397.
+
+- **LambdaMART**: Q. Wu, C.J.C. Burges, K. Svore and J. Gao. Adapting Boosting for Information Retrieval Measures. Journal of Information Retrieval, 2007.
+(We note that the implementations are provided by [LightGBM](https://lightgbm.readthedocs.io/en/latest/)  and [XGBoost](https://xgboost.readthedocs.io/en/latest/))
+
+- **IRGAN**: Wang, Jun and Yu, Lantao and Zhang, Weinan and Gong, Yu and Xu, Yinghui and Wang, Benyou and Zhang, Peng and Zhang, Dell. IRGAN: A Minimax Game for Unifying Generative and Discriminative Information Retrieval Models. Proceedings of the 40th International ACM SIGIR Conference on Research and Development in Information Retrieval, 515–524, 2017. (**Besides the pointwise and pairiwse adversarial learning-to-rank methods introduced in the paper, we also include the listwise version in PT-Ranking**)
+
+- **WassRank**: Hai-Tao Yu, Adam Jatowt, Hideo Joho, Joemon Jose, Xiao Yang and Long Chen. WassRank: Listwise Document Ranking Using Optimal Transport Theory. Proceedings of the 12th International Conference on Web Search and Data Mining (WSDM), 24-32, 2019.
+
+- Bruch, Sebastian and Han, Shuguang and Bendersky, Michael and Najork, Marc. A Stochastic Treatment of Learning to Rank Scoring Functions. Proceedings of the 13th International Conference on Web Search and Data Mining (WSDM), 61–69, 2020. 
 
 # Call for Contribution and/or Collaboration
 Anyone who are interested in the following kinds of contributions and/or collaborations are warmly welcomed.

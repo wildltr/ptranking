@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# Created by Hai-Tao Yu | 2020/03/17 | https://y-research.github.io
+
+"""Description
+
+"""
+
+import torch
+
+def batch_count(batch_std_labels=None, max_rele_grade=None, descending=False, gpu=False):
+    rele_grades = torch.arange(max_rele_grade+1).type(torch.cuda.FloatTensor) if gpu else torch.arange(max_rele_grade+1).type(torch.FloatTensor)
+    if descending: rele_grades, _ = torch.sort(rele_grades, descending=True)
+
+    batch_cnts = torch.stack([(batch_std_labels == g).sum(dim=1) for g in rele_grades])
+    batch_cnts = torch.t(batch_cnts)
+    return batch_cnts
