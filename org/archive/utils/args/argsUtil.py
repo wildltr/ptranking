@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Created by Hai-Tao Yu | 18/12/03 | https://y-research.github.io
 
 """Description
 
@@ -35,8 +34,8 @@ class ArgsUtil(object):
         self.args_parser.add_argument('-validation', action='store_false', help='perform validation.')
         self.args_parser.set_defaults(validation=True)
         self.args_parser.add_argument('-validation_k', type=int, default=10, help='the cutoff value for validation.')
-        self.args_parser.add_argument('-min_docs', type=int, default=10, help='the minimum size of a ranking.')
-        self.args_parser.add_argument('-min_rele', type=int, default=1, help='the minimum number of relevant documents per ranking.')
+        self.args_parser.add_argument('-min_docs', type=int, default=10, help='the minimum size of a ltr_adhoc.')
+        self.args_parser.add_argument('-min_rele', type=int, default=1, help='the minimum number of relevant documents per ltr_adhoc.')
         self.args_parser.add_argument('-binary', action='store_true', help='using binary standard relevance judgments.')
         self.args_parser.set_defaults(apply_tl_af=False)
 

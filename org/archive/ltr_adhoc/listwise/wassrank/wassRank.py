@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Created by Hai-Tao Yu | 18/12/02 | https://y-research.github.io
 
 """Description
 
@@ -14,7 +13,6 @@ from itertools import product
 import torch
 
 from org.archive.base.ranker import NeuralRanker
-from org.archive.ltr_adhoc.listwise.otrank.ot_loss_layer import EntropicOTLoss
 from org.archive.ltr_adhoc.listwise.wassrank.wasserstein_loss_layer import Y_WassersteinLossStab
 from org.archive.ltr_adhoc.listwise.wassrank.wasserstein_cost_mat import get_explicit_cost_mat, get_normalized_histograms
 

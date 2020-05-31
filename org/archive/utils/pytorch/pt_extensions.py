@@ -6,8 +6,8 @@ from torch.distributions.multivariate_normal import MultivariateNormal
 import math
 import numpy as np
 
-from org.archive.l2r_global import L2R_GLOBAL
-gpu, device = L2R_GLOBAL.global_gpu, L2R_GLOBAL.global_device
+from org.archive.l2r_global import global_gpu as gpu
+
 
 
 def shuffle_ties(vec, descending=True):
@@ -50,9 +50,9 @@ def test_shuffle_ties():
 
 def plackett_luce_sampling(probs, softmaxed=False):
     '''
-    sample a ranking based on the Plackett-Luce model
+    sample a ltr_adhoc based on the Plackett-Luce model
     :param vec: a vector of values, the higher, the more possible the corresponding entry will be sampled
-    :return: the indice of the corresponding ranking
+    :return: the indice of the corresponding ltr_adhoc
     '''
     if softmaxed:
         inds = torch.multinomial(probs, probs.size()[0], replacement=False)
@@ -67,7 +67,7 @@ def soft_rank_sampling(loc, covariance_matrix=None, inds_style=True, descending=
     '''
     :param loc: mean of the distribution
     :param covariance_matrix: positive-definite covariance matrix
-    :param inds_style: true means the indice leading to the ranking
+    :param inds_style: true means the indice leading to the ltr_adhoc
     :return:
     '''
     m = MultivariateNormal(loc, covariance_matrix)
@@ -210,6 +210,21 @@ def sinkhorn_batch_(batch_x, num_iter=20, eps=1e-10, tau=0.05):
             break
 
     return torch.exp(batch_x) + eps # add a small offset 'eps' in order to avoid numerical errors due to exp()
+
+
+
+def swish(x):
+    return x * torch.sigmoid(x)
+
+
+class SWISH(nn.Module):
+    def __init__(self):
+        super(SWISH, self).__init__()
+
+    def forward(self, x):
+        res = x * torch.sigmoid(x)
+        return res
+
 
 
 class ReLU_K(nn.Hardtanh):

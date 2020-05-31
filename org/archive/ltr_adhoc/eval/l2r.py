@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Created by Hai-Tao Yu | 19/04/05 | https://y-research.github.io
 
 """Description
 
@@ -26,32 +25,14 @@ from org.archive.ltr_adhoc.eval.grid_utils import sf_grid, get_sf_ID, eval_grid
 
 from org.archive.ltr_adhoc.pointwise.rank_mse          import RankMSE
 from org.archive.ltr_adhoc.pairwise.ranknet           import RankNet
-from org.archive.ltr_adhoc.pairwise.ranknet_sharp   import RankNet_Sharp, rtpplus_para_iterator, get_rnpp_para_str
 from org.archive.ltr_adhoc.listwise.lambdarank        import LambdaRank, lambda_para_iterator, get_lambda_para_str, get_default_lambda_para_dict
-from org.archive.ltr_adhoc.listwise.lambdarank_sharp  import LambdaRank_Sharp, get_lambda_sharp_para_str
 from org.archive.ltr_adhoc.listwise.rank_cosine        import RankCosine
 from org.archive.ltr_adhoc.listwise.listnet           import ListNet
 from org.archive.ltr_adhoc.listwise.st_listnet         import STListNet
 from org.archive.ltr_adhoc.listwise.listmle           import ListMLE
 from org.archive.ltr_adhoc.listwise.approxNDCG        import AppoxNDCG, get_apxndcg_paras_str
-from org.archive.ltr_adhoc.listwise.approxNDCG_sharp  import ApproxNDCG_Sharp, get_apxndcg_sharp_paras_str
-from org.archive.ltr_adhoc.listwise.otrank.otRank     import OTRank, KOTRank, otrank_para_iterator, get_ot_para_str
 from org.archive.ltr_adhoc.listwise.wassrank.wassRank import WassRank, wassrank_para_iterator, get_wass_para_str
-#from org.archive.ltr_adhoc.pointwise.pointMDNs        import PointMDNs
-#from org.archive.ltr_adhoc.pairwise.pairMDNs          import PairMDNs
-#from org.archive.ltr_adhoc.pointwise.pointMCNs        import PointMCNs
-#from org.archive.ltr_adhoc.triplewise.triRank         import TriRank
-#from org.archive.ltr_adhoc.listwise.wassrank.emdRank  import EMDRank
-from org.archive.ltr_adhoc.listwise.histogramLoss.histogram_ap import HistogramAP
 
-from org.archive.ltr_adhoc.listwise.virtual_rank import VirtualRank, default_virtual_rank_para_dict, virtual_rank_para_iterator, get_virtual_rank_paras_str
-from org.archive.ltr_adhoc.listwise.magic_rank import MagicRank, default_magic_rank_para_dict, magic_rank_para_iterator, get_magic_rank_paras_str
-
-from org.archive.ltr_adhoc.listwise.virtual_ap         import VirtualAP, get_virtual_ap_paras_str, virtual_ap_para_iterator
-from org.archive.ltr_adhoc.listwise.virtual_ndcg       import VirtualNDCG, get_virtual_ndcg_paras_str, virtual_ndcg_para_iterator
-from org.archive.ltr_adhoc.listwise.virtual_kendall_tau import VirtualKendallTau, get_virtual_kt_paras_str, virtual_kt_para_iterator
-from org.archive.ltr_adhoc.listwise.virtual_p          import VirtualP, get_virtual_p_paras_str, virtual_p_para_iterator
-from org.archive.ltr_adhoc.listwise.virtual_nerr       import VirtualNERR, get_virtual_nerr_paras_str, virtual_nerr_para_iterator
 
 from org.archive.l2r_global import global_gpu as gpu, global_device as device, tensor
 
@@ -233,30 +214,8 @@ class L2REvaluator():
         elif model_id == 'RankNet':  # -- pairwise --
             ranker = RankNet(sf_para_dict=sf_para_dict)
 
-        elif model_id == 'RankNet_Sharp':
-            rnpp_para_dict = model_para_dict
-
-            em_label = rnpp_para_dict['em_label']
-            if em_label:
-                max_rele_level = rnpp_para_dict['max_rele_level']
-                mapping_dims = 1
-                em_para_dict = dict(num_features=max_rele_level + 1, h_dim=50, out_dim=mapping_dims, num_layers=3, HD_AF='RR', HN_AF='RR', TL_AF='RR', apply_tl_af=True, BN=False, RD=False, FBN=False)
-            else:
-                em_para_dict = None
-
-            ranker = RankNet_Sharp(sf_para_dict=sf_para_dict, rnpp_para_dict=rnpp_para_dict, em_label=em_label, em_para_dict=em_para_dict)
-
-        elif model_id == 'TriRank':
-            tri_para_dict = dict(num_features=self.data_dict['num_features'], h_dim=50, out_dim=50, num_layers=3,
-                                HD_AF='CE', HN_AF='CE', TL_AF='CE', apply_tl_af=True, BN=TriRank, RD=False, FBN=False)
-
-            ranker = TriRank(sf_para_dict=sf_para_dict, tri_para_dict=tri_para_dict)
-
         elif model_id == 'LambdaRank':  # -- listwise --
             ranker = LambdaRank(sf_para_dict=sf_para_dict, lambda_para_dict=model_para_dict)
-
-        elif model_id == 'LambdaRank_Sharp':
-            ranker = LambdaRank_Sharp(sf_para_dict=sf_para_dict, lambda_para_dict=model_para_dict)
 
         elif model_id == 'ListNet':
             ranker = ListNet(sf_para_dict=sf_para_dict)
@@ -273,46 +232,11 @@ class L2REvaluator():
         elif model_id == 'ApproxNDCG':
             ranker = AppoxNDCG(sf_para_dict=sf_para_dict, apxNDCG_para_dict=model_para_dict)
 
-        elif model_id == 'ApproxNDCG_Sharp':
-            ranker = ApproxNDCG_Sharp(sf_para_dict=sf_para_dict, apxNDCG_sharp_dict=model_para_dict)
-
-        elif model_id == 'VirtualRank':
-            ranker = VirtualRank(sf_para_dict=sf_para_dict, virtual_rank_dict=model_para_dict)
-
-        elif model_id == "MagicRank":
-            ranker = MagicRank(sf_para_dict=sf_para_dict, magic_rank_dict=model_para_dict)
-
-        elif model_id == 'PointMCNs':
-            #print(self.data_dict['sorted_labels'])
-            ranker = PointMCNs(sf_para_dict=sf_para_dict, mcn_para_dict=model_para_dict, sorted_labels=self.data_dict['sorted_labels'])
-
         elif model_id in ['WassRank', 'WassRankSP']:
             if model_id.endswith('SP'):
                 ranker = WassRank(sf_para_dict=sf_para_dict, wass_para_dict=model_para_dict, dict_cost_mats=kwargs['dict_cost_mats'], dict_std_dists=kwargs['dict_std_dists'], sampling=True)
             else:
                 ranker = WassRank(sf_para_dict=sf_para_dict, wass_para_dict=model_para_dict, dict_cost_mats=kwargs['dict_cost_mats'], dict_std_dists=kwargs['dict_std_dists'])
-
-        elif model_id == 'KOTRank':
-            ranker = KOTRank(sf_para_dict=sf_para_dict, ot_para_dict=model_para_dict, dict_cost_mats=kwargs['dict_cost_mats'], dict_std_dists=kwargs['dict_std_dists'])
-
-        elif model_id == 'OTRank':
-            ot_para_dict = model_para_dict
-
-            max_rele_level = ot_para_dict['max_rele_level']
-            mapping_dims = 1
-            em_para_dict = dict(num_features=max_rele_level + 1, h_dim=50, out_dim=mapping_dims, num_layers=3, HD_AF='R', HN_AF='R', TL_AF='R', apply_tl_af=True)
-            ranker = OTRank(sf_para_dict=sf_para_dict, ot_para_dict=ot_para_dict, dict_std_dists=kwargs['dict_std_dists'], em_para_dict=em_para_dict)
-
-        elif model_id == 'EMDRank':
-            ranker = EMDRank(sf_para_dict=sf_para_dict)
-
-        elif model_id == 'PointMDNs':
-            ranker = PointMDNs(sf_para_dict=sf_para_dict)
-        elif model_id == 'PairMDNs':
-            ranker = PairMDNs(sf_para_dict=sf_para_dict)
-
-        elif model_id == 'HistogramAP':
-            ranker = HistogramAP(sf_para_dict=sf_para_dict)
 
         else:
             raise NotImplementedError
@@ -439,37 +363,13 @@ class L2REvaluator():
             wass_paras_str = get_wass_para_str(ot_para_dict=model_para_dict)
             dir_run = dir_run + wass_paras_str + '/'
 
-        elif model_id == 'OTRank':
-            ot_paras_str = get_ot_para_str(ot_para_dict=model_para_dict)
-            dir_run = dir_run + ot_paras_str + '/'
-
         elif model_id == 'ApproxNDCG':
             apxNDCG_paras_str = get_apxndcg_paras_str(model_para_dict=model_para_dict)
             dir_run = dir_run + apxNDCG_paras_str + '/'
 
-        elif model_id == 'ApproxNDCG_Sharp':
-            apxNDCG_sharp_paras_str = get_apxndcg_sharp_paras_str(model_para_dict=model_para_dict)
-            dir_run = dir_run + apxNDCG_sharp_paras_str + '/'
-
-        elif model_id == 'RankNet_Sharp':
-            rnpp_paras_str = get_rnpp_para_str(rnpp_para_dict=model_para_dict)
-            dir_run = dir_run + rnpp_paras_str + '/'
-
         elif model_id == 'LambdaRank':
             lambda_paras_str = get_lambda_para_str(lambda_para_dict=model_para_dict)
             dir_run = dir_run + lambda_paras_str + '/'
-
-        elif model_id == 'LambdaRank_Sharp':
-            lambda_sharp_paras_str = get_lambda_sharp_para_str(lambda_para_dict=model_para_dict)
-            dir_run = dir_run + lambda_sharp_paras_str + '/'
-
-        elif model_id == 'VirtualRank':
-            virtual_rank_paras_str = get_virtual_rank_paras_str(virtual_rank_para_dict=model_para_dict)
-            dir_run = dir_run + virtual_rank_paras_str + '/'
-
-        elif model_id == 'MagicRank':
-            magic_rank_paras_str = get_magic_rank_paras_str(magic_rank_para_dict=model_para_dict)
-            dir_run = dir_run + magic_rank_paras_str + '/'
 
         eval_dict['dir_run'] = dir_run
         if not os.path.exists(dir_run):
@@ -513,30 +413,11 @@ class L2REvaluator():
         if model_id == 'WassRank':
             para_setting_str = get_wass_para_str(ot_para_dict=model_para_dict, log=True)
 
-        elif model_id == 'OTRank':
-            para_setting_str = get_ot_para_str(ot_para_dict=model_para_dict, log=True)
-
-        elif model_id == 'RankNet_Sharp':
-            para_setting_str = get_rnpp_para_str(rnpp_para_dict=model_para_dict, log=True)
-
         elif model_id == 'ApproxNDCG':
             para_setting_str = get_apxndcg_paras_str(model_para_dict=model_para_dict, log=True)
 
-        elif model_id == 'ApproxNDCG_Sharp':
-            para_setting_str = get_apxndcg_sharp_paras_str(model_para_dict=model_para_dict, log=True)
-
         elif model_id == 'LambdaRank':
             para_setting_str = get_lambda_para_str(lambda_para_dict=model_para_dict, log=True)
-
-        elif model_id == 'LambdaRank_Sharp':
-            para_setting_str = get_lambda_sharp_para_str(lambda_para_dict=model_para_dict, log=True)
-
-        elif model_id == 'VirtualRank':
-            para_setting_str = get_virtual_rank_paras_str(virtual_rank_para_dict=model_para_dict, log=True)
-
-        elif model_id == 'MagicRank':
-            para_setting_str = get_magic_rank_paras_str(magic_rank_para_dict=model_para_dict, log=True)
-
 
         else:
             para_setting_str = ''

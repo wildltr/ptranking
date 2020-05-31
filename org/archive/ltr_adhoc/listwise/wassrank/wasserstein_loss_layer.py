@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Created by Haitao Yu on 29/06/2018
 
 """Description
 

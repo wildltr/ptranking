@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Created by Hai-Tao Yu | 2020/03/16 | https://y-research.github.io
-
 """Description
 
 """
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+from org.archive.l2r_global import tensor, torch_one, torch_half, torch_zero
 
 #from torch.nn.init import kaiming_normal_ as nr_init
 from torch.nn.init import xavier_normal_ as nr_init
@@ -123,3 +124,43 @@ class ResidualBlock_FFNNs(nn.Module):
         res = self.AF(res)
 
         return res
+
+
+class Robust_Sigmoid(torch.autograd.Function):
+    ''' Aiming for a stable sigmoid operator with specified sigma '''
+
+    @staticmethod
+    def forward(ctx, input, sigma=1.0):
+        '''
+        :param ctx:
+        :param input: the input tensor
+        :param sigma: the scaling constant
+        :return:
+        '''
+        x = input if 1.0==sigma else sigma * input
+
+        sigmoid_x_pos = torch.where(input>0, 1./(1. + torch.exp(-x)), torch_half)
+
+        exp_x = torch.exp(x)
+        sigmoid_x = torch.where(input<0, exp_x/(1.+exp_x), sigmoid_x_pos)
+
+        grad = sigmoid_x * (1. - sigmoid_x) if 1.0==sigma else sigma * sigmoid_x * (1. - sigmoid_x)
+        ctx.save_for_backward(grad)
+
+        return sigmoid_x
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        '''
+        :param ctx:
+        :param grad_output: backpropagated gradients from upper module(s)
+        :return:
+        '''
+        grad = ctx.saved_tensors[0]
+
+        bg = grad_output * grad # chain rule
+
+        return bg, None
+
+#- function: robust_sigmoid-#
+robust_sigmoid = Robust_Sigmoid.apply

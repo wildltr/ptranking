@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Created by Hai-Tao Yu | 18/12/21 | https://y-research.github.io
 
 """Description
 
@@ -55,9 +54,9 @@ def np_softmax(xs):
 
 def np_plackett_luce_sampling(items, probs, softmaxed=False):
     '''
-    sample a ranking based on the Plackett-Luce model
+    sample a ltr_adhoc based on the Plackett-Luce model
     :param vec: a vector of values, the higher, the more possible the corresponding entry will be sampled
-    :return: the indice of the corresponding ranking
+    :return: the indice of the corresponding ltr_adhoc
     '''
     if softmaxed:
         ranking = np.random.choice(items, size=len(probs), p=probs, replace=False)

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Created by Hai-Tao Yu | 27/09/2018 | https://y-research.github.io
 
 """Description
 
@@ -170,13 +169,13 @@ if __name__ == '__main__':
     """
 
     ### The parameters that are commonly & explicitly specified ###
-    debug = False
+    debug = True
 
-    grid_search = True
+    grid_search = False
 
-    data_id = 'MSLRWEB10K'
+    #data_id = 'MSLRWEB10K'
     #data_id = 'MSLRWEB30K'
-    #data_id = 'MQ2007_Super'
+    data_id = 'MQ2007_Super'
     #data_id = 'MQ2007_list'
     #data_id = 'MQ2008_Semi'
 

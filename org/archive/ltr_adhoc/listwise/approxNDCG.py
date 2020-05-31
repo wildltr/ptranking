@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Created by Hai-Tao Yu | 26/09/2018 | https://y-research.github.io
 
 """Description
 
@@ -12,7 +11,7 @@ import torch
 from org.archive.base.ranker import NeuralRanker
 from org.archive.metric.adhoc_metric import torch_ideal_dcg
 
-from org.dl.virtual.indicator.virtual_indicator_family import robust_sigmoid
+from org.archive.base.base_utils import robust_sigmoid
 
 from org.archive.l2r_global import global_gpu as gpu
 

@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Created by Hai-Tao Yu | 19/05/07 | https://y-research.github.io
-
 """Description
 
 """
