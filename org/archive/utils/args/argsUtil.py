@@ -32,6 +32,8 @@ class ArgsUtil(object):
         '''model-specific'''
         self.args_parser.add_argument('-model', help='specify the learning-to-rank method')
 
+        self.args_parser.add_argument('-engine', help='specify the driving engine for LambdaMART, either XGBoost or LightGBM')
+
         """
         ''' train '''
         self.args_parser.add_argument('-num_epochs', type=int, default=100, help='the number of training epoches.')

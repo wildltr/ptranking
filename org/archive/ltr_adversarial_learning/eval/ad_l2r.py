@@ -332,8 +332,51 @@ class AdL2REvaluator(L2REvaluator):
             pickle_save(fold_k_vali_eval, file=self.dir_run + '_'.join([sy_prefix, id_str, 'vali_eval.np']))
 
 
-    def grid_run(self, model_id=None, data_dict=None, eval_dict=None):
+    def grid_run(self, model_id=None, data_id=None, dir_data=None, dir_output=None):
         ''' perform adversarial learning-to-rank based on grid search of optimal parameter setting '''
+
+        ''' common setting w.r.t. datasets & evaluation'''
+        debug = False
+
+        '''
+        It denotes how to make use of semi-supervised datasets
+        True:   Keep '-1' labels
+        False:  Convert '-1' as zero, use it as supervised dataset
+        '''
+
+        semi_context = False
+        if semi_context:
+            assert not data_id in data_utils.MSLETOR_SEMI
+            mask_ratio = 0.1
+            mask_type  = 'rand_mask_rele'
+        else:
+            mask_ratio = None
+            mask_type  = None
+
+        '''
+        For semi-data,
+        The settings of {unknown_as_zero & binary_rele } only take effects on the training data of MSLETOR_SEMI
+    
+        For supervised data, 
+        The setting of {binary_rele} takes effects on train, vali, test datasets.    
+        '''
+
+        unknown_as_zero = False #True if data_id in data_utils.MSLETOR_SEMI else False
+        presort = False # since it is not necessary
+
+        if data_id in data_utils.MSLETOR_SEMI:
+            binary_rele = True # it binarizes train, vali, test, say for a consistent comparison with irgan paper
+        else:
+            binary_rele = False
+
+        if binary_rele and data_id in data_utils.MSLETOR_SEMI:
+            unknown_as_zero = True # required for binarization
+
+        query_aware = False
+
+        data_dict = dict(data_id=data_id, dir_data=dir_data, unknown_as_zero=unknown_as_zero, binary_rele=binary_rele, presort=presort)
+        eval_dict = dict(debug=debug, grid_search=True, semi_context=semi_context, mask_ratio=mask_ratio, mask_type=mask_type, query_aware=query_aware, dir_output=dir_output)
+
 
         debug = eval_dict['debug']
         #query_aware = eval_dict['query_aware']

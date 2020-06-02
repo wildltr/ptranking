@@ -9,16 +9,21 @@
 from org.archive.utils.args.argsUtil import ArgsUtil
 
 from org.archive.ltr_adhoc.eval.l2r import L2REvaluator
+from org.archive.ltr_tree.lambdamart.lambdaMART import LambdaMARTEvaluator
+from org.archive.ltr_adversarial_learning.eval.ad_l2r import AdL2REvaluator
+
+
 """
 Example command line usage:
 
-python pt_ranking.py -data MQ2007_super -dir_data /home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/ -dir_output /home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/ -model ListMLE
+python pt_ranking.py -data MQ2007_Super -dir_data /home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/ -dir_output /home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/ -model ListMLE
 
 """
 
 if __name__ == '__main__':
+
     """
-                            >>> Learning-to-Rank Models <<<
+    >>> Learning-to-Rank Models <<<
     (1) Optimization based on Empirical Risk Minimization
     -----------------------------------------------------------------------------------------
     | Pointwise | RankMSE                                                                   |
@@ -44,7 +49,7 @@ if __name__ == '__main__':
     -----------------------------------------------------------------------------------------
     
 
-                            >>> Supported Datasets <<<
+    >>> Supported Datasets <<<
     -----------------------------------------------------------------------------------------
     | LETTOR    | MQ2007_Super %  MQ2008_Super %  MQ2007_Semi %  MQ2008_Semi                |
     -----------------------------------------------------------------------------------------
@@ -63,13 +68,18 @@ if __name__ == '__main__':
     l2r_args = args_obj.get_l2r_args()
 
     if 'IR_GAN' in l2r_args.model:
-        pass
-        #point_run(model=l2r_args.model, data=l2r_args.data_id, dir_data=l2r_args.dir_data, dir_output=l2r_args.dir_output, binary_rele=l2r_args.binary)
+
+        evaluator = AdL2REvaluator()
+        evaluator.default_run(model_id=l2r_args.model, data_id=l2r_args.data_id, dir_data=l2r_args.dir_data, dir_output=l2r_args.dir_output)
 
     elif 'LambdaMART' in l2r_args.model:
-        pass
+
+        evaluator = LambdaMARTEvaluator(engine=l2r_args.engine)
+
+        evaluator.default_run(l2r_args.data_id, dir_data=l2r_args.dir_data, dir_output=l2r_args.dir_output)
 
     elif '' == l2r_args.framework:
+
         evaluator = L2REvaluator()
         evaluator.default_run(model_id=l2r_args.model, data_id=l2r_args.data_id, dir_data=l2r_args.dir_data, dir_output=l2r_args.dir_output)
 

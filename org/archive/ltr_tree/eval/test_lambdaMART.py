@@ -6,32 +6,24 @@
 
 """
 
-import torch
-
 import numpy as np
 
 from org.archive.l2r_global import l2r_seed
-from org.archive.ltr_adversarial_learning.eval.ad_l2r import AdL2REvaluator
+from org.archive.ltr_tree.lambdamart.lambdaMART import LambdaMARTEvaluator
 
 np.random.seed(seed=l2r_seed)
-torch.manual_seed(seed=l2r_seed)
 
 
 if __name__ == '__main__':
 
     """
-    >>> Learning-to-Rank Models <<< 
+    >>> Learning-to-Rank Models <<<
     
-    (2) Adversarial Optimization
+    (3) Tree-based Model (provided by LightGBM & XGBoost)
     -----------------------------------------------------------------------------------------
-    | Pointwise | IR_GAN_Point                                                              |
-    -----------------------------------------------------------------------------------------
-    | Pairwise  | IR_GAN_Pair                                                               |
-    -----------------------------------------------------------------------------------------
-    | Listwise  | IR_GAN_List                                                               |
+    | LambdaMART(L)  % LambdaMART(X)                                                        |
     -----------------------------------------------------------------------------------------
     
-
     >>> Supported Datasets <<<
     -----------------------------------------------------------------------------------------
     | LETTOR    | MQ2007_Super %  MQ2008_Super %  MQ2007_Semi %  MQ2008_Semi                |
@@ -42,17 +34,15 @@ if __name__ == '__main__':
     -----------------------------------------------------------------------------------------
     | ISTELLA_L2R | Istella_S | Istella | Istella_X                                         |
     -----------------------------------------------------------------------------------------
-    | IRGAN_Adhoc_Semi                                                                      |
-    -----------------------------------------------------------------------------------------
-
+    
     """
 
     ''' selected dataset '''
-    data_id = 'MQ2007_Super'
+    data_id = 'MQ2008_Super'
 
     ''' location of the adopted data '''
     #dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2007/'
-    dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
+    dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
 
     ''' output directory '''
     #dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/'
@@ -61,16 +51,10 @@ if __name__ == '__main__':
     '''
     with grid_search(), we can (1) test different models in one run; (2) test the hyper-parameters of a specific model in one run
     '''
-    grid_search = True
 
-    evaluator = AdL2REvaluator()
+    #engine = 'XGBoost'
+    engine = 'LightGBM'
 
-    if grid_search:
-        to_run_models = ['IR_GAN_Pair', 'IR_GAN_Point']
+    evaluator = LambdaMARTEvaluator(engine=engine)
 
-        for model_id in to_run_models:
-            evaluator.grid_run(model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output)
-
-    else:
-        model_id = 'IR_GAN_Point'
-        evaluator.default_run(model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output)
+    evaluator.default_run(data_id=data_id, dir_data=dir_data, dir_output=dir_output)

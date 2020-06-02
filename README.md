@@ -4,11 +4,11 @@ This open-source project, referred to as **PT-Ranking** (Learning to Rank in PyT
 
 PT-Ranking offers deep neural networks as the basis to construct a scoring function based on PyTorch and can thus fully leverage the advantages of PyTorch. 
 NeuralRanker is a class that represents a general learning-to-rank model. 
-A key component of NeuralRanker is the neural scoring function $f$. The configurable hyper-parameters include activation function, number of layers, number of neurons per layer, etc. 
-All specific learning-to-rank models inherit NeuralRanker and mainly differ in the way of computing the training loss $\mathcal{R}$.
+A key component of NeuralRanker is the neural scoring function. The configurable hyper-parameters include activation function, number of layers, number of neurons per layer, etc. 
+All specific learning-to-rank models inherit NeuralRanker and mainly differ in the way of computing the training loss.
  The following figure shows the main step in developing a new learning-to-rank model based on Empirical Risk Minimization, 
- where batch\_preds and batch\_stds correspond to outputs of the scoring function and ground-truth lables, respectively. 
- We can observe that the main work is to define the surrogate loss functions $\mathcal{R}$.
+ where batch_preds and batch_stds correspond to outputs of the scoring function and ground-truth lables, respectively. 
+ We can observe that the main work is to define the surrogate loss function.
 
 ![NewLoss](./img/new_loss.png)
 
@@ -17,7 +17,7 @@ All specific learning-to-rank models inherit NeuralRanker and mainly differ in t
 - Optimization based on Empirical Risk Minimization
 
 | |Model|
-|----|----|
+|:----|:----|
 | Pointwise | RankMSE |
 | Pairwise  | RankNet |
 | Listwise  | LambdaRank ・ ListNet ・ ListMLE ・ RankCosine ・  ApproxNDCG ・  WassRank ・ STListNet | 
@@ -25,7 +25,7 @@ All specific learning-to-rank models inherit NeuralRanker and mainly differ in t
 - Adversarial Optimization
 
 | |Model|
-|----|----|
+|:----|:----|
 | Pointwise | IR_GAN_Point |
 | Pairwise  | IR_GAN_Pair |
 | Listwise  | IR_GAN_List |
@@ -33,7 +33,7 @@ All specific learning-to-rank models inherit NeuralRanker and mainly differ in t
 - Tree-based Model (provided by LightGBM & XGBoost)
 
 | |Model|
-|----|----|
+|:----|:----|
 | Listwise | LambdaMART(L)  ・ LambdaMART(X) |
 
 ### References

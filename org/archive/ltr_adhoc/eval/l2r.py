@@ -693,6 +693,7 @@ class L2REvaluator():
 
         return sf_para_dict
 
+
     def default_run(self, model_id=None, data_id=None, dir_data=None, dir_output=None):
         '''
         :param model_id:
@@ -713,8 +714,32 @@ class L2REvaluator():
 
 
 
-    def grid_run(self, model_id=None, data_dict=None, eval_dict=None):
+    def grid_run(self, model_id=None, data_id=None, dir_data=None, dir_output=None):
         ''' Perform learning-to-rank based on grid search of optimal parameter setting '''
+
+        ''' common setting w.r.t. datasets & evaluation'''
+        debug = False
+
+        query_aware = False
+
+        # testing the effect of partially masking ground-truth labels with a specified ratio
+        semi_context = False
+        if semi_context:
+            assert not data_id in data_utils.MSLETOR_SEMI
+            mask_ratio = 0.5
+            mask_type  = 'rand_mask_rele'
+        else:
+            mask_ratio = None
+            mask_type  = None
+
+        unknown_as_zero = True if data_id in data_utils.MSLETOR_SEMI else False
+        binary_rele     = True if data_id in data_utils.MSLETOR_SEMI else False
+
+        presort = True # a default setting
+
+        data_dict = dict(data_id=data_id, dir_data=dir_data, unknown_as_zero=unknown_as_zero, binary_rele=binary_rele, presort=presort)
+
+        eval_dict = dict(debug=debug, grid_search=True, query_aware=query_aware, dir_output=dir_output, semi_context=semi_context, mask_ratio=mask_ratio, mask_type=mask_type)
 
         debug = eval_dict['debug']
         query_aware = eval_dict['query_aware']
