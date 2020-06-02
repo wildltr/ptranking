@@ -663,7 +663,7 @@ class L2REvaluator():
 
         # more evaluation settings that are rarely changed
         eval_dict.update(dict(cutoffs=[1, 3, 5, 10, 20], do_vali=do_vali, vali_k=5, do_summary=do_summary,
-                              do_log=do_log, log_step=log_step, loss_guided=False, epochs=10))
+                              do_log=do_log, log_step=log_step, loss_guided=False, epochs=50))
 
         return data_dict, eval_dict
 

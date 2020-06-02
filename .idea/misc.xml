@@ -3,5 +3,5 @@
   <component name="PreferredVcsStorage">
     <preferredVcsName>ApexVCS</preferredVcsName>
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.7 (pytorch13)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.7 (pytorch11)" project-jdk-type="Python SDK" />
 </project>

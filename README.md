@@ -111,9 +111,9 @@ This functionality is required when using the implementation of LambdaMART provi
 
 # Demo Scripts
 
-- JupyterLab Documentation
+- [Jupyter Notebook example with RankNet](./demo/pt_ranking_default_ltr.ipynb)
 
-- Colab Notebook
+
 
 # Test Setting
 
