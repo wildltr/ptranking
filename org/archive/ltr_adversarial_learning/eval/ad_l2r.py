@@ -21,18 +21,6 @@ from org.archive.ltr_adversarial_learning.pointwise.point_ir_gan import Point_IR
 from org.archive.ltr_adversarial_learning.pairwise.pair_ir_gan   import Pair_IR_GAN, get_pair_irgan_paras_str
 from org.archive.ltr_adversarial_learning.listwise.list_ir_gan   import List_IR_GAN, get_list_irgan_paras_str
 
-from org.archive.ltr_adversarial_learning.pointwise.point_ir_wgan import Point_IR_WGAN
-from org.archive.ltr_adversarial_learning.pairwise.pair_ir_wgan   import Pair_IR_WGAN
-from org.archive.ltr_adversarial_learning.listwise.list_ir_wgan   import List_IR_WGAN
-
-from org.archive.ltr_adversarial_learning.pointwise.point_ir_fgan import Point_IR_FGAN
-from org.archive.ltr_adversarial_learning.pairwise.pair_ir_fgan   import Pair_IR_FGAN
-from org.archive.ltr_adversarial_learning.listwise.list_ir_fgan   import List_IR_FGAN
-
-from org.archive.ltr_adversarial_learning.listwise.list_ir_gman import List_IR_GMAN
-
-from org.archive.ltr_adversarial_learning.pointwise.point_ir_swgan import Point_IR_SW_GAN
-
 from org.archive.l2r_global import global_gpu as gpu
 from org.archive.ltr_adhoc.eval.l2r import L2REvaluator
 from org.archive.ltr_adhoc.eval.grid_utils import sf_grid
@@ -126,42 +114,6 @@ class AdL2REvaluator(L2REvaluator):
                                      ad_training_order=ad_para_dict['ad_training_order'], PL=ad_para_dict['PL'],
                                      shuffle_ties=ad_para_dict['shuffle_ties'],  repTrick=ad_para_dict['repTrick'],
                                      dropLog=ad_para_dict['dropLog'])
-
-        elif model_id == 'IR_GMAN_List':
-            ad_machine = List_IR_GMAN(sf_para_dict=sf_para_dict, temperature=ad_para_dict['temperature'],
-                                     d_epoches=ad_para_dict['d_epoches'], g_epoches=ad_para_dict['g_epoches'],
-                                     samples_per_query=ad_para_dict['samples_per_query'], top_k=ad_para_dict['top_k'],
-                                     ad_training_order=ad_para_dict['ad_training_order'], PL=ad_para_dict['PL'],
-                                     shuffle_ties=ad_para_dict['shuffle_ties'],  repTrick=ad_para_dict['repTrick'],
-                                     dropLog=ad_para_dict['dropLog'])
-
-
-        elif model_id == 'IR_WGAN_Point':
-            ad_machine = Point_IR_WGAN(sf_para_dict=sf_para_dict, temperature=ad_para_dict['temperature'],
-                                      d_epoches=ad_para_dict['d_epoches'], g_epoches=ad_para_dict['g_epoches'],
-                                      ad_training_order=ad_para_dict['ad_training_order'])
-
-        elif model_id == 'IR_WGAN_Pair':
-            ad_machine = Pair_IR_WGAN(rf_para_dict=sf_para_dict)
-
-        elif model_id == 'IR_WGAN_List':
-            ad_machine = List_IR_WGAN(sf_para_dict=sf_para_dict, temperature=ad_para_dict['temperature'],
-                                     d_epoches=ad_para_dict['d_epoches'], g_epoches=ad_para_dict['g_epoches'],
-                                     samples_per_query=ad_para_dict['samples_per_query'], top_k=ad_para_dict['top_k'],
-                                     ad_training_order=ad_para_dict['ad_training_order'], PL=ad_para_dict['PL'],
-                                     shuffle_ties=ad_para_dict['shuffle_ties'])
-
-        elif model_id == 'IR_FGAN_Point':
-            ad_machine = Point_IR_FGAN(sf_para_dict=sf_para_dict)
-        elif model_id == 'IR_FGAN_Pair':
-            ad_machine = Pair_IR_FGAN(sf_para_dict=sf_para_dict)
-        elif model_id == 'IR_FGAN_List':
-            ad_machine = List_IR_FGAN(sf_para_dict=sf_para_dict)
-
-        elif model_id == 'IR_SWGAN_Point':
-            ad_machine = Point_IR_SW_GAN(sf_para_dict=sf_para_dict, temperature=ad_para_dict['temperature'],
-                                      d_epoches=ad_para_dict['d_epoches'], g_epoches=ad_para_dict['g_epoches'],
-                                      ad_training_order=ad_para_dict['ad_training_order'])
 
         else:
             raise NotImplementedError
@@ -517,48 +469,90 @@ class AdL2REvaluator(L2REvaluator):
                                 self.cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, ad_para_dict=ad_para_dict)
 
 
-    def point_run(self, model_id=None, data_dict=None, eval_dict=None):
+    @staticmethod
+    def get_default_dicts(model_id=None, data_id=None, dir_data=None, dir_output=None):
+        debug = False
+        grid_search = False
+
+        semi_context = False
+        if semi_context:
+            assert not data_id in data_utils.MSLETOR_SEMI
+            mask_ratio = 0.1
+            mask_type  = 'rand_mask_rele'
+        else:
+            mask_ratio = None
+            mask_type  = None
+
+        unknown_as_zero = False #True if data_id in data_utils.MSLETOR_SEMI else False
+        presort = False # since it is not necessary
+
+        if data_id in data_utils.MSLETOR_SEMI:
+            binary_rele = True # it binarizes train, vali, test, say for a consistent comparison with irgan paper
+        else:
+            binary_rele = False
+
+        if binary_rele and data_id in data_utils.MSLETOR_SEMI:
+            unknown_as_zero = True # required for binarization
+
+        query_aware = False
+
+        data_dict = dict(data_id=data_id, dir_data=dir_data, unknown_as_zero=unknown_as_zero, binary_rele=binary_rele, presort=presort, sample_rankings_per_q=1)
+
+        eval_dict = dict(debug=debug, grid_search=grid_search, semi_context=semi_context, mask_ratio=mask_ratio, mask_type=mask_type, query_aware=query_aware, dir_output=dir_output)
 
         debug = eval_dict['debug']
         do_log = True if eval_dict['debug'] else True
 
         epochs = 20 if debug else 100
 
-        scale_data, scaler_id, scaler_level = self.get_scaler_setting(data_id=data_dict['data_id'])
+        scale_data, scaler_id, scaler_level = L2REvaluator.get_scaler_setting(data_id=data_dict['data_id'])
 
-        #FBN = False if scale_data else True
         FBN = False # leads to error like batchnorm.py"
 
         # more data settings that are rarely changed
         data_dict.update(dict(max_docs='All', min_docs=10, min_rele=1, scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level))
-        #data_dict.update(dict(max_docs='All', min_docs=None, min_rele=None, scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level))
 
         # checking loss variation
         # do_vali, do_summary = False, True
         do_vali, do_summary = False, False
         #do_vali, do_summary = True, True
-        log_step = 1
+        log_step = 2
 
         # more evaluation settings that are rarely changed
         eval_dict.update(dict(cutoffs=[1, 3, 5, 10, 20], do_vali=do_vali, vali_k=5, do_summary=do_summary, do_log=do_log, log_step=log_step, loss_guided=False, epochs=epochs))
 
+        return data_dict, eval_dict
+
+
+    @staticmethod
+    def get_default_sf_para_dict(data_dict, eval_dict):
+        ##- setting w.r.t. the scoring function -##
+
+        FBN = False # leads to error like batchnorm.py"
         sf_para_dict = dict()
 
         if eval_dict['query_aware']:  # to be deprecated
-            pass
-
-        elif model_id.endswith('MDNs'):
-            pass
-
-        elif model_id.endswith('MCNs'):
-            pass
+            sf_para_dict['id'] = 'ScoringFunction_CAFFNNs'
+            # sf_para_dict['cnt_str'] = 'max_mean_var'
+            in_para_dict = dict(num_layers=3, HD_AF='CE', HN_AF='CE', TL_AF='CE', apply_tl_af=True, BN=True, RD=False,
+                                FBN=FBN)
+            # cnt_para_dict = dict(num_layers=3, HD_AF='R', HN_AF='R', TL_AF='R', apply_tl_af=True, BN=True, RD=False)
+            cnt_para_dict = None
+            com_para_dict = dict(num_layers=3, HD_AF='CE', HN_AF='CE', TL_AF='CE', apply_tl_af=True, BN=True, RD=False)
+            sf_para_dict['in_para_dict'] = in_para_dict
+            sf_para_dict['cnt_para_dict'] = cnt_para_dict
+            sf_para_dict['com_para_dict'] = com_para_dict
 
         else:
             sf_para_dict['id'] = 'ffnns'
-            ffnns_para_dict = dict(num_layers=5, HD_AF='R', HN_AF='R', TL_AF='S', apply_tl_af=True, BN=False, RD=False, FBN=FBN)
+            ffnns_para_dict = dict(num_layers=5, HD_AF='R', HN_AF='R', TL_AF='S', apply_tl_af=True,
+                                   BN=False, RD=False, FBN=FBN)
             sf_para_dict['ffnns'] = ffnns_para_dict
 
+        return sf_para_dict
 
+
+    def get_default_para_dict(self, model_id):
         temperature = 0.2
         d_epoches, g_epoches = 1, 1
         ad_training_order = 'DG'
@@ -572,8 +566,17 @@ class AdL2REvaluator(L2REvaluator):
             ad_para_dict = dict(model_id=model_id, d_epoches=d_epoches, g_epoches=g_epoches,
                                 temperature=temperature, ad_training_order=ad_training_order, loss_type='svm')
 
-        if 'IR_GAN_Point' == model_id or 'IR_WGAN_Point' == model_id:
-            self.cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, ad_para_dict=ad_para_dict)
+        return ad_para_dict
 
-        else:
-            self.cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, ad_para_dict=ad_para_dict)
+
+
+    def default_run(self, model_id=None, data_id=None, dir_data=None, dir_output=None):
+
+        data_dict, eval_dict = AdL2REvaluator.get_default_dicts(data_id=data_id, dir_data=dir_data, dir_output=dir_output)
+
+        # model-specific parameter dict #
+        ad_para_dict = self.get_default_para_dict(model_id=model_id)
+
+        sf_para_dict = AdL2REvaluator.get_default_sf_para_dict(data_dict=data_dict, eval_dict=eval_dict)
+
+        self.cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, ad_para_dict=ad_para_dict)

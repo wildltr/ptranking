@@ -40,6 +40,37 @@ MSLRWEB       = ['MSLRWEB10K', 'MSLRWEB30K']
 YAHOO_L2R     = ['Set1', 'Set2']
 YAHOO_L2R_5Fold     = ['5FoldSet1', '5FoldSet2']
 
+ISTELLA_L2R   = ['Istella_S', 'Istella', 'Istella_X']
+
+GLTR_LIBSVM = ['LTR_LibSVM', 'LTR_LibSVM_K']
+GLTR_LETOR  = ['LETOR', 'LETOR_K']
+
+"""
+GLTR refers to General Learning-to-rank, thus
+GLTR_LIBSVM and GLTR_LETOR refer to general learning-to-rank datasets given in the formats of libsvm and LETOR, respectively.
+
+The suffix '_K' indicates that the dataset consists of K folds in order to perform k-fold cross validation.
+
+For GLTR_LIBSVM, it is defined as follows, where features with zero values are not included.
+<ground-truth label int> qid:<query_id int> [<feature_id int>:<feature_value float>]
+
+For example:
+
+4 qid:105 2:0.4 8:0.7 50:0.5
+1 qid:105 5:0.5 30:0.7 32:0.4 48:0.53
+0 qid:210 4:0.9 38:0.01 39:0.5 45:0.7
+1 qid:210 1:0.2 8:0.9 31:0.93 40:0.6
+
+The above sample dataset includes two queries, the query “105” has 2 documents, the corresponding ground-truth labels are 4 and 1, respectively.
+
+For GLTR_LETOR, it is defined as follows, where features with zero values are still included and the number of features per row must be the same.
+<ground-truth label int> qid:<query_id int> [<feature_id int>:<feature_value float>]
+
+4 qid:105 1:0.4 2:0.7  3:0.5
+1 qid:105 1:0.5 2:0.7  3:0.4
+0 qid:210 1:0.9 2:0.01 3:0.5
+1 qid:210 1:0.2 2:0.9  3:0.93
+"""
 
 def get_data_meta(data_id=None):
     ## query-document pair graded, [0-4] ##
@@ -92,13 +123,18 @@ def get_data_meta(data_id=None):
         has_comment = False
         fold_num = 5
 
+    elif data_id in ISTELLA_L2R:
+        max_rele_level = 4
+        multi_level_rele = True
+        num_features = 220  # libsvm format, rather than uniform number
+        has_comment = False
+        fold_num = 1
+
     else:
         raise NotImplementedError
 
     data_meta = dict(num_features=num_features, has_comment=has_comment, multi_level_rele=multi_level_rele, max_rele_level=max_rele_level, fold_num=fold_num)
     return data_meta
-
-
 
 
 def enrich(x, num_features=None):
@@ -113,8 +149,6 @@ def enrich(x, num_features=None):
     return ' '.join(enriched_feats)
 
 
-
-
 class L2RDataLoader():
     """
     The data loader for learning-to-rank datasets
@@ -127,10 +161,15 @@ class L2RDataLoader():
         self.buffer = buffer
 
         self.data_id   = data_dict['data_id']
+
+        assert self.data_id in MSLETOR or self.data_id in MSLRWEB \
+               or self.data_id in YAHOO_L2R or self.data_id in YAHOO_L2R_5Fold \
+               or self.data_id in ISTELLA_L2R
+
         self.data_dict = data_dict
         self.pre_check()
 
-        if self.data_id in YAHOO_L2R:
+        if self.data_id in YAHOO_L2R or self.data_id in ISTELLA_L2R:
             self.df_file = file[:file.find('.txt')].replace(self.data_id.lower() + '.', 'Buffered' + self.data_id + '/') + '.df'  # the original data file buffer as a dataframe
         else:
             self.df_file = file[:file.find('.txt')].replace('Fold', 'BufferedFold') + '.df' # the original data file buffer as a dataframe
@@ -217,6 +256,8 @@ class L2RDataLoader():
             self.num_features = 136
         elif self.data_id in YAHOO_L2R or self.data_id in YAHOO_L2R_5Fold:
             self.num_features = 700
+        elif self.data_id in ISTELLA_L2R:
+            self.num_features = 220
 
         if os.path.exists(self.perquery_file):
             list_Qs = pickle_load(self.perquery_file)
@@ -293,6 +334,10 @@ class L2RDataLoader():
                 self.df = self.load_MSLRWEB()
             elif self.data_id in YAHOO_L2R or self.data_id in YAHOO_L2R_5Fold:
                 self.df = self.load_YahooL2R()
+            elif self.data_id in ISTELLA_L2R:
+                self.df = self.load_ISTELLA()
+            else:
+                raise NotImplementedError
 
             if self.buffer:
                 parent_dir = Path(self.df_file).parent
@@ -375,6 +420,30 @@ class L2RDataLoader():
 
         return df
 
+    def load_ISTELLA(self):
+        '''  '''
+        df = pd.read_csv(self.file, header=None, lineterminator='\n', names=['all_in_one'])
+
+        df['all_in_one'] = df.all_in_one.str.strip()
+
+        df[['rele_truth', 'qid'] + self.feature_cols] = df.all_in_one.str.split(' ', n=222, expand=True)
+        df.drop(columns=['all_in_one'], inplace=True)  # remove the original column of all_in_one
+
+        #print(len(df.columns))
+        assert self.num_features == len(df.columns) - 2
+
+        for c in range(1, len(df.columns)):           # remove the keys per column from key:value
+            df.iloc[:, c] = df.iloc[:, c].apply(lambda x: x.split(":")[1])
+
+        #df.columns = ['rele_truth', 'qid'] + self.feature_cols
+
+        for c in ['rele_truth'] + self.feature_cols:
+            df[c] = df[c].astype(np.float32)
+
+        df['rele_binary'] = (df['rele_truth'] > 0).astype(np.float32)     # additional binarized column for later filtering
+
+        return df
+
 
     def load_YahooL2R(self):
         '''  '''
@@ -405,6 +474,8 @@ class L2RDataLoader():
         return df
 
 
+
+
     def ini_scaler(self, joint_transform=False):
         assert self.scaler_id in SCALER_ID
         if self.scaler_id == 'MinMaxScaler':
@@ -426,7 +497,8 @@ class L2RDataLoader():
         filter out dumb queries
         '''
         if self.data_id in MSLETOR_SUPER or self.data_id in MSLRWEB\
-                or self.data_id in YAHOO_L2R or self.data_id in YAHOO_L2R_5Fold:
+                or self.data_id in YAHOO_L2R or self.data_id in YAHOO_L2R_5Fold\
+                or self.data_id in ISTELLA_L2R:
 
             if self.min_rele > 0: self.df = self.df.groupby('qid').filter(lambda s: s.rele_binary.sum() >= self.min_rele)
             #print(self.df.shape)
@@ -861,10 +933,6 @@ def convert_yahoo_into_5folds(data_id):
 
     wr5.flush()
     wr5.close()
-
-
-
-
 
 
 

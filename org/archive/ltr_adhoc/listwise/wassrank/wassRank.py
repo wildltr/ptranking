@@ -6,65 +6,19 @@
 
 """
 
-import ot
+#import ot
 import numpy as np
 from itertools import product
 
 import torch
 
 from org.archive.base.ranker import NeuralRanker
-from org.archive.ltr_adhoc.listwise.wassrank.wasserstein_loss_layer import Y_WassersteinLossStab
+from org.archive.ltr_adhoc.listwise.wassrank.wasserstein_loss_layer import Y_WassersteinLossStab, EntropicOTLoss
 from org.archive.ltr_adhoc.listwise.wassrank.wasserstein_cost_mat import get_explicit_cost_mat, get_normalized_histograms
 
 from org.archive.l2r_global import global_gpu as gpu, global_device as device, tensor
 
 wasserstein_distance = Y_WassersteinLossStab.apply
-
-class _EMD_OP(torch.autograd.Function):
-    """ Aiming at mannual gradient computation """
-
-    @staticmethod
-    def forward(ctx, batch_pred_hists, batch_std_hists, batch_cost_mats):
-        #print(batch_pred_hists.type())
-        pred_hists = torch.squeeze(batch_pred_hists)*100.
-        std_hists  = torch.squeeze(batch_std_hists)*100.
-        cost_mat   = torch.squeeze(batch_cost_mats)/100.
-
-        np_pred_hists = pred_hists.cpu().numpy() if gpu else pred_hists.data.numpy()
-        np_std_hists  = std_hists.cpu().numpy() if gpu else std_hists.data.numpy()
-        np_cost_mat   = cost_mat.cpu().numpy() if gpu else cost_mat.data.numpy()
-        #print(np_pred_hists.dtype)
-
-        print('np_pred_hists', np_pred_hists)
-        print('np_std_hists',  np_std_hists)
-        print('np_cost_mat', np_cost_mat)
-        pi = ot.emd(a=np_pred_hists, b=np_std_hists, M=np_cost_mat)
-        print('pi', pi)
-
-        emd = np.sum(pi * np_cost_mat)
-
-        batch_loss = torch.tensor([emd]).to(device) if gpu else torch.tensor([emd])
-        print(batch_loss)
-
-        # mannual gradients
-        pi[pi >= 1e-8] = 1.0
-        pi[pi < 1e-8]  = 0.0
-
-        grads = np.sum(pi * np_cost_mat, axis=1)
-        torch_grads = torch.tensor(grads).to(device) if gpu else torch.tensor(grads)
-        batch_grad = torch_grads.view(batch_pred_hists.size())
-
-        ctx.save_for_backward(batch_grad)
-
-        return batch_loss
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        batch_grad = ctx.saved_tensors[0]
-        target_gradients = grad_output*batch_grad
-        # it is a must that keeping the same number w.r.t. the input of forward function
-        return target_gradients, None, None
-
 
 class WassRank(NeuralRanker):
     '''
@@ -113,8 +67,6 @@ class WassRank(NeuralRanker):
         else:
             raise NotImplementedError
         #'''
-
-        #batch_loss = apply_EMD_OP(batch_pred_hists, batch_std_hists, batch_cost_mats)
 
         self.optimizer.zero_grad()
         batch_loss.backward()
@@ -192,8 +144,9 @@ def get_wass_para_str(ot_para_dict, log=False):
     return wass_paras_str
 
 
-def get_wsdm2019_para_dict(model_id=None):
-    w_para_dict = dict(model_id=model_id, mode='EOTLossSta',
+def get_default_wass_para_dict(model_id=None):
+    w_para_dict = dict(model_id=model_id,
+                       mode='EOTLossSta',
                        sh_itr=20, lam=0.1,
                        smooth_type='ST', norm_type='BothST',
                        cost_type='eg', non_rele_gap=100, var_penalty=np.e, gain_base=4)

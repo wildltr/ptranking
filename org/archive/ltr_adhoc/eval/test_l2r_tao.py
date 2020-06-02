@@ -223,4 +223,4 @@ if __name__ == '__main__':
         to_run_models = ['RankNet'] #
         #to_run_models = ['ListNet']
         for model_id in to_run_models:
-            evaluator.point_run(model_id=model_id, data_dict=data_dict, eval_dict=eval_dict)
+            evaluator.default_run(model_id=model_id, data_id=data_id, dir_data=data_dict['dir_data'], dir_output=data_dict['dir_output'])

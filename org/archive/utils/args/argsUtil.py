@@ -10,27 +10,31 @@ import argparse
 
 class ArgsUtil(object):
     def __init__(self, given_root=None):
-        self.args_parser = argparse.ArgumentParser('Run ptl2r.')
+        self.args_parser = argparse.ArgumentParser('Run pt_ranking.')
         self.ini_l2r_args(given_root=given_root)
 
     def ini_l2r_args(self, given_root=None):
         self.given_root = given_root
 
         self.args_parser.add_argument('-gpu', action='store_true', help='using gpu device.')
-        self.args_parser.set_defaults(apply_tl_af=False)
+        self.args_parser.set_defaults(apply_tl_af=True)
 
-        ''' framework '''
-        self.args_parser.add_argument('-framework', default='L2R', help='the specific learning-to-rank framework.')
+        #''' framework '''
+        #self.args_parser.add_argument('-framework', default='adhoc', help='the specific learning-to-rank framework: adhoc | adversarial | gbdt')
 
         ''' data '''
-        self.args_parser.add_argument('-data', help='the data collection upon which you will perform learning-to-rank.')
+        self.args_parser.add_argument('-data_id', help='the data collection upon which you will perform learning-to-rank.')
         self.args_parser.add_argument('-dir_data', help='the path where the data locates.')
 
         ''' output '''
         self.args_parser.add_argument('-dir_output', help='the output path of the results.')
 
+        '''model-specific'''
+        self.args_parser.add_argument('-model', help='specify the learning-to-rank method')
+
+        """
         ''' train '''
-        self.args_parser.add_argument('-num_epoches', type=int, default=100, help='the number of training epoches.')
+        self.args_parser.add_argument('-num_epochs', type=int, default=100, help='the number of training epoches.')
         self.args_parser.add_argument('-validation', action='store_false', help='perform validation.')
         self.args_parser.set_defaults(validation=True)
         self.args_parser.add_argument('-validation_k', type=int, default=10, help='the cutoff value for validation.')
@@ -46,13 +50,13 @@ class ArgsUtil(object):
         self.args_parser.add_argument('-apply_tl_af', action='store_false', help='perform activation for the final layer.')
         self.args_parser.set_defaults(apply_tl_af=True)
 
-        """ model-specific """
-        self.args_parser.add_argument('-model', help='specify the learning-to-rank method')
+        
 
         ''' ApproxNDCG '''
         self.args_parser.add_argument('-approxNDCG_alpha', type=int, default=100, help='the alpha parameter of ApproxNDCG.')
 
         ''' WassRank '''
+        """
 
 
     def update_if_required(self, args):

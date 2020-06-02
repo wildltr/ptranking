@@ -7,6 +7,7 @@
 
 import torch
 
+from org.archive.data import data_utils
 from org.archive.metric.adhoc_metric import torch_nDCG_at_k, torch_nDCG_at_ks, EMD_at_k
 
 from org.archive.l2r_global import global_gpu as gpu, global_device as device
@@ -119,6 +120,7 @@ def emd_at_k(ranker=None, test_Qs=None, k=10, TL_AF=None, multi_level_rele=True)
 
     avg_emd = sum_emd/cnt
     return avg_emd  # averaged value
+
 
 if __name__ == '__main__':
     #1 test idcg_std

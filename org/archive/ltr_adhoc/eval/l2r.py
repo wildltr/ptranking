@@ -54,8 +54,8 @@ class L2REvaluator():
         else:
            print(' '.join(['\nStart {} on {} for ltr_adhoc >>>'.format(model_para_dict['model_id'], data_dict['data_id'])]))
 
-
-    def get_scaler_setting(self, data_id, grid_search=False):
+    @staticmethod
+    def get_scaler_setting(data_id, grid_search=False):
         # todo-as-note: setting w.r.t. data-preprocess
         ''' According to {Introducing {LETOR} 4.0 Datasets}, "QueryLevelNorm version: Conduct query level normalization based on data in MIN version. This data can be directly used for learning. We further provide 5 fold partitions of this version for cross fold validation".
          --> Thus there is no need to perform query_level_scale again for {MQ2007_super | MQ2008_super | MQ2007_semi | MQ2008_semi}
@@ -153,57 +153,6 @@ class L2REvaluator():
 
         return train_data, test_data, vali_data
 
-
-    def get_scoring_function(self, sf_para_dict=None):
-        ''' Initialize the scoring function given the specified settings '''
-        num_features = sf_para_dict['num_features']
-
-        if 'ScoringFunction_CAFFNNs' == sf_para_dict['id']:
-            in_para_dict = sf_para_dict['in_para_dict']
-            cnt_para_dict = sf_para_dict['cnt_para_dict']
-            com_para_dict = sf_para_dict['com_para_dict']
-
-            in_para_dict['num_features'] = num_features
-            in_para_dict['out_dim'] = 100
-
-            #cnt = len(sf_para_dict['cnt_str'].split('_'))
-            #cnt_para_dict['num_features'] = num_features * cnt
-            if cnt_para_dict is not None:
-                cnt_para_dict['num_features'] = 100
-                cnt_para_dict['out_dim'] = 100
-
-            #com_para_dict['num_features'] = cnt_para_dict['out_dim']
-            if cnt_para_dict is not None:
-                com_para_dict['num_features'] = in_para_dict['out_dim'] + cnt_para_dict['out_dim']
-            else:
-                com_para_dict['num_features'] = in_para_dict['out_dim']*2
-
-            sf = ScoringFunction_CAFFNNs(in_para_dict=in_para_dict, cnt_para_dict=cnt_para_dict, com_para_dict=com_para_dict)
-            return sf
-
-        elif 'ScoringFunction_MDNs' == sf_para_dict['id']:
-            one_fits_all_dict = sf_para_dict['one_fits_all']
-            one_fits_all_dict['num_features'] = num_features
-            sf = ScoringFunction_MDNs(para_dict=one_fits_all_dict)
-            return sf
-
-        elif 'ScoringFunction_MCNs' == sf_para_dict['id']:
-            one_fits_all_dict = sf_para_dict['one_fits_all']
-            one_fits_all_dict['num_features'] = num_features
-            sf = ScoringFunction_MCNs(para_dict=one_fits_all_dict)
-            return sf
-
-        elif 'ScoringFunction_FFNNs' == sf_para_dict['id']:
-            one_fits_all_dict = sf_para_dict['one_fits_all']
-            one_fits_all_dict['num_features'] = num_features
-            sf = ScoringFunction_FFNNs(para_dict=one_fits_all_dict)
-
-            return sf
-        else:
-            raise NotImplementedError
-
-
-
     def ini_ranker(self, sf_para_dict, model_para_dict, **kwargs):
         ''' Initialize a ranker given the specified settings'''
         model_id = model_para_dict['model_id']
@@ -250,23 +199,6 @@ class L2REvaluator():
         model_id = model_para_dict['model_id']
         if model_id in ['WassRank', 'WassRankSP']:
             ranker = self.ini_ranker(sf_para_dict=sf_para_dict, model_para_dict=model_para_dict, dict_cost_mats=self.dict_cost_mats, dict_std_dists=self.dict_std_dists)
-
-        elif model_id == 'EMDRank':
-            ranker = self.ini_ranker(sf_para_dict=sf_para_dict, model_para_dict=model_para_dict)
-
-        elif model_id == 'KOTRank':
-            ranker = self.ini_ranker(sf_para_dict=sf_para_dict, model_para_dict=model_para_dict, dict_cost_mats=self.dict_cost_mats, dict_std_dists=self.dict_std_dists)
-
-        elif model_id == 'OTRank':
-            if (not eval_dict['grid_search']): dict_std_dists = dict()
-            model_para_dict['max_rele_level'] = data_dict['max_rele_level']
-
-            ranker = self.ini_ranker(sf_para_dict=sf_para_dict, model_para_dict=model_para_dict, dict_std_dists=dict_std_dists)
-
-        elif model_id == 'RankNet_Sharp':
-            model_para_dict['max_rele_level'] = data_dict['max_rele_level']
-
-            ranker = self.ini_ranker(sf_para_dict=sf_para_dict, model_para_dict=model_para_dict)
 
         else:
             ranker = self.ini_ranker(sf_para_dict=sf_para_dict, model_para_dict=model_para_dict)
@@ -391,6 +323,11 @@ class L2REvaluator():
         self.data_dict = data_dict
         self.eval_dict = eval_dict
 
+        if sf_para_dict['id'] == 'ffnns':
+            sf_para_dict['ffnns'].update(dict(num_features=data_dict['num_features']))
+        else:
+            raise NotImplementedError
+
         self.dir_run  = self.setup_output(data_dict, eval_dict, sf_para_dict, model_para_dict)
 
         # for quick access of common evaluation settings
@@ -460,19 +397,6 @@ class L2REvaluator():
             for qid, batch_rankings, batch_stds in train_data: # _, [batch, ranking_size, num_features], [batch, ranking_size]
                 if gpu: batch_rankings, batch_stds = batch_rankings.to(device), batch_stds.to(device)
 
-                '''
-                if self.permutation_train:
-                    batch_size   = batch_stds.size(0)
-                    ranking_size = batch_stds.size(1)
-    
-                    pos_reles    = (torch.arange(ranking_size) + 1.0).type(tensor)
-                    pos_reles, _ = torch.sort(pos_reles, descending=True)
-                    if 1 == batch_size:
-                        batch_stds = pos_reles.view(1, ranking_size)
-                    else:
-                        batch_stds = pos_reles.expand(batch_size, -1)
-                '''
-
                 if reranking:
                     # in case the standard labels of the initial retrieval are all zeros providing no optimization information. Meanwhile, some models (e.g., lambdaRank) may fail to train
                     if torch.nonzero(batch_stds).size(0) <= 0:
@@ -487,53 +411,6 @@ class L2REvaluator():
 
         return epoch_loss, stop_training
 
-
-    def load_query_context(self, eval_dict=None, cnt_str=None, train_data=None, test_data=None, vali_data=None):
-        """ for query-aware setting """
-
-        buffered_file = eval_dict['data_dir'] + 'Buffer/' + cnt_str + '.cnt'
-        if os.path.exists(buffered_file):
-            print('Loaded ', buffered_file)
-            self.dict_query_cnts = pickle_load(buffered_file)
-        else:
-            parent_dir = Path(buffered_file).parent
-            if not os.path.exists(parent_dir):
-                os.makedirs(parent_dir)
-
-            dict_query_cnts = dict()
-
-            for entry in train_data:
-                tor_batch_rankings, tor_batch_stds, qid = torch.squeeze(entry[0], dim=0), torch.squeeze(entry[1],
-                                                                                                        dim=0), \
-                                                          entry[2][0]  # remove the size 1 of dim=0 from loader itself
-                if gpu: tor_batch_rankings, tor_batch_stds = tor_batch_rankings.to(device), tor_batch_stds.to(device)
-                # print('tor_batch_rankings', tor_batch_rankings.size())
-                batch_cnts = distill_context(tor_batch_rankings, cnt_str=cnt_str)
-                dict_query_cnts[qid] = batch_cnts
-
-            for entry in test_data:
-                tor_batch_rankings, tor_batch_stds, qid = entry[0], torch.squeeze(entry[1], dim=0), entry[2][
-                    0]  # remove the size 1 of dim=0 from loader itself
-                if gpu: tor_batch_rankings, tor_batch_stds = tor_batch_rankings.to(device), tor_batch_stds.to(device)
-
-                # print('tor_batch_rankings', tor_batch_rankings.size())
-                batch_cnts = distill_context(tor_batch_rankings, cnt_str=cnt_str)
-                dict_query_cnts[qid] = batch_cnts
-
-            for entry in vali_data:
-                tor_batch_rankings, tor_batch_stds, qid = entry[0], torch.squeeze(entry[1], dim=0), entry[2][
-                    0]  # remove the size 1 of dim=0 from loader itself
-                if gpu: tor_batch_rankings, tor_batch_stds = tor_batch_rankings.to(device), tor_batch_stds.to(device)
-
-                batch_cnts = distill_context(tor_batch_rankings, cnt_str=cnt_str)
-                dict_query_cnts[qid] = batch_cnts
-
-            #
-            pickle_save(dict_query_cnts, file=buffered_file)
-
-            self.dict_query_cnts = dict_query_cnts
-
-
     def get_ndcg_at_k(self, ranker=None, test_data=None, k=None, batch_mode=True):
 
         return ndcg_at_k(ranker=ranker, test_data=test_data, k=k, multi_level_rele=self.data_dict['multi_level_rele'], batch_mode=batch_mode)
@@ -543,7 +420,7 @@ class L2REvaluator():
         return ndcg_at_ks(ranker=ranker, test_data=test_data, ks=ks, multi_level_rele=self.data_dict['multi_level_rele'], batch_mode=batch_mode)
 
 
-    def cv_eval(self, data_dict=None, eval_dict=None, sf_para_dict=None, model_para_dict=None):
+    def kfold_cv_eval(self, data_dict=None, eval_dict=None, sf_para_dict=None, model_para_dict=None):
         """
         Evaluation learning-to-rank methods via k-fold cross validation.
         :param data_dict:       settings w.r.t. data
@@ -557,11 +434,6 @@ class L2REvaluator():
         self.setup_eval(data_dict, eval_dict, sf_para_dict, model_para_dict)
 
         model_id = model_para_dict['model_id']
-
-        if sf_para_dict['id'] == 'ffnns':
-            sf_para_dict['ffnns'].update(dict(num_features=data_dict['num_features']))
-        else:
-            raise NotImplementedError
 
         ranker   = self.load_ranker(data_dict=data_dict, eval_dict=eval_dict, model_para_dict=model_para_dict, sf_para_dict=sf_para_dict)
 
@@ -676,6 +548,41 @@ class L2REvaluator():
 
         return l2r_cv_avg_scores
 
+    def basic_train(self, ranker, eval_dict, train_data=None, test_data=None, vali_data=None):
+        ranker.reset_parameters()  # reset with the same random initialization
+
+        assert train_data is not None
+        assert test_data  is not None
+
+        list_losses = []
+        list_train_ndcgs = []
+        list_test_ndcgs = []
+
+        epochs, cutoffs = eval_dict['epochs'], eval_dict['cutoffs']
+
+        for i in range(epochs):
+            epoch_loss = torch.zeros(1).to(device) if gpu else torch.zeros(1)
+            for qid, batch_rankings, batch_stds in train_data:
+                if gpu: batch_rankings, batch_stds = batch_rankings.to(device), batch_stds.to(device)
+                batch_loss, stop_training = ranker.train(batch_rankings, batch_stds, qid=qid)
+                epoch_loss += batch_loss.item()
+
+            np_epoch_loss = epoch_loss.cpu().numpy() if gpu else epoch_loss.data.numpy()
+            list_losses.append(np_epoch_loss)
+
+            test_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs, multi_level_rele=True)
+            np_test_ndcg_ks = test_ndcg_ks.data.numpy()
+            list_test_ndcgs.append(np_test_ndcg_ks)
+
+            train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs, multi_level_rele=True)
+            np_train_ndcg_ks = train_ndcg_ks.data.numpy()
+            list_train_ndcgs.append(np_train_ndcg_ks)
+
+        test_ndcgs = np.vstack(list_test_ndcgs)
+        train_ndcgs = np.vstack(list_train_ndcgs)
+
+        return list_losses, train_ndcgs, test_ndcgs
+
 
     def result_to_str(self, list_scores=None, list_cutoffs=None, split_str=', '):
         list_str = []
@@ -695,120 +602,115 @@ class L2REvaluator():
         return metric
 
 
-    def get_point_para_dict(self, model_id):
+    def get_default_para_dict(self, model_id):
         if model_id in ['WassRank', 'WassRankSP']: # EOTLossSta | WassLossSta ## p1 | p2 | eg | dg| ddg
             self.dict_cost_mats, self.dict_std_dists = dict(), dict()  # global buffering across a number of runs with different model parameters
             w_para_dict = dict(model_id=model_id, mode='WassLossSta', sh_itr=10, lam=0.1, cost_type='eg', smooth_type='ST',
                                norm_type='BothST', non_rele_gap=10, var_penalty=np.e, gain_base=4)
             return w_para_dict
 
-        elif model_id == 'OTRank':
-            ot_para_dict = dict(model_id=model_id, mode='EOTLossSta', sh_itr=50, lam=2, smooth_type='ST', norm_type='BothST', em_itr=5, clip_bound=1.0)
-            return ot_para_dict
-
-        elif model_id == 'KOTRank':
-            self.dict_cost_mats, self.dict_std_dists = dict(), dict()  # global buffering across a number of runs with different model parameters
-            kot_para_dict = dict(model_id=model_id, mode='WassLossSta', sh_itr=20, lam=10, cost_type='Group', smooth_type='ST',
-                                 norm_type='BothST', non_rele_gap=10, var_penalty=np.e, gain_base=2)
-            return kot_para_dict
-
-        elif model_id == 'RankNet_Sharp':
-            rnpp_para_dict = dict(model_id=model_id, pair="NoTies", sigma=1.0, boost=True, focal=False, gamma=2.0, em_label=True, com=False)
-            return rnpp_para_dict
-
         elif model_id == 'LambdaRank':
             lambda_para_dict = get_default_lambda_para_dict()
             return lambda_para_dict
-
-        elif model_id == 'LambdaRank_Sharp': # ['All', 'NoTies', 'No00']
-            lambda_sharp_para_dict = dict(model_id=model_id, sigma=1.0, pair="Inversion", focal=False, swap='sharpDelta')
-            return lambda_sharp_para_dict
 
         elif model_id == 'ApproxNDCG':
             apxNDCG_dict = dict(model_id=model_id, alpha=10)
             return apxNDCG_dict
 
-        elif model_id == 'ApproxNDCG_Sharp':
-            apxNDCG_sharp_dict = dict(model_id=model_id, alpha=50, k=None, fbsg=True)
-            return apxNDCG_sharp_dict
-
-        elif model_id.startswith('Virtual'):
-            metric = self.parse_virtual_rank_id(model_id)
-            virtual_rank_dict = default_virtual_rank_para_dict(metric=metric)
-            return virtual_rank_dict
-
-        elif model_id == "MagicRank":
-            magic_rank_dict = default_magic_rank_para_dict()
-            return magic_rank_dict
-
-        elif model_id == 'PointMCNs':
-            mode = 'EMD_dg'
-            if not mode in ['EMD_p1', 'EMD_p2', 'EMD_dg', 'EMD_ddg']: raise NotImplementedError
-
-            mcn_para_dict = dict(model_id=model_id, mode=mode)
-            return mcn_para_dict
-
         else:
             return dict(model_id=model_id)
 
+    @staticmethod
+    def get_default_dicts(data_id, dir_data=None, dir_output=None):
+        debug = False
+        grid_search = False
+        query_aware = False
 
-    def point_run(self, model_id=None, data_dict=None, eval_dict=None):
+        # testing the effect of partially masking ground-truth labels with a specified ratio
+        semi_context = False
+        if semi_context:
+            assert not data_id in data_utils.MSLETOR_SEMI
+            mask_ratio = 0.5
+            mask_type = 'rand_mask_rele'
+        else:
+            mask_ratio = None
+            mask_type = None
+
+        unknown_as_zero = True if data_id in data_utils.MSLETOR_SEMI else False
+
+        binary_rele = False  # using the original values
+        presort = True  # a default setting
+
+        data_dict = dict(data_id=data_id, dir_data=dir_data, unknown_as_zero=unknown_as_zero, binary_rele=binary_rele,
+                         presort=presort, sample_rankings_per_q=1)
+
+        eval_dict = dict(debug=debug, grid_search=grid_search, query_aware=query_aware, dir_output=dir_output,
+                         semi_context=semi_context, mask_ratio=mask_ratio, mask_type=mask_type)
+
         do_log = False if eval_dict['debug'] else True
 
-        scale_data, scaler_id, scaler_level = self.get_scaler_setting(data_id=data_dict['data_id'])
-
-        FBN = False if scale_data else True
+        scale_data, scaler_id, scaler_level = L2REvaluator.get_scaler_setting(data_id=data_dict['data_id'])
 
         # more data settings that are rarely changed
-        data_dict.update(dict(max_docs='All', min_docs=10, min_rele=1, scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level))
+        data_dict.update(dict(max_docs='All', min_docs=10, min_rele=1,
+                              scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level))
 
         # checking loss variation
         do_vali, do_summary = False, False
-        #do_vali, do_summary = True, False
-        #do_vali, do_summary = True, True
-        log_step = 1
+        # do_vali, do_summary = True, False
+        # do_vali, do_summary = True, True
+        log_step = 2
 
         # more evaluation settings that are rarely changed
         eval_dict.update(dict(cutoffs=[1, 3, 5, 10, 20], do_vali=do_vali, vali_k=5, do_summary=do_summary,
-                              do_log=do_log, log_step=log_step, loss_guided=False, epochs=100))
+                              do_log=do_log, log_step=log_step, loss_guided=False, epochs=10))
 
+        return data_dict, eval_dict
+
+    @staticmethod
+    def get_default_sf_para_dict(data_dict, eval_dict):
         ##- setting w.r.t. the scoring function -##
+        FBN = False if data_dict['scale_data'] else True
         sf_para_dict = dict()
 
-        if eval_dict['query_aware']: # to be deprecated
-            sf_para_dict['id']      = 'ScoringFunction_CAFFNNs'
-            #sf_para_dict['cnt_str'] = 'max_mean_var'
-            in_para_dict  = dict(num_layers=3, HD_AF='CE', HN_AF='CE', TL_AF='CE', apply_tl_af=True, BN=True, RD=False, FBN=FBN)
-            #cnt_para_dict = dict(num_layers=3, HD_AF='R', HN_AF='R', TL_AF='R', apply_tl_af=True, BN=True, RD=False)
+        if eval_dict['query_aware']:  # to be deprecated
+            sf_para_dict['id'] = 'ScoringFunction_CAFFNNs'
+            # sf_para_dict['cnt_str'] = 'max_mean_var'
+            in_para_dict = dict(num_layers=3, HD_AF='CE', HN_AF='CE', TL_AF='CE', apply_tl_af=True, BN=True, RD=False,
+                                FBN=FBN)
+            # cnt_para_dict = dict(num_layers=3, HD_AF='R', HN_AF='R', TL_AF='R', apply_tl_af=True, BN=True, RD=False)
             cnt_para_dict = None
             com_para_dict = dict(num_layers=3, HD_AF='CE', HN_AF='CE', TL_AF='CE', apply_tl_af=True, BN=True, RD=False)
             sf_para_dict['in_para_dict'] = in_para_dict
             sf_para_dict['cnt_para_dict'] = cnt_para_dict
             sf_para_dict['com_para_dict'] = com_para_dict
 
-        elif model_id.endswith('MDNs'):
-            sf_para_dict['id'] = 'ScoringFunction_MDNs' # ScoringFunction_MDNs
-            one_fits_all_dict    = dict(num_layers=3, HD_AF='R', HN_AF='R', TL_AF='', apply_tl_af=True, sep=False)
-            sf_para_dict['one_fits_all'] = one_fits_all_dict
-
-        elif model_id.endswith('MCNs'):
-            sorted_labels = self.get_sorted_labels(data_utils.get_data_meta(data_id=data_dict['data_id'])['max_rele_level']) # [2.0, 1.0, 0.0]
-            num_labels = len(sorted_labels)
-            data_dict.update(dict(sorted_labels=sorted_labels))
-
-            sf_para_dict['id'] = 'ScoringFunction_MCNs'  # either ScoringFunction_MDNs or ScoringFunction_QMDNs
-            one_fits_all_dict = dict(num_layers=3, HD_AF='R', HN_AF='S', TL_AF='ST', num_labels=num_labels)
-            sf_para_dict['one_fits_all'] = one_fits_all_dict
-
         else:
             sf_para_dict['id'] = 'ffnns'
-            #one_fits_all_dict = dict(num_layers=5, HD_AF='CE', HN_AF='CE', TL_AF='CE', apply_tl_af=True, BN=True, RD=False, FBN=FBN)
-            ffnns_para_dict = dict(num_layers=5, HD_AF='S', HN_AF='S', TL_AF='S', apply_tl_af=True, BN=True, RD=False, FBN=FBN)
+            ffnns_para_dict = dict(num_layers=5, HD_AF='R', HN_AF='R', TL_AF='S', apply_tl_af=True,
+                                   BN=True, RD=False, FBN=FBN)
             sf_para_dict['ffnns'] = ffnns_para_dict
 
+        return sf_para_dict
+
+    def default_run(self, model_id=None, data_id=None, dir_data=None, dir_output=None):
+        '''
+        :param model_id:
+        :param data_id:
+        :param dir_data:
+        :param dir_output:
+        :return:
+        '''
+
+        data_dict, eval_dict = L2REvaluator.get_default_dicts(data_id=data_id, dir_data=dir_data, dir_output=dir_output)
+
         # model-specific parameter dict #
-        model_para_dict = self.get_point_para_dict(model_id=model_id)
-        self.cv_eval(data_dict=data_dict, eval_dict=eval_dict, model_para_dict=model_para_dict, sf_para_dict=sf_para_dict)
+        model_para_dict = self.get_default_para_dict(model_id=model_id)
+
+        sf_para_dict = L2REvaluator.get_default_sf_para_dict(data_dict=data_dict, eval_dict=eval_dict)
+
+        self.kfold_cv_eval(data_dict=data_dict, eval_dict=eval_dict, model_para_dict=model_para_dict, sf_para_dict=sf_para_dict)
+
 
 
     def grid_run(self, model_id=None, data_dict=None, eval_dict=None):
@@ -915,51 +817,29 @@ class L2REvaluator():
 
                     if model_id == 'WassRank':
                         for w_para_dict in wassrank_para_iterator():
-                            curr_cv_avg_scores = self.cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, model_para_dict=w_para_dict)
+                            curr_cv_avg_scores = self.kfold_cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, model_para_dict=w_para_dict)
 
                             if curr_cv_avg_scores[k_index] > max_cv_avg_scores[k_index]:
                                 max_cv_avg_scores, max_sf_para_dict, max_eval_dict, max_model_para_dict, = curr_cv_avg_scores, sf_para_dict, eval_dict, w_para_dict
 
-                    elif model_id == 'OTRank':
-                        for ot_para_dict in otrank_para_iterator(debug):
-                            curr_cv_avg_scores = self.cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, model_para_dict=ot_para_dict)
-
-                            if curr_cv_avg_scores[k_index] > max_cv_avg_scores[k_index]:
-                                max_cv_avg_scores, max_sf_para_dict, max_eval_dict, max_model_para_dict = curr_cv_avg_scores, sf_para_dict, eval_dict, ot_para_dict
-
                     elif model_id == 'ApproxNDCG':
                         for alpha in apxNDCG_choice_alpha:
                             apxNDCG_dict = dict(model_id='ApproxNDCG', alpha=alpha)
-                            curr_cv_avg_scores = self.cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, model_para_dict=apxNDCG_dict)
+                            curr_cv_avg_scores = self.kfold_cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, model_para_dict=apxNDCG_dict)
 
                             if curr_cv_avg_scores[k_index] > max_cv_avg_scores[k_index]:
                                 max_cv_avg_scores, max_sf_para_dict, max_eval_dict, max_model_para_dict = curr_cv_avg_scores, sf_para_dict, eval_dict, apxNDCG_dict
 
-                    elif model_id == 'RankNet_Sharp':
-                        for rnpp_para_dict in rtpplus_para_iterator(debug):
-                            curr_cv_avg_scores = self.cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, model_para_dict=rnpp_para_dict)
-
-                            if curr_cv_avg_scores[k_index] > max_cv_avg_scores[k_index]:
-                                max_cv_avg_scores, max_sf_para_dict, max_eval_dict, max_model_para_dict = curr_cv_avg_scores, sf_para_dict, eval_dict, rnpp_para_dict
-
                     elif model_id == 'LambdaRank':
                         for lambda_para_dict in lambda_para_iterator(debug):
-                            curr_cv_avg_scores = self.cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, model_para_dict=lambda_para_dict)
+                            curr_cv_avg_scores = self.kfold_cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, model_para_dict=lambda_para_dict)
 
                             if curr_cv_avg_scores[k_index] > max_cv_avg_scores[k_index]:
                                 max_cv_avg_scores, max_sf_para_dict, max_eval_dict, max_model_para_dict = curr_cv_avg_scores, sf_para_dict, eval_dict, lambda_para_dict
 
-                    elif model_id.startswith('Virtual'):
-                        metric = self.parse_virtual_rank_id(model_id)
-                        for virtual_rank_para_dict in virtual_rank_para_iterator(debug=debug, metric=metric):
-                            curr_cv_avg_scores = self.cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, model_para_dict=virtual_rank_para_dict)
-
-                            if curr_cv_avg_scores[k_index] > max_cv_avg_scores[k_index]:
-                                max_cv_avg_scores, max_sf_para_dict, max_eval_dict, max_model_para_dict = curr_cv_avg_scores, sf_para_dict, eval_dict, virtual_rank_para_dict
-
                     else:  # other traditional methods
                         model_para_dict = dict(model_id=model_id)
-                        curr_cv_avg_scores = self.cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, model_para_dict=model_para_dict)
+                        curr_cv_avg_scores = self.kfold_cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, model_para_dict=model_para_dict)
 
                         if curr_cv_avg_scores[k_index] > max_cv_avg_scores[k_index]:
                             max_cv_avg_scores, max_eval_dict, max_sf_para_dict, max_model_para_dict = curr_cv_avg_scores, eval_dict, sf_para_dict, model_para_dict

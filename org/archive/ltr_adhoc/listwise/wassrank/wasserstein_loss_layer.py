@@ -8,6 +8,7 @@
 import numpy as np
 
 import torch
+import torch.nn as nn
 import torch.utils.data
 from torch.autograd import Function
 
@@ -440,3 +441,55 @@ def tor_sinkhorn_stabilized(a, b, M, reg, numItermax=1000, tau=1e3, stopThr=1e-9
 		return get_Gamma(alpha, beta, u, v), log
 	else:
 		return get_Gamma(alpha, beta, u, v)
+
+
+class EntropicOTLoss(nn.Module):
+	"""
+	Given two (batch) distribution histograms { pred (say, predicted distribution) & target (say, ground-truth distribution) } and the specified cost matrix,
+	compute the approximation of the regularized OT cost between these two (batch) distribution histograms.
+	"""
+
+	def __init__(self, eps, max_iter):
+		"""
+		eps (float): regularization coefficient
+		max_iter (int): maximum number of Sinkhorn iterations
+		"""
+		super(EntropicOTLoss, self).__init__()
+		self.eps = eps
+		self.max_iter = max_iter
+
+	def M(self, C, u, v):
+		"Modified cost for logarithmic updates"
+		"$M_{ij} = (-c_{ij} + u_i + v_j) / \epsilon$"
+		return (-C + u.unsqueeze(-1) + v.unsqueeze(-2)) / self.eps
+
+	def forward(self, pred, target, C):
+		u = torch.zeros_like(pred)
+		v = torch.zeros_like(target)
+
+		actual_nits = 0 # To check if algorithm terminates because of threshold or max iterations reached
+		thresh = 1e-1   # Stopping criterion
+
+		## Sinkhorn iterations ##
+		for i in range(self.max_iter):
+			u1 = u  # useful to check the update
+			u = self.eps * (torch.log(pred + 1e-8) - torch.logsumexp(self.M(C, u, v), -1)) + u
+			v = self.eps * (torch.log(target + 1e-8) - torch.logsumexp(self.M(C, u, v).transpose(-2, -1), -1)) + v
+			err = (u - u1).abs().sum(-1).mean()
+
+			actual_nits += 1
+			if err.item() < thresh:
+				break
+
+		U, V = u, v
+		pi = torch.exp(self.M(C, U, V))         # Transport plan pi = diag(a)*K*diag(b)
+		dist = torch.sum(pi * C, dim=(-2, -1))  # Sinkhorn distance
+
+		"""
+		if self.reduction == 'mean':
+			dist = dist.mean()
+		elif self.reduction == 'sum':
+			dist = dist.sum()
+		"""
+
+		return dist, pi
