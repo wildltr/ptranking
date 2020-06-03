@@ -1,6 +1,24 @@
+# Introduction
+
 This open-source project, referred to as **PT-Ranking** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous learning-to-rank methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank. 
 
-# Develop your own learning-to-rank model based on PT-Ranking
+**Key Features**:
+
+- A number of representative learning-to-rank models, including not only the traditional optimization framework via empirical risk minimization but also the adversarial optimization framework
+- Supports widely used benchmark datasets. Meanwhile, random masking of the ground-truth labels with a specified ratio is also supportd
+- Supports different metrics, such as Precision, MAP, nDCG and nERR
+- Highly configurable functionalities for fine-tuning hyper-parameters, e.g., grid-search over hyper-parameters of a specific model
+- Provides easy-to-use APIs for developing a new learning-to-rank model
+
+# How-to-Start and Learning more
+
+## Demo Scripts
+
+To get a taste of learning-to-rank models without writing any code, you could try the following script. You just need to specify the model name, the dataset id, as well as the directories for input and output.
+
+- [Jupyter Notebook example with RankNet](./demo/pt_ranking_default_ltr.ipynb)
+
+## Develop a new model based on PT-Ranking
 
 PT-Ranking offers deep neural networks as the basis to construct a scoring function based on PyTorch and can thus fully leverage the advantages of PyTorch. 
 NeuralRanker is a class that represents a general learning-to-rank model. 
@@ -12,7 +30,11 @@ All specific learning-to-rank models inherit NeuralRanker and mainly differ in t
 
 ![NewLoss](./img/new_loss.png)
 
-# Implementations of published learning-to-rank models & References
+To fully leverage PT-Ranking, one needs to [be familiar with PyTorch](https://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html).
+
+For detailed introduction on learning-to-rank, please refer to the book: [Learning to Rank for Information Retrieval](https://link.springer.com/book/10.1007/978-3-642-14267-3).
+
+# List of implemented models & References
 
 - Optimization based on Empirical Risk Minimization
 
@@ -109,9 +131,7 @@ The above sample dataset includes two queries, the query "105" has 2 documents, 
 This functionality is required when using the implementation of LambdaMART provided in [LightGBM](https://lightgbm.readthedocs.io/en/latest/)  and [XGBoost](https://xgboost.readthedocs.io/en/latest/).
 
 
-# Demo Scripts
 
-- [Jupyter Notebook example with RankNet](./demo/pt_ranking_default_ltr.ipynb)
 
 
 
@@ -122,9 +142,9 @@ PyTorch (1.3)
 Python (3.7)
 
 # Call for Contribution
-Anyone who are interested in the following kinds of contributions and/or collaborations are warmly welcomed.
 
-**Contribution**: Adding one or more implementations of learning-to-rank models based on the current code base.
+We are adding more learning-to-rank models all the time. Please submit an issue if there is something you want to have implemented and included. Meanwhile, 
+anyone who are interested in any kinds of contributions and/or collaborations are warmly welcomed.
 
 # Relevant Resources
 
