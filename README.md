@@ -157,4 +157,4 @@ anyone who are interested in any kinds of contributions and/or collaborations ar
 | [LEROT](https://bitbucket.org/ilps/lerot) | Python  | x  |
 | [Rank Lib](http://www.lemurproject.org/ranklib.php) |  Java | x  |
 | [Propensity SVM^Rank](http://www.cs.cornell.edu/people/tj/svm_light/svm_proprank.html)  |  C | x  |
-| [QuickRank](http://quickrank.isti.cnr.it)  |  C++ | x  |
+| [QuickRank](https://github.com/hpclab/quickrank)  |  C++ | x  |
