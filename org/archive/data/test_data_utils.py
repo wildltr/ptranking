@@ -23,11 +23,13 @@ def test_loading():
     train = False
 
     # ['MinMaxScaler', 'RobustScaler', 'StandardScaler']
-    data_dict = dict(data_id='Istella', binary_rele=False,
-                     min_docs=50, min_rele=1, presort=False,
+    '''
+    data_dict = dict(data_id='Istella_S', binary_rele=False,
+                     min_docs=50, min_rele=1, presort=False, unknown_as_zero=False,
                      scale_data=False, scaler_id='MinMaxScaler', scaler_level='QUERY')
+    '''
 
-    ms = L2RDataLoader(train=train, file=file, data_dict=data_dict)
+    ms = L2RDataLoader(train=train, file=file, data_id='Istella_S', data_dict=None)
     train_Qs = ms.load_data()
 
     '''
@@ -200,7 +202,7 @@ def get_min_max_docs(train_dataset, vali_dataset, test_dataset):
     return min_doc, max_doc, sum_rele.data.numpy()
 
 
-from org.archive.ltr_adhoc.eval.test_l2r_tao import get_in_out_dir
+#from org.archive.ltr_adhoc.eval.test_l2r_tao import get_in_out_dir
 
 def check_dataset_statistics(data_id, filtering_dumb_queries=False):
     '''
@@ -371,31 +373,47 @@ def check_np_mask_rele(mask_ratio=0.4):
 
 
 def check_file():
-    #file = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella_S/test.txt'
+    file = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella_S/train.txt'
     #file = '/home/dl-box/ダウンロード/sample/test.txt'
-    file = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/tmp'
+    #file = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/tmp'
+
+    '''
+    contain extremely large features, e.g., 1.79769313486e+308
+    we replace features of this kind with a constant 1000000
+    '''
 
     i = 0
     with open(file=file) as reader:
         for line in reader.readlines():
-            print(line)
-            #arrs = line.strip().split(' ')
-            arrs = line.split(' ')
-            print(arrs)
-            print(len(arrs))
-            i+=1
+            #print(line)
+            arrs = line.strip().split(' ')
+            #arrs = line.split(' ')
+            #print(arrs)
+            #print(len(arrs))
+            #i+=1
 
-            if i>10:
-                break
+            #if i>10:
+            #    break
+
+            max_v = 0
+            if '001041' in arrs[1]:
+                for element in arrs[2:]:
+                    parts = element.split(':')
+                    v = float(parts[1])
+                    if v > max_v:
+                        max_v = v
+                print(max_v)
+                print(line)
+
 
 
 
 
 if __name__ == '__main__':
     #
-    test_loading()
+    #test_loading()
 
-    #check_file()
+    check_file()
 
     #2
     #test_loading_2()

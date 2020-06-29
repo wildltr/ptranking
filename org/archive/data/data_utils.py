@@ -24,11 +24,7 @@ from org.archive.ltr_adhoc.util.one_hot_utils import get_one_hot_reprs
 from org.archive.utils.bigdata.BigPickle import pickle_save, pickle_load
 
 
-SCALER_LEVEL = ['QUERY', 'DATASET']
-SCALER_ID    = ['MinMaxScaler', 'RobustScaler', 'StandardScaler']
-
-MASK_TYPE = ['rand_mask_all', 'rand_mask_rele']
-# rand_mask_all is dynamic, while rand_mask_rele resorts to buffer
+## Supported datasets and formats ##
 
 MSLETOR_SEMI  = ['MQ2007_Semi', 'MQ2008_Semi', 'IRGAN_Adhoc_Semi']
 MSLETOR_LIST  = ['MQ2007_List', 'MQ2008_List']
@@ -40,7 +36,9 @@ MSLRWEB       = ['MSLRWEB10K', 'MSLRWEB30K']
 YAHOO_L2R     = ['Set1', 'Set2']
 YAHOO_L2R_5Fold     = ['5FoldSet1', '5FoldSet2']
 
+
 ISTELLA_L2R   = ['Istella_S', 'Istella', 'Istella_X']
+ISTELLA_MAX = 1000000 # As ISTELLA contain extremely large features, e.g., 1.79769313486e+308, we replace features of this kind with a constant 1000000
 
 GLTR_LIBSVM = ['LTR_LibSVM', 'LTR_LibSVM_K']
 GLTR_LETOR  = ['LETOR', 'LETOR_K']
@@ -72,24 +70,33 @@ For GLTR_LETOR, it is defined as follows, where features with zero values are st
 1 qid:210 1:0.2 2:0.9  3:0.93
 """
 
+## supported feature normalization ##
+SCALER_LEVEL = ['QUERY', 'DATASET']
+SCALER_ID    = ['MinMaxScaler', 'RobustScaler', 'StandardScaler']
+
+## supported ways of masking labels ##
+MASK_TYPE = ['rand_mask_all', 'rand_mask_rele']
+
+
 def get_data_meta(data_id=None):
-    ## query-document pair graded, [0-4] ##
+    '''
+    :param data_id:
+    :return: get the meta-information corresponding to the specified dataset
+    '''
+
     if data_id in MSLRWEB:
         max_rele_level = 4
         multi_level_rele = True
         num_features = 136
         has_comment = False
         fold_num = 5
-        #unknown_as_zero = False
 
-    ## query-document pair graded ##
     elif data_id in MSLETOR_SUPER:
         max_rele_level = 2
         multi_level_rele = True
         num_features = 46
         has_comment = True
         fold_num = 5
-        #unknown_as_zero = False
 
     elif data_id in MSLETOR_SEMI:
         max_rele_level = 2
@@ -97,9 +104,6 @@ def get_data_meta(data_id=None):
         num_features = 46
         has_comment = True
         fold_num = 5
-        #unknown_as_zero = True # if not labled, regard the relevance degree as zero
-
-        ## query-document pair graded ##
 
     elif data_id in MSLETOR_LIST:
         max_rele_level = None
@@ -108,14 +112,13 @@ def get_data_meta(data_id=None):
         has_comment = True
         fold_num = 5
 
-    ## query-document pair graded, [0-4] ##
     elif data_id in YAHOO_L2R:
         max_rele_level = 4
         multi_level_rele = True
         num_features = 700 # libsvm format, rather than uniform number
         has_comment = False
         fold_num = 1
-        #unknown_as_zero = True
+
     elif data_id in YAHOO_L2R_5Fold:
         max_rele_level = 4
         multi_level_rele = True
@@ -151,10 +154,18 @@ def enrich(x, num_features=None):
 
 class L2RDataLoader():
     """
-    The data loader for learning-to-rank datasets
+    Loading the specified dataset as: list of tuples consisting of (query_id, all_document_features_as_numpy_tensor, all_labels_as_numpy_tensor)
     """
 
     def __init__(self, train, file, data_dict=None, buffer=True):
+        '''
+        :param train: training data or not
+        :param file:
+        :param data_id:
+        :param data_dict:
+        :param buffer: buffer the dataset in the format as list of tuples in case of multiple access
+        '''
+
         self.df = None
         self.train = train
         self.file = file
@@ -192,11 +203,18 @@ class L2RDataLoader():
             else:
                 fi_suffix = '_'.join(['MiD', str(self.min_docs)])
 
+        res_suffix = ''
+        if self.data_dict['binary_rele']:
+            res_suffix += '_B'
+
+        if self.data_dict['unknown_as_zero']:
+            res_suffix += '_UO'
+
         if self.filtering:
             if self.data_id in YAHOO_L2R:
-                self.filtered_df_file = file[:file.find('.txt')].replace(self.data_id.lower() + '.', 'Buffered' + self.data_id + '/') + '_' + fi_suffix + '.df'
+                self.filtered_df_file = file[:file.find('.txt')].replace(self.data_id.lower() + '.', 'Buffered' + self.data_id + '/') + '_' + fi_suffix + res_suffix + '.df'
             else:
-                self.filtered_df_file = file[:file.find('.txt')].replace('Fold', 'BufferedFold') + '_' +fi_suffix +'.df'
+                self.filtered_df_file = file[:file.find('.txt')].replace('Fold', 'BufferedFold') + '_' +fi_suffix + res_suffix +'.df'
 
         pq_suffix = '_'.join([fi_suffix, 'PerQ']) if len(fi_suffix) > 0 else 'PerQ'
 
@@ -215,9 +233,12 @@ class L2RDataLoader():
                 pq_suffix = '_'.join([pq_suffix, 'QS', self.scaler_id])
 
         if self.data_id in YAHOO_L2R:
-            self.perquery_file = file[:file.find('.txt')].replace(self.data_id.lower() + '.', 'Buffered' + self.data_id + '/') + '_' + pq_suffix + '.np'
+            self.perquery_file = file[:file.find('.txt')].replace(self.data_id.lower() + '.', 'Buffered' + self.data_id + '/') + '_' + pq_suffix + res_suffix + '.np'
         else:
-            self.perquery_file = file[:file.find('.txt')].replace('Fold', 'BufferedFold') + '_' + pq_suffix +'.np'
+            self.perquery_file = file[:file.find('.txt')].replace('Fold', 'BufferedFold') + '_' + pq_suffix + res_suffix +'.np'
+
+
+
 
 
     def pre_check(self):
@@ -243,6 +264,7 @@ class L2RDataLoader():
         else:
             pass
             # assert 'All' == data_dict['max_docs']
+
 
     def load_data(self, given_scaler=None):
         '''
@@ -297,7 +319,11 @@ class L2RDataLoader():
                 doc_reprs = qdf[self.feature_cols].values
                 if self.scale_data:
                     if 'QUERY' == self.scaler_level:
-                        doc_reprs = self.scaler.fit_transform(doc_reprs)
+                        if self.data_id in ISTELLA_L2R:
+                            # due to the possible extremely large features, e.g., 1.79769313486e+308
+                            doc_reprs = self.scaler.fit_transform(np.clip(doc_reprs, a_min=None, a_max=ISTELLA_MAX))
+                        else:
+                            doc_reprs = self.scaler.fit_transform(doc_reprs)
                     else:
                         doc_reprs = self.scaler.transform(doc_reprs)
 
@@ -318,7 +344,12 @@ class L2RDataLoader():
                 # doc_ids    = sorted_qdf['#docid'].values # commented due to rare usage
                 list_Qs.append((qid, doc_reprs, doc_labels))
 
-            if self.buffer: pickle_save(list_Qs, file=self.perquery_file)
+            if self.buffer:
+                parent_dir = Path(self.perquery_file).parent
+                if not os.path.exists(parent_dir):
+                    os.makedirs(parent_dir)
+
+                pickle_save(list_Qs, file=self.perquery_file)
 
             return list_Qs
 
@@ -339,10 +370,12 @@ class L2RDataLoader():
             else:
                 raise NotImplementedError
 
+            '''
             if self.buffer:
                 parent_dir = Path(self.df_file).parent
                 if not os.path.exists(parent_dir): os.makedirs(parent_dir)
                 self.df.to_pickle(self.df_file)
+            '''
 
     def get_filtered_df_file(self):
         ''' Perform filtering over the dataframe file '''
@@ -356,7 +389,7 @@ class L2RDataLoader():
                 #print('T', self.df.qid.unique())
                 self.filter()
                 #print('X', self.df.qid.unique())
-                if self.buffer: self.df.to_pickle(self.filtered_df_file)
+                #if self.buffer: self.df.to_pickle(self.filtered_df_file)
         else:
             self.get_df_file()
 
@@ -395,7 +428,7 @@ class L2RDataLoader():
             else:
                 assert self.data_dict['binary_rele'] is not True
 
-        elif self.data_dict['binary_rele']:
+        else:
             df['rele_binary'] = (df['rele_truth'] > 0).astype(np.float32)  # additional binarized column for later filtering
 
         return df
@@ -474,8 +507,6 @@ class L2RDataLoader():
         return df
 
 
-
-
     def ini_scaler(self, joint_transform=False):
         assert self.scaler_id in SCALER_ID
         if self.scaler_id == 'MinMaxScaler':
@@ -524,16 +555,23 @@ class L2RDataLoader():
 
 class L2RDataset(data.Dataset):
     '''
-    Buffering tensored objects can save much time.
+    Loading the specified dataset as data.Dataset
     '''
-    def __init__(self, train, file, sample_rankings_per_q=1, shuffle=True, data_dict=None, given_scaler=None, hot=False, eval_dict=None):
+
+    def __init__(self, train, file, data_id=None, data_dict=None,
+                 sample_rankings_per_q=1, shuffle=True, given_scaler=None, hot=False, eval_dict=None, buffer=True):
+
+        assert data_id is not None or data_dict is not None
+        if data_dict is None: data_dict = self.get_default_data_dict(data_id=data_id)
+
         self.train = train
 
         if data_dict['data_id'] in MSLETOR or data_dict['data_id'] in MSLRWEB \
                 or data_dict['data_id'] in YAHOO_L2R or data_dict['data_id'] in YAHOO_L2R_5Fold \
+                or data_dict['data_id'] in ISTELLA_L2R \
                 or data_dict['data_id'] == 'IRGAN_Adhoc_Semi':
 
-            loader = L2RDataLoader(train=train, file=file, data_dict=data_dict)
+            loader = L2RDataLoader(train=train, file=file, data_dict=data_dict, buffer=buffer)
             #print(loader.perquery_file)
             perquery_file = loader.perquery_file
 
@@ -617,13 +655,45 @@ class L2RDataset(data.Dataset):
                         self.list_torch_Qs.append((qid, torch_batch_rankings, torch_batch_std_labels))
 
                 #buffer
-                print('Num of q:', len(self.list_torch_Qs))
-                pickle_save(self.list_torch_Qs, torch_perquery_file)
+                #print('Num of q:', len(self.list_torch_Qs))
+                if buffer:
+                    parent_dir = Path(self.torch_perquery_file).parent
+                    if not os.path.exists(parent_dir):
+                        os.makedirs(parent_dir)
+
+                    pickle_save(self.list_torch_Qs, torch_perquery_file)
         else:
             raise NotImplementedError
 
         self.hot     = hot
         self.shuffle = shuffle
+
+
+    def get_default_data_dict(self, data_id):
+
+        if data_id in MSLRWEB:
+            scale_data=True
+            scaler_id='StandardScaler'
+            scaler_level='QUERY'
+
+        elif data_id in ISTELLA_L2R:
+            scale_data=True
+            scaler_id='StandardScaler'
+            scaler_level='QUERY'
+
+        else:
+            scale_data=False
+            scaler_id=None
+            scaler_level=None
+
+        min_docs = 1
+        min_rele = -1 # we note that it includes dumb queries that has no relevant documents
+
+        data_dict = dict(data_id=data_id, max_docs='All', min_docs=min_docs, min_rele=min_rele,
+                         sample_times_per_q=1, presort=False, binary_rele=False, unknown_as_zero=False,
+                         scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
+
+        return data_dict
 
     def get_scaler(self):
         pass

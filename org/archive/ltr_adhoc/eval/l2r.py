@@ -96,6 +96,9 @@ class L2REvaluator():
             else:
                 assert sf_para_dict['one_fits_all']['BN'] == False
 
+        if data_dict['data_id'] == 'Istella':
+            assert eval_dict['do_vali'] is not True # since there is no validation data
+
 
     def get_files(self, data_dict, fold_k=1):
         ''' Load files which are prepared as k-fold validation format '''

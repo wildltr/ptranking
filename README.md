@@ -18,6 +18,10 @@ To get a taste of learning-to-rank models without writing any code, you could tr
 
 - [Jupyter Notebook example with RankNet](./demo/pt_ranking_default_ltr.ipynb)
 
+To get familiar with the process of data loading, you could try the following script, namely, get the statistics of a dataset. 
+
+- [Jupyter Notebook example on loading a dataset](./demo/pt_ranking_data_loading.ipynb)
+
 ## Develop a new model based on PT-Ranking
 
 PT-Ranking offers deep neural networks as the basis to construct a scoring function based on PyTorch and can thus fully leverage the advantages of PyTorch. 
@@ -107,6 +111,8 @@ But for {MSLRWEB10K | MSLRWEB30K}, the query-level normalization is **not conduc
 
 - For Yahoo! LETOR, the query-level normalization is already done.
 
+- For Istella! LETOR, the query-level normalization is **not conducted yet**. We note that ISTELLA contains extremely large features, e.g., 1.79769313486e+308, we replace features of this kind with a constant 1000000.
+
 ## PT-Ranking currently supports to ingest data with the LibSVM formats
 
 - LETOR datasets in LibSVM format
@@ -140,6 +146,8 @@ This functionality is required when using the implementation of LambdaMART provi
 PyTorch (1.3)
 
 Python (3.7)
+
+Ubuntu 16.04 LTS
 
 # Call for Contribution
 
