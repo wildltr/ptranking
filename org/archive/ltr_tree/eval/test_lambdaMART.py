@@ -37,12 +37,12 @@ if __name__ == '__main__':
     
     """
 
-    ''' selected dataset '''
-    data_id = 'MQ2008_Super'
+    ''' selected dataset & location of the adopted data '''
+    #data_id = 'MQ2008_Super'
+    #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
 
-    ''' location of the adopted data '''
-    #dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2007/'
-    dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
+    data_id  = 'Istella_S'
+    dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/'
 
     ''' output directory '''
     #dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/'
@@ -52,9 +52,6 @@ if __name__ == '__main__':
     with grid_search(), we can (1) test different models in one run; (2) test the hyper-parameters of a specific model in one run
     '''
 
-    #engine = 'XGBoost'
-    engine = 'LightGBM'
-
-    evaluator = LambdaMARTEvaluator(engine=engine)
+    evaluator = LambdaMARTEvaluator()
 
     evaluator.default_run(data_id=data_id, dir_data=dir_data, dir_output=dir_output)

@@ -61,10 +61,12 @@ class L2REvaluator():
          --> Thus there is no need to perform query_level_scale again for {MQ2007_super | MQ2008_super | MQ2007_semi | MQ2008_semi}
          --> But for {MSLRWEB10K | MSLRWEB30K}, the query-level normalization is ## not conducted yet##.
          --> For {Yahoo_L2R_Set_1 | Yahoo_L2R_Set_1 }, the query-level normalization is already conducted.
+         --> For Istella! LETOR, the query-level normalization is not conducted yet.
+             We note that ISTELLA contains extremely large features, e.g., 1.79769313486e+308, we replace features of this kind with a constant 1000000.
         '''
 
         if grid_search:
-            if data_id in data_utils.MSLRWEB:
+            if data_id in data_utils.MSLRWEB or data_id in data_utils.ISTELLA_L2R:
                 choice_scale_data   = [True]             # True, False
                 choice_scaler_id    = ['StandardScaler']  # ['MinMaxScaler', 'RobustScaler', 'StandardScaler']
                 choice_scaler_level = ['QUERY']        # SCALER_LEVEL = ['QUERY', 'DATASET']
@@ -75,7 +77,7 @@ class L2REvaluator():
 
             return choice_scale_data, choice_scaler_id, choice_scaler_level
         else:
-            if data_id in data_utils.MSLRWEB:
+            if data_id in data_utils.MSLRWEB or data_id in data_utils.ISTELLA_L2R:
                 scale_data   = True
                 scaler_id    = 'StandardScaler'  # ['MinMaxScaler', 'StandardScaler']
                 scaler_level = 'QUERY'  # SCALER_LEVEL = ['QUERY', 'DATASET']
@@ -106,6 +108,13 @@ class L2REvaluator():
             file_train, file_vali, file_test = os.path.join(data_dict['dir_data'], data_dict['data_id'].lower() + '.train.txt'),\
                                                os.path.join(data_dict['dir_data'], data_dict['data_id'].lower() + '.valid.txt'),\
                                                os.path.join(data_dict['dir_data'], data_dict['data_id'].lower() + '.test.txt')
+
+        elif data_dict['data_id'] in data_utils.ISTELLA_L2R:
+            if data_dict['data_id'] == 'Istella_X' or data_dict['data_id']=='Istella_S':
+                file_train, file_vali, file_test = data_dict['dir_data'] + 'train.txt', data_dict['dir_data'] + 'vali.txt', data_dict['dir_data'] + 'test.txt'
+            else:
+                file_vali = None
+                file_train, file_test = data_dict['dir_data'] + 'train.txt', data_dict['dir_data'] + 'test.txt'
         else:
             print('Fold-', fold_k)
             fold_k_dir = data_dict['dir_data'] + 'Fold' + str(fold_k) + '/'

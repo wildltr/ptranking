@@ -4,7 +4,6 @@
 
 import os
 import sys
-import pickle
 import datetime
 import numpy as np
 from sklearn.datasets import load_svmlight_file
@@ -14,38 +13,16 @@ import torch
 import lightgbm as lgb
 from lightgbm import Dataset
 
-import xgboost as xgb
-from xgboost import DMatrix
-from xgboost import XGBRanker
-
 from org.archive.data import data_utils
-from org.archive.utils.bigdata.BigPickle import pickle_save, pickle_load
-from org.archive.data.data_utils import prepare_data_for_lambdaMART, YAHOO_L2R
+from org.archive.utils.bigdata.BigPickle import pickle_save
+from org.archive.data.data_utils import load_letor_data_as_libsvm_data, YAHOO_L2R, ISTELLA_L2R
 from org.archive.metric.adhoc_metric import torch_nDCG_at_ks, torch_nerr_at_ks, torch_ap_at_ks, torch_p_at_ks
 
 """
-The different implementations of LambdaMART are included for a fair comparison, which are provided by the following libraries:
-
-- XGBoost:  https://github.com/dmlc/xgboost
+The different implementations of LambdaMART are included for a fair comparison, which are provided by the following library:
 
 - LightGBM: https://github.com/microsoft/LightGBM
-
 """
-
-class GDMatrix(DMatrix):
-    """
-    Wrapper DMatrix of for getting group information
-    """
-    def __init__(self, data, label=None, group=None, missing=None, weight=None, silent=False,
-                 feature_names=None, feature_types=None, nthread=None):
-        super(GDMatrix, self).__init__(data=data, label=label, missing=missing, weight=weight, silent=silent,
-                                       feature_names=feature_names, feature_types=feature_types, nthread=nthread)
-        self.group = group
-
-    def get_group(self):
-        return self.group
-
-
 
 
 class LambdaMARTEvaluator():
@@ -53,9 +30,8 @@ class LambdaMARTEvaluator():
     The class for evaluating LambdaMART building upon different Gradient Boosting Engines.
     """
 
-    def __init__(self, engine=''):
+    def __init__(self, engine='LightGBM'):
         self.engine = engine
-
 
     def load_group_data(self, file_group, use_np=False):
         """  """
@@ -69,14 +45,9 @@ class LambdaMARTEvaluator():
                     group.append(int(line.split("\n")[0]))
             return group
 
-
-    def update_output_setting(self, para_dict=None, eval_dict=None):
-        data_id, model, do_validation, root_output = eval_dict['data_id'], eval_dict['model'], eval_dict['do_validation'], eval_dict['dir_output']
-        grid_search, min_docs, min_rele = eval_dict['grid_search'], eval_dict['min_docs'], eval_dict['min_rele']
-
-        if 'XGBoost' == self.engine:
-            eta, gamma, min_child_weight, max_depth, tree_method = para_dict['eta'], para_dict['gamma'], para_dict['min_child_weight'], para_dict['max_depth'], para_dict['tree_method']
-            lm_para_str = '_'.join(['{:,g}'.format(eta), '{:,g}'.format(gamma), '{:,g}'.format(min_child_weight), '{:,g}'.format(max_depth), tree_method])
+    def update_output_setting(self, para_dict=None, data_dict=None, eval_dict=None):
+        data_id, model, do_validation, root_output = data_dict['data_id'], eval_dict['model'], eval_dict['do_validation'], eval_dict['dir_output']
+        grid_search, min_docs, min_rele = eval_dict['grid_search'], data_dict['min_docs'], data_dict['min_rele']
 
         print(' '.join(['Start {} on {} >>>'.format(model, data_id)]))
 
@@ -85,10 +56,7 @@ class LambdaMARTEvaluator():
             if not os.path.exists(root_output):
                 os.makedirs(root_output)
 
-        if 'XGBoost' == self.engine:
-            para_setting_str = '_'.join(['Vd', str(do_validation), 'Md', str(min_docs), 'Mr', str(min_rele), lm_para_str])
-        else:
-            para_setting_str = '_'.join(['Vd', str(do_validation), 'Md', str(min_docs), 'Mr', str(min_rele)])
+        para_setting_str = '_'.join(['Vd', str(do_validation), 'Md', str(min_docs), 'Mr', str(min_rele)])
 
         file_prefix = '_'.join([model, data_id, para_setting_str])
 
@@ -102,7 +70,6 @@ class LambdaMARTEvaluator():
         if not os.path.exists(model_output):
             os.makedirs(model_output)
         return model_output
-
 
     def result_to_str(self, list_scores=None, list_cutoffs=None, split_str=', ', metric_str=None):
         list_str = []
@@ -175,34 +142,14 @@ class LambdaMARTEvaluator():
 
         return avg_ndcg_at_ks, avg_nerr_at_ks, avg_ap_at_ks, avg_p_at_ks, list_ndcg_at_ks_per_q, list_err_at_ks_per_q, list_ap_at_ks_per_q, list_p_at_ks_per_q
 
-
-    def get_paras_XGBoost(self, para_dict=None, eval_dict=None):
-        debug, grid_search = eval_dict['debug'], eval_dict['grid_search']
-
-        if debug:
-            params = {'objective': 'rank:ndcg', 'eta': 0.1, 'eval_metric':'ndcg@10'}
-
-        else:
-            eta, gamma, min_child_weight, max_depth, tree_method = para_dict['eta'], para_dict['gamma'], para_dict[
-                'min_child_weight'], para_dict['max_depth'], para_dict['tree_method']
-
-            params = {'objective': 'rank:ndcg', 'eta': eta, 'gamma': gamma, 'min_child_weight': min_child_weight,
-                      'max_depth': max_depth, 'eval_metric': 'ndcg@10-',
-                      'tree_method': tree_method}  # if idealDCG=0, then 0
-
-        return params
-
-
     def get_paras_LightGBM(self, para_dict=None, eval_dict=None):
 
         debug, grid_search = eval_dict['debug'], eval_dict['grid_search']
 
         if debug:
             params = {'learning_rate': 0.1}
-
         elif grid_search:
             raise NotImplementedError
-
         else:
             # default setting according to LightGBM experiments
             params = {'boosting_type': 'gbdt',  # ltr_gbdt, dart
@@ -221,25 +168,19 @@ class LambdaMARTEvaluator():
         return params
 
 
-    def fold_eval_lambdaMART_upon_LightGBM(self, fold_k, file_train, file_vali, file_test, para_dict=None, save_dir=None, eval_dict=None):
+    def eval_lambdaMART_lightGBM(self, fold_k, file_train, file_vali, file_test, para_dict=None, save_dir=None, data_dict=None, eval_dict=None):
+        ''' '''
+        data_id, do_validation = data_dict['data_id'], eval_dict['do_validation']
 
-        min_docs, min_rele = eval_dict['min_docs'], eval_dict['min_rele']
-        do_validation, validation_k = eval_dict['do_validation'], eval_dict['validation_k']
-        data_id=eval_dict['data_id']
-
-        if eval_dict is not None and eval_dict['semi_context']:
-            file_train_data, file_train_group = prepare_data_for_lambdaMART(file_train, train=True, min_docs=min_docs, min_rele=min_rele, data_id=eval_dict['data_id'], eval_dict=eval_dict)
-        else:
-            file_train_data, file_train_group = prepare_data_for_lambdaMART(file_train, train=True, min_docs=min_docs, min_rele=min_rele, data_id=eval_dict['data_id'], eval_dict=eval_dict)
-
-        file_vali_data, file_vali_group   = prepare_data_for_lambdaMART(file_vali, min_docs=min_docs, min_rele=min_rele, data_id=eval_dict['data_id'], eval_dict=eval_dict)
-        file_test_data, file_test_group   = prepare_data_for_lambdaMART(file_test, min_docs=min_docs, min_rele=min_rele, data_id=eval_dict['data_id'], eval_dict=eval_dict)
+        file_train_data, file_train_group = load_letor_data_as_libsvm_data(file_train, train=True, data_dict=data_dict, eval_dict=eval_dict)
+        file_test_data, file_test_group   = load_letor_data_as_libsvm_data(file_test, data_dict=data_dict, eval_dict=eval_dict)
 
         x_train, y_train = load_svmlight_file(file_train_data)
         group_train = np.loadtxt(file_train_group)
         train_set = Dataset(data=x_train, label=y_train, group=group_train)
 
         if do_validation:
+            file_vali_data, file_vali_group   = load_letor_data_as_libsvm_data(file_vali, data_dict=data_dict, eval_dict=eval_dict)
             x_valid, y_valid = load_svmlight_file(file_vali_data)
             group_valid = np.loadtxt(file_vali_group)
             valid_set = Dataset(data=x_valid, label=y_valid, group=group_valid)
@@ -255,9 +196,8 @@ class LambdaMARTEvaluator():
         else:
             gbm = lgb.train(params=params, train_set=train_set, verbose_eval=10, num_boost_round=100)
 
-
         if data_id in YAHOO_L2R:
-            model_file = save_dir+'model.txt'
+            model_file = save_dir + 'model.txt'
         else:
             model_file = save_dir+'_'.join(['fold', str(fold_k), 'model'])+'.txt'
 
@@ -267,94 +207,19 @@ class LambdaMARTEvaluator():
 
         return y_test, group_test, y_pred
 
-
-    def check_group(self, train_dmatrix, group, y_train):
-        labels = train_dmatrix.get_label()
-
-        head = 0
-        for gr in group:
-            #print('From labels:\t', labels[head:head + gr])
-            #print()
-            #print('From input:\t', y_train[head:head + gr])
-            #print('Np cmp:\t', np.equal(labels[head:head + gr], y_train[head:head + gr]))
-            #print('Comparison:\t', (labels[head:head + gr] == y_train[head:head + gr]).all())
-            if not (labels[head:head + gr] == y_train[head:head + gr]).all():
-                print('Flase')
-            #print()
-
-
-            head += gr
-
-
-    def fold_eval_lambdaMART_upon_XGBoost(self, fold_k, file_train, file_vali, file_test, para_dict=None, save_dir=None, eval_dict=None):
-        '''  '''
-        min_docs, min_rele = eval_dict['min_docs'], eval_dict['min_rele']
-        do_validation, validation_k = eval_dict['do_validation'], eval_dict['validation_k']
-        data_id=eval_dict['data_id']
-
-        file_train_data, file_train_group = prepare_data_for_lambdaMART(file_train, min_docs=min_docs, min_rele=min_rele, data_id=data_id, eval_dict=eval_dict)
-        file_vali_data, file_vali_group   = prepare_data_for_lambdaMART(file_vali, min_docs=min_docs, min_rele=min_rele, data_id=data_id, eval_dict=eval_dict)
-        file_test_data, file_test_group   = prepare_data_for_lambdaMART(file_test, min_docs=min_docs, min_rele=min_rele, data_id=data_id, eval_dict=eval_dict)
-
-        x_train, y_train = load_svmlight_file(file_train_data)
-        group_train = self.load_group_data(file_train_group)
-        #train_dmatrix = DMatrix(x_train, y_train)
-        train_dmatrix = GDMatrix(x_train, y_train, group=group_train)
-        train_dmatrix.set_group(group_train)
-
-        #self.check_group(train_dmatrix=train_dmatrix, group=group_train, y_train=y_train)
-
-        if do_validation:
-            x_valid, y_valid = load_svmlight_file(file_vali_data)
-            group_valid = self.load_group_data(file_vali_group)
-            valid_dmatrix = GDMatrix(x_valid, y_valid, group=group_valid)
-            valid_dmatrix.set_group(group_valid)
-
-        x_test, y_test = load_svmlight_file(file_test_data)
-        group_test = self.load_group_data(file_test_group)
-        test_dmatrix = GDMatrix(x_test, group=group_test)
-
-        params = self.get_paras_XGBoost(para_dict=para_dict, eval_dict=eval_dict)
-        if do_validation:
-            fold_xgb_model = xgb.train(params, train_dmatrix,
-                                       num_boost_round = 50,
-                                       early_stopping_rounds=20,
-                                       maximize=True,
-                                       #learning_rates=0.001,
-                                       evals=[(valid_dmatrix, 'validation')], verbose_eval=20
-                                       )
-        else:
-            fold_xgb_model = xgb.train(params, train_dmatrix, verbose_eval=10)
-
-        if data_id in YAHOO_L2R:
-            with open(save_dir + 'model.dat', 'wb') as model_file:
-                pickle.dump(fold_xgb_model, model_file)
-        else:
-            with open(save_dir + '_'.join(['fold', str(fold_k), 'model']) + '.dat', 'wb') as model_file:
-                pickle.dump(fold_xgb_model, model_file)
-
-        '''
-        If early stopping occurs, the model will have three additional fields: bst.best_score, bst.best_iteration and bst.best_ntree_limit. Note that xgboost.train() will return a model from the last iteration, not the best one.
-        '''
-
-        print(fold_xgb_model)
-
-        y_pred = fold_xgb_model.predict(test_dmatrix, ntree_limit=fold_xgb_model.best_iteration)  # fold-wise performance
-
-        return y_test, group_test, y_pred
-
-
-    def cv_eval(self, para_dict=None, eval_dict=None):
+    def cv_eval(self, para_dict=None, data_dict=None, eval_dict=None):
         ''' Evaluation based on k-fold cross validation if multiple folds exist '''
 
-        debug, data_id, dir_data, model = eval_dict['debug'], eval_dict['data_id'], eval_dict['dir_data'], eval_dict['model']
+        debug, data_id, dir_data, model = eval_dict['debug'], data_dict['data_id'], data_dict['dir_data'], eval_dict['model']
         cutoffs, do_validation, do_log = eval_dict['cutoffs'], eval_dict['do_validation'], eval_dict['do_log']
 
+        # required setting to be consistent with the dataset
         fold_num = 2 if debug else 5
         if data_id in YAHOO_L2R: fold_num = 1
         if eval_dict['plot']: fold_num = 1
+        if data_dict['data_id'] == 'Istella': assert eval_dict['do_vali'] is not True # since there is no validation data
 
-        model_output = self.update_output_setting(eval_dict=eval_dict, para_dict=para_dict)
+        model_output = self.update_output_setting(para_dict=para_dict, data_dict=data_dict, eval_dict=eval_dict)
         if do_log: sys.stdout = open(model_output + 'log.txt', "w")
 
         time_begin = datetime.datetime.now()        # timing
@@ -372,6 +237,12 @@ class LambdaMARTEvaluator():
             if data_id in YAHOO_L2R:
                 data_prefix = dir_data + data_id.lower() + '.'
                 ori_file_train, ori_file_vali, ori_file_test = data_prefix + 'train.txt', data_prefix + 'valid.txt', data_prefix + 'test.txt'
+            elif data_id in ISTELLA_L2R:
+                data_prefix = dir_data + data_id + '/'
+                if data_id == 'Istella_X' or data_id=='Istella_S':
+                    ori_file_train, ori_file_vali, ori_file_test = data_prefix + 'train.txt', data_prefix + 'vali.txt', data_prefix + 'test.txt'
+                else:
+                    ori_file_train, ori_file_test = data_prefix + 'train.txt', data_prefix + 'test.txt'
             else:
                 print('\nFold-', fold_k)            # fold-wise data preparation plus certain light filtering
                 dir_fold_k = dir_data + 'Fold' + str(fold_k) + '/'
@@ -385,14 +256,8 @@ class LambdaMARTEvaluator():
 
             if not os.path.exists(save_dir): os.makedirs(save_dir)
 
-            if model.endswith('XGBoost'):
-                y_test, group_test, y_pred = self.fold_eval_lambdaMART_upon_XGBoost(fold_k=fold_k, file_train=ori_file_train, file_vali=ori_file_vali, file_test=ori_file_test,
-                                                                                    para_dict=para_dict, save_dir=save_dir, eval_dict=eval_dict)
-            elif model.endswith('LightGBM'):
-                y_test, group_test, y_pred = self.fold_eval_lambdaMART_upon_LightGBM(fold_k=fold_k, file_train=ori_file_train, file_vali=ori_file_vali, file_test=ori_file_test,
-                                                                                    para_dict=para_dict, save_dir=save_dir, eval_dict=eval_dict)
-            else:
-                raise NotImplementedError
+            y_test, group_test, y_pred = self.eval_lambdaMART_lightGBM(fold_k=fold_k, file_train=ori_file_train, file_vali=ori_file_vali,
+                                                                       file_test=ori_file_test, para_dict=para_dict, save_dir=save_dir, data_dict=data_dict, eval_dict=eval_dict)
 
             fold_avg_ndcg_at_ks, fold_avg_nerr_at_ks, fold_avg_ap_at_ks, fold_avg_p_at_ks,\
             list_ndcg_at_ks_per_q, list_err_at_ks_per_q, list_ap_at_ks_per_q, list_p_at_ks_per_q = self.cal_metric_at_ks(model=model, all_std_labels=y_test, all_preds=y_pred, group=group_test, ks=cutoffs)
@@ -462,62 +327,63 @@ class LambdaMARTEvaluator():
             max_writer.write(para_str + '\n')
             max_writer.write(self.result_to_str(max_cv_avg_scores, cutoffs))
 
+    def get_default_dicts(self, data_id, dir_data=None, dir_output=None):
+        '''  '''
+        debug = False
+
+        grid_search = False
+
+        semi_context = False # testing the effect of partially masking ground-truth labels with a specified ratio
+        if semi_context:
+            assert not data_id in data_utils.MSLETOR_SEMI
+            mask_ratio = 0.5
+            mask_type = 'rand_mask_rele'
+        else:
+            mask_ratio = None
+            mask_type = None
+
+        unknown_as_zero = True if data_id in data_utils.MSLETOR_SEMI else False
+
+        binary_rele = False  # using the original values
+        presort = False  # a default setting, since there is not need for tree-based models
+
+        data_dict = dict(data_id=data_id, dir_data=dir_data, unknown_as_zero=unknown_as_zero, binary_rele=binary_rele,
+                         presort=presort, sample_rankings_per_q=1)
+        scale_data, scaler_id, scaler_level = data_utils.get_default_scaler_setting(data_id=data_id)
+        # more data settings that are rarely changed
+        data_dict.update(dict(min_docs=10, min_rele=1, scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level))
+        data_meta = data_utils.get_data_meta(data_id=data_id)
+        data_dict.update(data_meta)
+
+        # more evaluation settings that are rarely changed
+        do_validation = False if data_id == 'Istella' else True
+        eval_dict = dict(debug=debug, grid_search=grid_search, do_validation=do_validation, dir_output=dir_output, semi_context=semi_context, mask_ratio=mask_ratio, mask_type=mask_type)
+
+        do_log = False if eval_dict['debug'] else False
+        eval_dict.update(dict(model='_'.join(['LambdaMART', self.engine]), cutoffs=[1, 3, 5, 10, 20], validation_k=10, plot=False, do_log=do_log))
+
+        return data_dict, eval_dict
 
     def default_run(self, data_id=None, dir_data=None, dir_output=None):
 
         ''' common setting w.r.t. datasets & evaluation'''
-        debug=False
-        do_log = False if debug else True
+        data_dict, eval_dict = self.get_default_dicts(data_id=data_id, dir_data=dir_data, dir_output=dir_output)
 
         '''
-        {semi_context} is used to test the effect of partially masking ground-truth labels with a specified ratio currently, it only supports {MSLRWEB10K | MSLRWEB30K}
+        default setting according to LightGBM experiments
+        params = {'boosting_type': 'gbdt',  # ltr_gbdt, dart
+                  'objective': 'lambdarank',
+                  'metric': 'ndcg',
+                  'learning_rate': 0.05,
+                  'num_leaves': 400,
+                  'num_trees': 1000,
+                  'num_threads': 16,
+                  'min_data_in_leaf': 50,
+                  'min_sum_hessian_in_leaf': 200,
+                  #'lambdamart_norm':False,
+                  #'is_training_metric':True,
+                  'verbosity': -1}            
         '''
-        semi_context = False
-        if semi_context:
-            assert not data_id in data_utils.MSLETOR_SEMI
-            mask_ratio = 0.2
-            mask_type  = 'rand_mask_rele'
-        else:
-            mask_ratio = None
-            mask_type  = None
+        para_dict = dict()
 
-        if semi_context:
-            do_validation = False
-        else:
-            do_validation = True
-
-        # as a baseline for comparison w.r.t. adversarial methods
-        #do_validation = False
-
-        eval_dict = dict(debug=debug, grid_search=False, data_id=data_id, dir_data=dir_data, dir_output=dir_output,
-                         semi_context=semi_context, mask_ratio=mask_ratio, mask_type=mask_type, do_validation=do_validation)
-
-        plot = False
-
-        eval_dict.update(dict(model='_'.join(['LambdaMART', self.engine]), cutoffs=[1, 3, 5, 10, 20], min_docs=10, min_rele=1, validation_k=10, do_log=do_log, plot=plot))
-
-        if 'XGBoost' == self.engine:
-            para_dict = dict(eta=0.05, gamma=0.0, min_child_weight=100, max_depth=8, tree_method='exact')
-
-        elif 'LightGBM' == self.engine:
-            '''
-            default setting according to LightGBM experiments
-            params = {'boosting_type': 'gbdt',  # ltr_gbdt, dart
-                      'objective': 'lambdarank',
-                      'metric': 'ndcg',
-                      'learning_rate': 0.05,
-                      'num_leaves': 400,
-                      'num_trees': 1000,
-                      'num_threads': 16,
-                      'min_data_in_leaf': 50,
-                      'min_sum_hessian_in_leaf': 200,
-                      #'lambdamart_norm':False,
-                      #'is_training_metric':True,
-                      'verbosity': -1}            
-            '''
-            para_dict = dict()
-
-        else:
-            raise NotImplementedError
-
-        self.cv_eval(para_dict=para_dict, eval_dict=eval_dict)
+        self.cv_eval(para_dict=para_dict, data_dict=data_dict, eval_dict=eval_dict)

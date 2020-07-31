@@ -40,17 +40,26 @@ if __name__ == '__main__':
     -----------------------------------------------------------------------------------------
     | Yahoo_L2R | Set1 % Set2                                                               |
     -----------------------------------------------------------------------------------------
-    | ISTELLA_L2R | Istella_S | Istella | Istella_X                                         |
+    | ISTELLA_L2R | Istella_S % Istella % Istella_X                                         |
     -----------------------------------------------------------------------------------------
 
     """
 
 	''' selected dataset '''
-	data_id = 'MQ2007_Super'
+	#data_id = 'MQ2007_Super'
 
 	''' location of the adopted data '''
 	#dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2007/'
-	dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
+	#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
+
+	#data_id = 'Istella_X'
+	#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella_X/'
+
+	data_id = 'Istella'
+	dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella/'
+
+	#data_id = 'Istella_S'
+	#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella_S/'
 
 	''' output directory '''
 	#dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/'
@@ -59,7 +68,8 @@ if __name__ == '__main__':
 	'''
     with grid_search(), we can (1) test different models in one run; (2) test the hyper-parameters of a specific model in one run
     '''
-	grid_search = True
+
+	grid_search = False
 
 
 	evaluator = L2REvaluator()

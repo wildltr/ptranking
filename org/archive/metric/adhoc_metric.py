@@ -184,6 +184,7 @@ def torch_nerr_at_ks(sys_sorted_labels, ideal_sorted_labels, ks=None, multi_leve
 		cascad_non_satis_pros = positions
 		cascad_non_satis_pros[1:max_cutoff] = cum_non_satis_pros[0:max_cutoff-1]
 		expt_satis_ranks = expt_ranks * satis_pros * cascad_non_satis_pros  # w.r.t. all rank positions
+
 		err_at_ks = torch.cumsum(expt_satis_ranks, dim=0)
 		#print(err_at_ks)
 
