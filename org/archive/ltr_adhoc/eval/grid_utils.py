@@ -24,51 +24,25 @@ def eval_grid(choice_validation, choice_epoch, choice_semi_context, choice_mask_
 
 ### scoring function ###
 
-def sf_grid(query_aware=None, FBN=False,
-            choice_apply_BN=None, choice_apply_RD=None,
-            choice_layers=None, choice_hd_hn_af=None, choice_tl_af=None, choice_hd_hn_tl_af=None, choice_apply_tl_af=None,
-            in_choice_layers=None, in_choice_hd_hn_af=None, in_choice_tl_af=None,
-            cnt_choice_layers=None, cnt_choice_hd_hn_af=None, cnt_choice_tl_af=None,
-            com_choice_layers=None, com_choice_hd_hn_af=None, com_choice_tl_af=None,
-            choice_cnt_strs=None):
+def sf_grid(FBN=False, choice_apply_BN=None, choice_apply_RD=None, choice_layers=None, choice_hd_hn_af=None,
+            choice_tl_af=None, choice_hd_hn_tl_af=None, choice_apply_tl_af=None):
     ''' get the iterator w.r.t. scoring function '''
+    if choice_hd_hn_tl_af is not None:
+        for BN, RD, num_layers, af, apply_tl_af in product(choice_apply_BN, choice_apply_RD, choice_layers, choice_hd_hn_tl_af, choice_apply_tl_af):
+            ffnns_para_dict = dict(FBN=FBN, BN=BN, RD=RD, num_layers=num_layers, HD_AF=af, HN_AF=af, TL_AF=af, apply_tl_af=apply_tl_af)
+            sf_para_dict = dict()
+            sf_para_dict['id'] = 'ffnns'
+            sf_para_dict['ffnns'] = ffnns_para_dict
 
-    if query_aware:
-        for in_num_layers, in_hd_hn_af, in_tl_af in product(in_choice_layers, in_choice_hd_hn_af, in_choice_tl_af):
-            in_para_dict = dict(FBN=FBN, num_layers=in_num_layers, HD_AF=in_hd_hn_af, HN_AF=in_hd_hn_af, TL_AF=in_tl_af, apply_tl_af=True)
-
-            for cnt_num_layers, cnt_hd_hn_af, cnt_tl_af in product(cnt_choice_layers, cnt_choice_hd_hn_af, cnt_choice_tl_af):
-                cnt_para_dict = dict(num_layers=cnt_num_layers, HD_AF=cnt_hd_hn_af, HN_AF=cnt_hd_hn_af, TL_AF=cnt_tl_af, apply_tl_af=True)
-
-                for com_num_layers, com_hd_hn_af, com_tl_af in product(com_choice_layers, com_choice_hd_hn_af, com_choice_tl_af):
-                    com_para_dict = dict(num_layers=com_num_layers, HD_AF=com_hd_hn_af, HN_AF=com_hd_hn_af, TL_AF=com_tl_af, apply_tl_af=True)
-
-                    for cnt_str in choice_cnt_strs:
-                        sf_para_dict = dict()
-                        sf_para_dict['id']      = 'ScoringFunction_CAFFNNs'
-                        sf_para_dict['cnt_str'] = cnt_str
-                        sf_para_dict['in_para_dict'] = in_para_dict
-                        sf_para_dict['cnt_para_dict'] = cnt_para_dict
-                        sf_para_dict['com_para_dict'] = com_para_dict
-
-                        yield sf_para_dict
+            yield sf_para_dict
     else:
-        if choice_hd_hn_tl_af is not None:
-            for BN, RD, num_layers, af, apply_tl_af in product(choice_apply_BN, choice_apply_RD, choice_layers, choice_hd_hn_tl_af, choice_apply_tl_af):
-                ffnns_para_dict = dict(FBN=FBN, BN=BN, RD=RD, num_layers=num_layers, HD_AF=af, HN_AF=af, TL_AF=af, apply_tl_af=apply_tl_af)
-                sf_para_dict = dict()
-                sf_para_dict['id'] = 'ffnns'
-                sf_para_dict['ffnns'] = ffnns_para_dict
+        for BN, RD, num_layers, hd_hn_af, tl_af, apply_tl_af in product(choice_apply_BN, choice_apply_RD, choice_layers, choice_hd_hn_af, choice_tl_af, choice_apply_tl_af):
+            ffnns_para_dict = dict(FBN=FBN, BN=BN, RD=RD, num_layers=num_layers, HD_AF=hd_hn_af, HN_AF=hd_hn_af, TL_AF=tl_af, apply_tl_af=apply_tl_af)
+            sf_para_dict = dict()
+            sf_para_dict['id'] = 'ffnns'
+            sf_para_dict['ffnns'] = ffnns_para_dict
 
-                yield sf_para_dict
-        else:
-            for BN, RD, num_layers, hd_hn_af, tl_af, apply_tl_af in product(choice_apply_BN, choice_apply_RD, choice_layers, choice_hd_hn_af, choice_tl_af, choice_apply_tl_af):
-                ffnns_para_dict = dict(FBN=FBN, BN=BN, RD=RD, num_layers=num_layers, HD_AF=hd_hn_af, HN_AF=hd_hn_af, TL_AF=tl_af, apply_tl_af=apply_tl_af)
-                sf_para_dict = dict()
-                sf_para_dict['id'] = 'ffnns'
-                sf_para_dict['ffnns'] = ffnns_para_dict
-
-                yield sf_para_dict
+            yield sf_para_dict
 
 
 ### identifier ###

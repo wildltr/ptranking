@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Created by Hai-Tao Yu | 18/12/25 | https://y-research.github.io
-
 """Description
 
 """
@@ -29,14 +27,11 @@ class Point_IR_FGAN(AdversarialMachine):
 
         self.activation_f, self.conjugate_f = get_f_divergence_functions(f_div_str)
 
-        if self.eval_dict['query_aware']:
-            raise NotImplementedError
-        else:
-            sf_para_dict['ffnns']['apply_tl_af'] = False
+        sf_para_dict['ffnns']['apply_tl_af'] = False
 
-            g_sf_para_dict = sf_para_dict
+        g_sf_para_dict = sf_para_dict
 
-            d_sf_para_dict = copy.deepcopy(g_sf_para_dict)
+        d_sf_para_dict = copy.deepcopy(g_sf_para_dict)
 
         self.generator = Point_Generator(sf_para_dict=g_sf_para_dict)
         self.discriminator = Point_Discriminator(sf_para_dict=d_sf_para_dict)

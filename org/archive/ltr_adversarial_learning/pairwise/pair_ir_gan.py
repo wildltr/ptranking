@@ -72,16 +72,13 @@ class Pair_IR_GAN(AdversarialMachine):
         '''
         super(Pair_IR_GAN, self).__init__(eval_dict=eval_dict, data_dict=data_dict)
 
-        if self.eval_dict['query_aware']:
-            raise NotImplementedError
-        else:
-            sf_para_dict['ffnns']['apply_tl_af'] = True
+        sf_para_dict['ffnns']['apply_tl_af'] = True
 
-            g_sf_para_dict = sf_para_dict
+        g_sf_para_dict = sf_para_dict
 
-            d_sf_para_dict = copy.deepcopy(g_sf_para_dict)
-            d_sf_para_dict['ffnns']['apply_tl_af'] = False
-            #d_sf_para_dict['ffnns']['TL_AF'] = 'S'  # as required by the IRGAN model
+        d_sf_para_dict = copy.deepcopy(g_sf_para_dict)
+        d_sf_para_dict['ffnns']['apply_tl_af'] = False
+        #d_sf_para_dict['ffnns']['TL_AF'] = 'S'  # as required by the IRGAN model
 
         self.generator     = IRGAN_Pair_Generator(sf_para_dict=g_sf_para_dict, temperature=temperature)
         self.discriminator = IRGAN_Pair_Discriminator(sf_para_dict=d_sf_para_dict)

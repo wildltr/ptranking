@@ -201,7 +201,7 @@ def get_buffer_file_name(data_id, file, data_dict):
     if data_id in YAHOO_L2R:
         perquery_file = file[:file.find('.txt')].replace(data_id.lower() + '.', 'Buffered' + data_id + '/') + '_' + pq_suffix + res_suffix + '.np'
     elif data_id in ISTELLA_L2R:
-        perquery_file = file[:file.find('.txt')].replace(data_id + '.', 'Buffered' + data_id + '/') + '_' + pq_suffix + res_suffix + '.np'
+        perquery_file = file[:file.find('.txt')].replace(data_id, 'Buffered_' + data_id) + '_' + pq_suffix + res_suffix + '.np'
     else:
         perquery_file = file[:file.find('.txt')].replace('Fold', 'BufferedFold') + '_' + pq_suffix + res_suffix +'.np'
 
@@ -512,6 +512,7 @@ class L2RDataset(data.Dataset):
                 semi_context = False
 
             if os.path.exists(torch_perquery_file):
+                print('loading buffered file ...')
                 self.list_torch_Qs = pickle_load(torch_perquery_file)
             else:
                 self.list_torch_Qs = []
@@ -588,7 +589,7 @@ class L2RDataset(data.Dataset):
         min_rele = -1 # we note that it includes dumb queries that has no relevant documents
         scale_data, scaler_id, scaler_level = get_default_scaler_setting(data_id=data_id)
         data_dict = dict(data_id=data_id, min_docs=min_docs, min_rele=min_rele, sample_times_per_q=1,
-                         presort=False, binary_rele=False, unknown_as_zero=False,
+                         presort=True, binary_rele=False, unknown_as_zero=False,
                          scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
 
         data_meta = get_data_meta(data_id=data_id)
@@ -643,7 +644,7 @@ def get_buffer_file_name_libsvm(in_file, data_id=None, eval_dict=None, need_grou
         file_buffered_data  = buffer_prefix  + '.data'
         if need_group: file_buffered_group = buffer_prefix  + '.group'
     elif data_id in ISTELLA_L2R:
-        buffer_prefix       = in_file[:in_file.find('.txt')].replace(data_id, 'Buffered' + data_id + '/')
+        buffer_prefix       = in_file[:in_file.find('.txt')].replace(data_id, 'Buffered_' + data_id)
         file_buffered_data  = buffer_prefix  + '.data'
         if need_group: file_buffered_group = buffer_prefix  + '.group'
     else:

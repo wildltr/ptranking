@@ -196,7 +196,8 @@ class NeuralRanker(AbstractNeuralRanker):
     def stop_training(self, preds):
         ''' stop training if the predictions are all zeros or include nan value(s)'''
 
-        if torch.nonzero(preds).size(0) <= 0: # todo-as-note: 'preds.byte().any()' seems wrong operation w.r.t. gpu
+        #if torch.nonzero(preds).size(0) <= 0: # todo-as-note: 'preds.byte().any()' seems wrong operation w.r.t. gpu
+        if torch.nonzero(preds, as_tuple=False).size(0) <= 0: # due to the UserWarning: This overload of nonzero is deprecated:
             print('All zero error.\n')
             #print('All zero error.\n', preds)
             return True

@@ -11,7 +11,6 @@ import sys
 import copy
 import datetime
 import numpy as np
-from pathlib import Path
 from itertools import product
 
 import torch
@@ -20,22 +19,21 @@ import torch
 from org.archive.data import data_utils
 from org.archive.data.data_utils import L2RDataset
 from org.archive.ltr_adhoc.eval.eval_utils import ndcg_at_ks, ndcg_at_k
-from org.archive.utils.bigdata.BigPickle import pickle_save, pickle_load
+from org.archive.utils.bigdata.BigPickle import pickle_save
 from org.archive.ltr_adhoc.eval.grid_utils import sf_grid, get_sf_ID, eval_grid
 
 from org.archive.ltr_adhoc.pointwise.rank_mse          import RankMSE
 from org.archive.ltr_adhoc.pairwise.ranknet           import RankNet
-from org.archive.ltr_adhoc.listwise.lambdarank        import LambdaRank, lambda_para_iterator, get_lambda_para_str, get_default_lambda_para_dict
 from org.archive.ltr_adhoc.listwise.rank_cosine        import RankCosine
 from org.archive.ltr_adhoc.listwise.listnet           import ListNet
 from org.archive.ltr_adhoc.listwise.st_listnet         import STListNet
 from org.archive.ltr_adhoc.listwise.listmle           import ListMLE
 from org.archive.ltr_adhoc.listwise.approxNDCG        import AppoxNDCG, get_apxndcg_paras_str
 from org.archive.ltr_adhoc.listwise.wassrank.wassRank import WassRank, wassrank_para_iterator, get_wass_para_str
-
+from org.archive.ltr_adhoc.listwise.lambdarank        import LambdaRank, lambda_para_iterator, get_lambda_para_str, get_default_lambda_para_dict
+from org.archive.ltr_adhoc.listwise.direct_opt_ir_metric import DirectOptIRMetric, default_direct_opt_para_dict, direct_opt_para_iterator, get_direct_opt_paras_str
 
 from org.archive.l2r_global import global_gpu as gpu, global_device as device, tensor
-
 
 class L2REvaluator():
     """
@@ -48,11 +46,7 @@ class L2REvaluator():
     def show_infor(self, data_dict, model_para_dict):
         ''' Some tip information '''
         if gpu: print('-- GPU({}) is launched --'.format(device))
-
-        if model_para_dict['model_id'].startswith('Virtual'):
-            print(' '.join(['\nStart {}-{} on {} for ltr_adhoc >>>'.format(model_para_dict['model_id'], model_para_dict['metric'], data_dict['data_id'])]))
-        else:
-           print(' '.join(['\nStart {} on {} for ltr_adhoc >>>'.format(model_para_dict['model_id'], data_dict['data_id'])]))
+        print(' '.join(['\nStart {} on {} for ltr_adhoc >>>'.format(model_para_dict['model_id'], data_dict['data_id'])]))
 
     @staticmethod
     def get_scaler_setting(data_id, grid_search=False):
@@ -91,12 +85,7 @@ class L2REvaluator():
 
     def pre_check(self, data_dict, eval_dict, sf_para_dict):
         if data_dict['sample_rankings_per_q']>1:
-            if eval_dict['query_aware']:
-                assert sf_para_dict['in_para_dict']   == False
-                assert sf_para_dict['cnt_para_dict']  == False
-                assert sf_para_dict['com_para_dict']  == False
-            else:
-                assert sf_para_dict['one_fits_all']['BN'] == False
+            assert sf_para_dict['one_fits_all']['BN'] == False
 
         if data_dict['data_id'] == 'Istella':
             assert eval_dict['do_vali'] is not True # since there is no validation data
@@ -193,6 +182,9 @@ class L2REvaluator():
         elif model_id == 'ApproxNDCG':
             ranker = AppoxNDCG(sf_para_dict=sf_para_dict, apxNDCG_para_dict=model_para_dict)
 
+        elif model_id.startswith('DirectOpt'):
+            ranker = DirectOptIRMetric(sf_para_dict=sf_para_dict, direct_opt_dict=model_para_dict)
+
         elif model_id in ['WassRank', 'WassRankSP']:
             if model_id.endswith('SP'):
                 ranker = WassRank(sf_para_dict=sf_para_dict, wass_para_dict=model_para_dict, dict_cost_mats=kwargs['dict_cost_mats'], dict_std_dists=kwargs['dict_std_dists'], sampling=True)
@@ -223,8 +215,6 @@ class L2REvaluator():
         #date_prefix = datetime.datetime.now().strftime('%Y_%m_%d') # which may cause multiple directories for the same model due to date differences
 
         model_id = model_para_dict['model_id']
-        if model_id.startswith('Virtual'):
-            model_id = '_'.join([model_id, model_para_dict['metric']])
 
         if grid_search:
             dir_root = dir_output + '_'.join(['gpu', 'grid', model_id]) + '/' if gpu else dir_output + '_'.join(['grid', model_id]) + '/'
@@ -271,7 +261,7 @@ class L2REvaluator():
     def setup_output(self, data_dict=None, eval_dict=None, sf_para_dict=None, model_para_dict=None):
         ''' Update output directory '''
         model_id = model_para_dict['model_id']
-        grid_search, do_vali, dir_output, query_aware = eval_dict['grid_search'], eval_dict['do_vali'], eval_dict['dir_output'], eval_dict['query_aware']
+        grid_search, do_vali, dir_output = eval_dict['grid_search'], eval_dict['do_vali'], eval_dict['dir_output']
         semi_context = eval_dict['semi_context']
 
         dir_root = self.update_dir_root(grid_search, dir_output, model_para_dict)
@@ -285,13 +275,7 @@ class L2REvaluator():
         if semi_context:
             data_eval_str = '_'.join([data_eval_str, 'Semi', 'Ratio', '{:,g}'.format(eval_dict['mask_ratio'])])
 
-        if query_aware:
-            file_prefix = '_'.join([model_id, 'QA', 'SF', sf_str, data_eval_str])
-        else:
-            if model_id.startswith('Virtual'):
-                file_prefix = '_'.join([model_id, model_para_dict['metric'], 'SF', sf_str, data_eval_str])
-            else:
-                file_prefix = '_'.join([model_id, 'SF', sf_str, data_eval_str])
+        file_prefix = '_'.join([model_id, 'SF', sf_str, data_eval_str])
 
         if data_dict['scale_data']:
             if data_dict['scaler_level'] == 'QUERY':
@@ -310,6 +294,10 @@ class L2REvaluator():
         elif model_id == 'ApproxNDCG':
             apxNDCG_paras_str = get_apxndcg_paras_str(model_para_dict=model_para_dict)
             dir_run = dir_run + apxNDCG_paras_str + '/'
+
+        elif model_id.startswith('DirectOpt'):
+            direct_opt_paras_str = get_direct_opt_paras_str(direct_opt_dict=model_para_dict)
+            dir_run = dir_run + direct_opt_paras_str + '/'
 
         elif model_id == 'LambdaRank':
             lambda_paras_str = get_lambda_para_str(lambda_para_dict=model_para_dict)
@@ -351,9 +339,6 @@ class L2REvaluator():
         if self.do_log: sys.stdout = open(self.dir_run + 'log.txt', "w")
         #if self.do_summary: self.summary_writer = SummaryWriter(self.dir_run + 'summary')
 
-        #self.query_aware, self.dict_query_cnts = False, None
-        #if eval_dict['query_aware']: # query aware setting, Note: this ony permits evaluation over a single dataset
-        #    self.query_aware, self.loaded_query_cnts, self.dict_query_cnts = True, False, None
 
     def get_log_para_str(self, model_para_dict):
         ''' Get the log string of a particular ranker '''
@@ -364,6 +349,9 @@ class L2REvaluator():
 
         elif model_id == 'ApproxNDCG':
             para_setting_str = get_apxndcg_paras_str(model_para_dict=model_para_dict, log=True)
+
+        elif model_id.startswith('DirectOpt'):
+            para_setting_str = get_direct_opt_paras_str(direct_opt_dict=model_para_dict, log=True)
 
         elif model_id == 'LambdaRank':
             para_setting_str = get_lambda_para_str(lambda_para_dict=model_para_dict, log=True)
@@ -382,9 +370,6 @@ class L2REvaluator():
         sf_str = get_sf_ID(sf_para_dict=sf_para_dict, log=True)
 
         data_eval_str = self.get_data_eval_str(data_dict, eval_dict, log=True)
-
-        if eval_dict['query_aware']:
-            sf_str = '\n'.join(['query_aware: True', sf_str])
 
         with open(file=dir_root + '/' + data_id + '_max.txt', mode='w') as max_writer:
             max_writer.write('\n\n'.join([data_eval_str, sf_str, log_para_str, self.result_to_str(max_cv_avg_scores, cutoffs)]))
@@ -460,10 +445,6 @@ class L2REvaluator():
             if self.do_vali: fold_optimal_ndcgk = 0.0
             if self.do_summary: list_epoch_loss, list_fold_k_train_eval_track, list_fold_k_test_eval_track, list_fold_k_vali_eval_track = [], [], [], []
             if not self.do_vali and self.loss_guided: first_round, threshold_epoch_loss = True, tensor([10000000.0])
-
-            #if self.query_aware and (not self.loaded_query_cnts): ## todo the query_aware setting will be disabled ##
-            #    self.loaded_query_cnts = True
-            #    self.load_query_context(eval_dict, cnt_str=sf_para_dict['cnt_str'], train_data=train_data, test_data=test_data, vali_data=vali_data)
 
             for epoch_k in range(1, self.epochs + 1):
                 torch_fold_k_epoch_k_loss, stop_training = self.train_ranker(ranker=ranker, train_data=train_data, model_para_dict=model_para_dict, epoch_k=epoch_k)
@@ -609,7 +590,7 @@ class L2REvaluator():
 
         return ar
 
-    def parse_virtual_rank_id(self, id):
+    def parse_direct_opt_metric(self, id):
         metric = id.split('_')[1]
         return metric
 
@@ -629,14 +610,16 @@ class L2REvaluator():
             apxNDCG_dict = dict(model_id=model_id, alpha=10)
             return apxNDCG_dict
 
+        elif model_id.startswith('DirectOpt'):
+            direct_opt_para_dict = default_direct_opt_para_dict(metric='NDCG')
+            return direct_opt_para_dict
         else:
             return dict(model_id=model_id)
 
     @staticmethod
     def get_default_dicts(data_id, dir_data=None, dir_output=None):
-        debug = False
+        debug = True
         grid_search = False
-        query_aware = False
 
         # testing the effect of partially masking ground-truth labels with a specified ratio
         semi_context = False
@@ -656,7 +639,7 @@ class L2REvaluator():
         data_dict = dict(data_id=data_id, dir_data=dir_data, unknown_as_zero=unknown_as_zero, binary_rele=binary_rele,
                          presort=presort, sample_rankings_per_q=1)
 
-        eval_dict = dict(debug=debug, grid_search=grid_search, query_aware=query_aware, dir_output=dir_output,
+        eval_dict = dict(debug=debug, grid_search=grid_search, dir_output=dir_output,
                          semi_context=semi_context, mask_ratio=mask_ratio, mask_type=mask_type)
 
         do_log = False if eval_dict['debug'] else True
@@ -685,23 +668,9 @@ class L2REvaluator():
         FBN = False if data_dict['scale_data'] else True
         sf_para_dict = dict()
 
-        if eval_dict['query_aware']:  # to be deprecated
-            sf_para_dict['id'] = 'ScoringFunction_CAFFNNs'
-            # sf_para_dict['cnt_str'] = 'max_mean_var'
-            in_para_dict = dict(num_layers=3, HD_AF='CE', HN_AF='CE', TL_AF='CE', apply_tl_af=True, BN=True, RD=False,
-                                FBN=FBN)
-            # cnt_para_dict = dict(num_layers=3, HD_AF='R', HN_AF='R', TL_AF='R', apply_tl_af=True, BN=True, RD=False)
-            cnt_para_dict = None
-            com_para_dict = dict(num_layers=3, HD_AF='CE', HN_AF='CE', TL_AF='CE', apply_tl_af=True, BN=True, RD=False)
-            sf_para_dict['in_para_dict'] = in_para_dict
-            sf_para_dict['cnt_para_dict'] = cnt_para_dict
-            sf_para_dict['com_para_dict'] = com_para_dict
-
-        else:
-            sf_para_dict['id'] = 'ffnns'
-            ffnns_para_dict = dict(num_layers=5, HD_AF='R', HN_AF='R', TL_AF='S', apply_tl_af=True,
-                                   BN=True, RD=False, FBN=FBN)
-            sf_para_dict['ffnns'] = ffnns_para_dict
+        sf_para_dict['id'] = 'ffnns'
+        ffnns_para_dict = dict(num_layers=5, HD_AF='R', HN_AF='R', TL_AF='S', apply_tl_af=True, BN=True, RD=False, FBN=FBN)
+        sf_para_dict['ffnns'] = ffnns_para_dict
 
         return sf_para_dict
 
@@ -726,35 +695,28 @@ class L2REvaluator():
 
 
 
-    def grid_run(self, model_id=None, data_id=None, dir_data=None, dir_output=None):
-        ''' Perform learning-to-rank based on grid search of optimal parameter setting '''
+    def grid_run(self, model_id=None, data_id=None, dir_data=None, dir_output=None, debug=False):
+        ''' Perform learning-to-rank based on grid-search of optimal parameter setting '''
 
         ''' common setting w.r.t. datasets & evaluation'''
-        debug = False
-
-        query_aware = False
+        debug = debug
 
         # testing the effect of partially masking ground-truth labels with a specified ratio
         semi_context = False
-        if semi_context:
-            assert not data_id in data_utils.MSLETOR_SEMI
+        if semi_context and not data_id in data_utils.MSLETOR_SEMI:
             mask_ratio = 0.5
             mask_type  = 'rand_mask_rele'
         else:
             mask_ratio = None
             mask_type  = None
 
-        unknown_as_zero = True if data_id in data_utils.MSLETOR_SEMI else False
-        binary_rele     = True if data_id in data_utils.MSLETOR_SEMI else False
+        binary_rele, unknown_as_zero = False, False
 
-        presort = True # a default setting
+        data_dict = dict(data_id=data_id, dir_data=dir_data, unknown_as_zero=unknown_as_zero, binary_rele=binary_rele)
 
-        data_dict = dict(data_id=data_id, dir_data=dir_data, unknown_as_zero=unknown_as_zero, binary_rele=binary_rele, presort=presort)
-
-        eval_dict = dict(debug=debug, grid_search=True, query_aware=query_aware, dir_output=dir_output, semi_context=semi_context, mask_ratio=mask_ratio, mask_type=mask_type)
+        eval_dict = dict(debug=debug, grid_search=True, dir_output=dir_output, semi_context=semi_context, mask_ratio=mask_ratio, mask_type=mask_type)
 
         debug = eval_dict['debug']
-        query_aware = eval_dict['query_aware']
         do_log = False if debug else True
 
         # more data settings that are rarely changed
@@ -765,6 +727,7 @@ class L2REvaluator():
         cutoffs = [1, 3, 5, 10, 20, 50]
         eval_dict.update(dict(vali_k=vali_k, cutoffs=cutoffs, do_log=do_log, log_step=2, do_summary=False, loss_guided=False))
 
+        #-- grid-search parameters  --#
         choice_scale_data, choice_scaler_id, choice_scaler_level = self.get_scaler_setting(data_id=data_dict['data_id'], grid_search=True)
 
         ''' setting w.r.t. train  '''
@@ -798,28 +761,49 @@ class L2REvaluator():
         choice_apply_BN = [False] if debug else [True]  # True, False
         choice_apply_RD = [False] if debug else [False]  # True, False
 
+        '''
         choice_layers = [3]     if debug else [3]  # 1, 2, 3, 4
         choice_hd_hn_af = ['S'] if debug else ['R']  # 'R6' | 'RK' | 'S' activation function w.r.t. head hidden layers
         choice_tl_af = ['S']    if debug else ['R']  # activation function for the last layer, sigmoid is suggested due to zero-prediction
         choice_hd_hn_tl_af = ['R', 'CE'] if debug else ['R', 'LR', 'RR', 'E', 'SE', 'CE', 'S'] # ['R', 'LR', 'RR', 'E', 'SE', 'CE', 'S']
         choice_apply_tl_af = [True]  # True, False
+        '''
+        # temporay setting for 'DirectOpt_P', 'DirectOpt_AP', 'DirectOpt_NDCG', 'DirectOpt_NERR'
+        if model_id == 'DirectOpt_P':
+            choice_layers = [3]     if debug else [5]  # 1, 2, 3, 4
+            choice_hd_hn_af = ['S'] if debug else ['R']  # 'R6' | 'RK' | 'S' activation function w.r.t. head hidden layers
+            choice_tl_af = ['S']    if debug else ['R']  # activation function for the last layer, sigmoid is suggested due to zero-prediction
+            choice_hd_hn_tl_af = ['R', 'CE'] if debug else ['R'] # ['R', 'LR', 'RR', 'E', 'SE', 'CE', 'S']
+            choice_apply_tl_af = [True]  # True, False
 
+        elif model_id == 'DirectOpt_AP':
+            choice_layers = [3]     if debug else [5]  # 1, 2, 3, 4
+            choice_hd_hn_af = ['S'] if debug else ['R']  # 'R6' | 'RK' | 'S' activation function w.r.t. head hidden layers
+            choice_tl_af = ['S']    if debug else ['R']  # activation function for the last layer, sigmoid is suggested due to zero-prediction
+            choice_hd_hn_tl_af = ['R', 'CE'] if debug else ['CE'] # ['R', 'LR', 'RR', 'E', 'SE', 'CE', 'S']
+            choice_apply_tl_af = [False]  # True, False
 
-        ''' query-aware setting '''
-        in_choice_layers = [2]     if debug else [3]  # 1, 2, 3, 4
-        in_choice_hd_hn_af = ['R'] if debug else ['R']
-        in_choice_tl_af = ['S']    if debug else ['S']  # 'R6' | 'RK' | 'S' activation function w.r.t. head hidden layers
+        elif model_id == 'DirectOpt_NDCG':
+            choice_layers = [3]     if debug else [5]  # 1, 2, 3, 4
+            choice_hd_hn_af = ['S'] if debug else ['R']  # 'R6' | 'RK' | 'S' activation function w.r.t. head hidden layers
+            choice_tl_af = ['S']    if debug else ['R']  # activation function for the last layer, sigmoid is suggested due to zero-prediction
+            choice_hd_hn_tl_af = ['R', 'CE'] if debug else ['CE'] # ['R', 'LR', 'RR', 'E', 'SE', 'CE', 'S']
+            choice_apply_tl_af = [False]  # True, False
 
-        cnt_choice_layers = [2]     if debug else [3]  # 1, 2, 3, 4
-        cnt_choice_hd_hn_af = ['R'] if debug else ['R']
-        cnt_choice_tl_af = ['S']    if debug else ['S']  # 'R6' | 'RK' | 'S' activation function w.r.t. head hidden layers
+        elif model_id == 'DirectOpt_NERR':
+            choice_layers = [3]     if debug else [5]  # 1, 2, 3, 4
+            choice_hd_hn_af = ['S'] if debug else ['R']  # 'R6' | 'RK' | 'S' activation function w.r.t. head hidden layers
+            choice_tl_af = ['S']    if debug else ['R']  # activation function for the last layer, sigmoid is suggested due to zero-prediction
+            choice_hd_hn_tl_af = ['R', 'CE'] if debug else ['CE'] # ['R', 'LR', 'RR', 'E', 'SE', 'CE', 'S']
+            choice_apply_tl_af = [True]  # True, False
 
-        com_choice_layers = [2]     if debug else [3]  # 1, 2, 3, 4
-        com_choice_hd_hn_af = ['R'] if debug else ['R']
-        com_choice_tl_af = ['S']  # sigmoid is suggested due to zero-prediction
+        else:
+            choice_layers = [3]     if debug else [3]  # 1, 2, 3, 4
+            choice_hd_hn_af = ['S'] if debug else ['R']  # 'R6' | 'RK' | 'S' activation function w.r.t. head hidden layers
+            choice_tl_af = ['S']    if debug else ['R']  # activation function for the last layer, sigmoid is suggested due to zero-prediction
+            choice_hd_hn_tl_af = ['R', 'CE'] if debug else ['R', 'LR', 'RR', 'E', 'SE', 'CE', 'S'] # ['R', 'LR', 'RR', 'E', 'SE', 'CE', 'S']
+            choice_apply_tl_af = [True]  # True, False
 
-        #choice_cnt_strs = ['max_mean_var'] if debug else get_all_cnt_strs()
-        choice_cnt_strs = None
 
         """ setting w.r.t.  ApproxNDCG """
         apxNDCG_choice_alpha = [100] if debug else [10]  # 100, 150, 200
@@ -838,17 +822,9 @@ class L2REvaluator():
             for scale_data, scaler_id, scaler_level, presort, sample_rankings_per_q in product(choice_scale_data, choice_scaler_id, choice_scaler_level, choice_presort, choice_sample_rankings_per_q):
                 FBN = False if scale_data else True
 
-                for sf_para_dict in sf_grid(FBN=FBN, query_aware=query_aware, choice_cnt_strs=choice_cnt_strs,
-                                            choice_layers=choice_layers, choice_hd_hn_af=choice_hd_hn_af, choice_tl_af=choice_tl_af,
+                for sf_para_dict in sf_grid(FBN=FBN, choice_layers=choice_layers, choice_hd_hn_af=choice_hd_hn_af, choice_tl_af=choice_tl_af,
                                             choice_hd_hn_tl_af=choice_hd_hn_tl_af, choice_apply_tl_af=choice_apply_tl_af,
-                                            in_choice_layers=in_choice_layers, in_choice_hd_hn_af=in_choice_hd_hn_af,
-                                            in_choice_tl_af=in_choice_tl_af,
-                                            cnt_choice_layers=cnt_choice_layers, choice_apply_BN=choice_apply_BN, choice_apply_RD=choice_apply_RD,
-                                            cnt_choice_hd_hn_af=cnt_choice_hd_hn_af, cnt_choice_tl_af=cnt_choice_tl_af,
-                                            com_choice_layers=com_choice_layers,
-                                            com_choice_hd_hn_af=com_choice_hd_hn_af, com_choice_tl_af=com_choice_tl_af):
-
-                    model_id = '_'.join([model_id, 'QAware', sf_para_dict['cnt_str']]) if query_aware else model_id
+                                            choice_apply_BN=choice_apply_BN, choice_apply_RD=choice_apply_RD):
 
                     data_dict.update(dict(presort=presort, sample_rankings_per_q=sample_rankings_per_q, scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level))
 
@@ -873,6 +849,13 @@ class L2REvaluator():
 
                             if curr_cv_avg_scores[k_index] > max_cv_avg_scores[k_index]:
                                 max_cv_avg_scores, max_sf_para_dict, max_eval_dict, max_model_para_dict = curr_cv_avg_scores, sf_para_dict, eval_dict, lambda_para_dict
+
+                    elif model_id.startswith('DirectOpt'):
+                        for direct_opt_para_dict in direct_opt_para_iterator(debug=debug, model_id=model_id, metric=self.parse_direct_opt_metric(model_id)):
+                            curr_cv_avg_scores = self.kfold_cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict, model_para_dict=direct_opt_para_dict)
+
+                            if curr_cv_avg_scores[k_index] > max_cv_avg_scores[k_index]:
+                                max_cv_avg_scores, max_sf_para_dict, max_eval_dict, max_model_para_dict = curr_cv_avg_scores, sf_para_dict, eval_dict, direct_opt_para_dict
 
                     else:  # other traditional methods
                         model_para_dict = dict(model_id=model_id)

@@ -29,6 +29,7 @@ if __name__ == '__main__':
     -----------------------------------------------------------------------------------------
     | Listwise  | LambdaRank % ListNet % ListMLE % RankCosine %  ApproxNDCG %  WassRank     |
     |           | STListNet                                                                 |
+    |           | DirectOpt_P % DirectOpt_AP % DirectOpt_NDCG % DirectOpt_NERR              |
     -----------------------------------------------------------------------------------------   
     
 
@@ -46,17 +47,17 @@ if __name__ == '__main__':
     """
 
 	''' selected dataset '''
-	#data_id = 'MQ2007_Super'
+	data_id = 'MQ2007_Super'
 
 	''' location of the adopted data '''
 	#dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2007/'
-	#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
+	dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
 
 	#data_id = 'Istella_X'
 	#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella_X/'
 
-	data_id = 'Istella'
-	dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella/'
+	#data_id = 'Istella'
+	#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella/'
 
 	#data_id = 'Istella_S'
 	#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella_S/'
@@ -82,5 +83,5 @@ if __name__ == '__main__':
 			evaluator.grid_run(model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output)
 
 	else:
-		model_id = 'ListNet'
+		model_id = 'DirectOptIRMetric'
 		evaluator.default_run(model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output)

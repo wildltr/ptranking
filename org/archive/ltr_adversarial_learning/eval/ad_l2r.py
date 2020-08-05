@@ -41,7 +41,7 @@ class AdL2REvaluator(L2REvaluator):
         ''' Setting of the output directory '''
 
         model_id = model_para_dict['model_id']
-        grid_search, do_vali, dir_output, query_aware = eval_dict['grid_search'], eval_dict['do_vali'], eval_dict['dir_output'], eval_dict['query_aware']
+        grid_search, do_vali, dir_output = eval_dict['grid_search'], eval_dict['do_vali'], eval_dict['dir_output']
         semi_context = eval_dict['semi_context']
 
         dir_root = self.update_dir_root(grid_search, dir_output, model_para_dict)
@@ -55,10 +55,7 @@ class AdL2REvaluator(L2REvaluator):
         if semi_context:
             data_eval_str = '_'.join([data_eval_str, 'Semi', 'Ratio', '{:,g}'.format(eval_dict['mask_ratio'])])
 
-        if query_aware:
-            file_prefix = '_'.join([model_id, 'QA', 'SF', sf_str, data_eval_str])
-        else:
-            file_prefix = '_'.join([model_id, 'SF', sf_str, data_eval_str])
+        file_prefix = '_'.join([model_id, 'SF', sf_str, data_eval_str])
 
         if data_dict['scale_data']:
             if data_dict['scaler_level'] == 'QUERY':
@@ -372,14 +369,11 @@ class AdL2REvaluator(L2REvaluator):
         if binary_rele and data_id in data_utils.MSLETOR_SEMI:
             unknown_as_zero = True # required for binarization
 
-        query_aware = False
-
         data_dict = dict(data_id=data_id, dir_data=dir_data, unknown_as_zero=unknown_as_zero, binary_rele=binary_rele, presort=presort)
-        eval_dict = dict(debug=debug, grid_search=True, semi_context=semi_context, mask_ratio=mask_ratio, mask_type=mask_type, query_aware=query_aware, dir_output=dir_output)
+        eval_dict = dict(debug=debug, grid_search=True, semi_context=semi_context, mask_ratio=mask_ratio, mask_type=mask_type, dir_output=dir_output)
 
 
         debug = eval_dict['debug']
-        #query_aware = eval_dict['query_aware']
         do_log = True if debug else True
 
         # more data settings that are rarely changed
@@ -479,7 +473,7 @@ class AdL2REvaluator(L2REvaluator):
                 for partail_eval_dict in ad_eval_grid(choice_validation=choice_validation, choice_epoch=choice_epoch, choice_semi_context=choice_semi_context, choice_mask_ratios=choice_mask_ratios, choice_mask_type=choice_mask_type):
                     eval_dict.update(partail_eval_dict)
 
-                    for sf_para_dict in sf_grid(FBN=FBN, query_aware=False, choice_cnt_strs=None, choice_layers=choice_layers, choice_hd_hn_af=choice_hd_hn_af, choice_tl_af=choice_tl_af,
+                    for sf_para_dict in sf_grid(FBN=FBN, choice_layers=choice_layers, choice_hd_hn_af=choice_hd_hn_af, choice_tl_af=choice_tl_af,
                                                 choice_hd_hn_tl_af=choice_hd_hn_tl_af, choice_apply_tl_af=choice_apply_tl_af, choice_apply_BN=choice_apply_BN, choice_apply_RD=choice_apply_RD):
 
                         data_dict.update(dict(sample_rankings_per_q=sample_rankings_per_q, scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level, binary_rele=binary_rele, presort=presort))
@@ -537,11 +531,9 @@ class AdL2REvaluator(L2REvaluator):
         if binary_rele and data_id in data_utils.MSLETOR_SEMI:
             unknown_as_zero = True # required for binarization
 
-        query_aware = False
-
         data_dict = dict(data_id=data_id, dir_data=dir_data, unknown_as_zero=unknown_as_zero, binary_rele=binary_rele, presort=presort, sample_rankings_per_q=1)
 
-        eval_dict = dict(debug=debug, grid_search=grid_search, semi_context=semi_context, mask_ratio=mask_ratio, mask_type=mask_type, query_aware=query_aware, dir_output=dir_output)
+        eval_dict = dict(debug=debug, grid_search=grid_search, semi_context=semi_context, mask_ratio=mask_ratio, mask_type=mask_type, dir_output=dir_output)
 
         debug = eval_dict['debug']
         do_log = True if eval_dict['debug'] else True
@@ -574,23 +566,9 @@ class AdL2REvaluator(L2REvaluator):
         FBN = False # leads to error like batchnorm.py"
         sf_para_dict = dict()
 
-        if eval_dict['query_aware']:  # to be deprecated
-            sf_para_dict['id'] = 'ScoringFunction_CAFFNNs'
-            # sf_para_dict['cnt_str'] = 'max_mean_var'
-            in_para_dict = dict(num_layers=3, HD_AF='CE', HN_AF='CE', TL_AF='CE', apply_tl_af=True, BN=True, RD=False,
-                                FBN=FBN)
-            # cnt_para_dict = dict(num_layers=3, HD_AF='R', HN_AF='R', TL_AF='R', apply_tl_af=True, BN=True, RD=False)
-            cnt_para_dict = None
-            com_para_dict = dict(num_layers=3, HD_AF='CE', HN_AF='CE', TL_AF='CE', apply_tl_af=True, BN=True, RD=False)
-            sf_para_dict['in_para_dict'] = in_para_dict
-            sf_para_dict['cnt_para_dict'] = cnt_para_dict
-            sf_para_dict['com_para_dict'] = com_para_dict
-
-        else:
-            sf_para_dict['id'] = 'ffnns'
-            ffnns_para_dict = dict(num_layers=5, HD_AF='R', HN_AF='R', TL_AF='S', apply_tl_af=True,
-                                   BN=False, RD=False, FBN=FBN)
-            sf_para_dict['ffnns'] = ffnns_para_dict
+        sf_para_dict['id'] = 'ffnns'
+        ffnns_para_dict = dict(num_layers=5, HD_AF='R', HN_AF='R', TL_AF='S', apply_tl_af=True, BN=False, RD=False, FBN=FBN)
+        sf_para_dict['ffnns'] = ffnns_para_dict
 
         return sf_para_dict
 

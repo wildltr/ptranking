@@ -12,7 +12,7 @@ import torch
 from org.archive.ltr_adversarial_learning.base.ad_machine import AdversarialMachine
 from org.archive.ltr_adversarial_learning.listwise.list_generator import List_Generator
 from org.archive.ltr_adversarial_learning.listwise.list_discriminator import List_Discriminator
-
+from org.archive.ltr_adversarial_learning.util.f_divergence import get_f_divergence_functions
 from org.archive.ltr_adversarial_learning.util.list_probability import log_ranking_prob_Bradley_Terry, log_ranking_prob_Plackett_Luce
 
 from org.archive.utils.pytorch.pt_extensions import arg_shuffle_ties
@@ -20,9 +20,8 @@ from org.archive.ltr_adversarial_learning.util.list_sampling import gumbel_softm
 
 from org.archive.l2r_global import global_gpu as gpu, global_device as device
 
-
-class List_IR_GAN(AdversarialMachine):
-    def __init__(self, eval_dict, data_dict, sf_para_dict=None, temperature=None, d_epoches=1, g_epoches=1, samples_per_query=5, top_k=5,
+class List_IR_FGAN(AdversarialMachine):
+    def __init__(self, eval_dict, data_dict, sf_para_dict=None, f_div_str='KL', temperature=None, d_epoches=1, g_epoches=1, samples_per_query=5, top_k=5,
                  ad_training_order='GD', shuffle_ties=True, PL=True, repTrick=True, dropLog=False, optimal_train=False):
         '''
         :param eval_dict:
@@ -40,7 +39,7 @@ class List_IR_GAN(AdversarialMachine):
         :param dropLog:
         :param optimal_train: training with supervised generator or discriminator
         '''
-        super(List_IR_GAN, self).__init__(eval_dict=eval_dict, data_dict=data_dict)
+        super(List_IR_FGAN, self).__init__(eval_dict=eval_dict, data_dict=data_dict)
 
         #sf_para_dict['ffnns']['apply_tl_af'] = True # todo to be compared
         g_sf_para_dict = sf_para_dict
@@ -67,6 +66,8 @@ class List_IR_GAN(AdversarialMachine):
         self.replace_trick_4_generator = repTrick
         self.drop_discriminator_log_4_reward = dropLog
         self.optimal_train = optimal_train
+
+        self.activation_f, self.conjugate_f = get_f_divergence_functions(f_div_str)
 
         self.pre_check()
 
@@ -153,12 +154,12 @@ class List_IR_GAN(AdversarialMachine):
                     if d_epoch % g_mod == 0: # update generated data
                         if self.optimal_train:
                             samples = self.per_query_generation(qid=qid, batch_ranking=batch_ranking,
-                                batch_label=batch_label, pos_and_neg=True, generator=self.super_generator, top_k=top_k,
-                                shuffle_ties=shuffle_ties, samples_per_query=samples_per_query, temperature=temperature)
+                                                                batch_label=batch_label, pos_and_neg=True, generator=self.super_generator, top_k=top_k,
+                                                                shuffle_ties=shuffle_ties, samples_per_query=samples_per_query, temperature=temperature)
                         else:
                             samples = self.per_query_generation(qid=qid, batch_ranking=batch_ranking,
-                                batch_label=batch_label, pos_and_neg=True, generator=generator, top_k=top_k,
-                                samples_per_query=samples_per_query, shuffle_ties=shuffle_ties, temperature=temperature)
+                                                                batch_label=batch_label, pos_and_neg=True, generator=generator, top_k=top_k,
+                                                                samples_per_query=samples_per_query, shuffle_ties=shuffle_ties, temperature=temperature)
 
                     if samples is None: continue
                     else:
@@ -178,8 +179,8 @@ class List_IR_GAN(AdversarialMachine):
                                              temperature=temperature)
                     else:
                         self.train_generator(batch_ranking=batch_ranking, generator=generator, samples_per_query=samples_per_query, top_k=top_k,
-                            discriminator=discriminator, PL_discriminator=PL_discriminator, replace_trick_4_generator=replace_trick_4_generator,
-                            drop_discriminator_log_4_reward=drop_discriminator_log_4_reward, temperature=temperature)
+                                             discriminator=discriminator, PL_discriminator=PL_discriminator, replace_trick_4_generator=replace_trick_4_generator,
+                                             drop_discriminator_log_4_reward=drop_discriminator_log_4_reward, temperature=temperature)
             else:
                 # optimising generator
                 if self.optimal_train:
@@ -201,12 +202,12 @@ class List_IR_GAN(AdversarialMachine):
                     if d_epoch % g_mod == 0:
                         if self.optimal_train:
                             samples = self.per_query_generation(qid=qid, batch_ranking=batch_ranking,
-                                batch_label=batch_label, pos_and_neg=True, generator=self.super_generator, temperature=temperature,
-                                top_k=top_k, samples_per_query=samples_per_query, shuffle_ties=shuffle_ties)
+                                                                batch_label=batch_label, pos_and_neg=True, generator=self.super_generator, temperature=temperature,
+                                                                top_k=top_k, samples_per_query=samples_per_query, shuffle_ties=shuffle_ties)
                         else:
                             samples = self.per_query_generation(qid=qid, batch_ranking=batch_ranking,
-                                batch_label=batch_label, pos_and_neg=True, generator=generator, temperature=temperature,
-                                samples_per_query=samples_per_query, shuffle_ties=shuffle_ties, top_k=top_k)
+                                                                batch_label=batch_label, pos_and_neg=True, generator=generator, temperature=temperature,
+                                                                samples_per_query=samples_per_query, shuffle_ties=shuffle_ties, top_k=top_k)
 
                     if samples is None: continue
                     else:
@@ -308,6 +309,7 @@ class List_IR_GAN(AdversarialMachine):
         else:
             reward_d_batch_log_ranking_prob_4_gen = log_ranking_prob_Bradley_Terry(reward_d_batch_preds_4_gen_sorted_as_g)
 
+        '''
         if replace_trick_4_generator:
             if drop_discriminator_log_4_reward:
                 batch_rewards = -torch.exp(reward_d_batch_log_ranking_prob_4_gen)
@@ -318,6 +320,9 @@ class List_IR_GAN(AdversarialMachine):
                 batch_rewards = torch.exp(1.0 - reward_d_batch_log_ranking_prob_4_gen)
             else:
                 batch_rewards = torch.log(1.0 - reward_d_batch_log_ranking_prob_4_gen)
+        '''
+
+        batch_rewards = self.conjugate_f(self.activation_f(reward_d_batch_log_ranking_prob_4_gen))
 
         return batch_rewards
 
@@ -337,15 +342,13 @@ class List_IR_GAN(AdversarialMachine):
         else:
             d_batch_log_ranking_prob_4_std = log_ranking_prob_Bradley_Terry(d_batch_preds_4_std)
             d_batch_log_ranking_prob_4_gen = log_ranking_prob_Bradley_Terry(d_batch_preds_4_gen)
-
+        '''
         if replace_trick_4_discriminator:  # replace trick
-            dis_loss = torch.sum(
-                d_batch_log_ranking_prob_4_gen - d_batch_log_ranking_prob_4_std)  # objective to minimize
-
+            dis_loss = torch.sum(d_batch_log_ranking_prob_4_gen - d_batch_log_ranking_prob_4_std)  # objective to minimize
         else:  # standard cross-entropy loss
-            dis_loss = - (torch.sum(d_batch_log_ranking_prob_4_std) + torch.sum(
-                torch.log(1.0 - d_batch_log_ranking_prob_4_gen)))
-
+            dis_loss = - (torch.sum(d_batch_log_ranking_prob_4_std) + torch.sum(torch.log(1.0 - d_batch_log_ranking_prob_4_gen)))
+        '''
+        dis_loss = torch.mean(self.conjugate_f(self.activation_f(d_batch_log_ranking_prob_4_gen))) - torch.mean(self.activation_f(d_batch_log_ranking_prob_4_std))  # objective to minimize w.r.t. discriminator
         discriminator.optimizer.zero_grad()
         dis_loss.backward()
         discriminator.optimizer.step()
@@ -357,7 +360,6 @@ class List_IR_GAN(AdversarialMachine):
         # todo the variance issue really maters !
         # note that the ranking_size should be consistent between generator and discriminator
         reward_d_preds_4_gen = discriminator.predict(batch_ranking, train=False)
-
         if top_k is None:
             sorted_batch_gen_stochastic_probs, batch_gen_sto_sorted_inds = self.per_query_generation(
                 pos_and_neg=False, generator=generator, batch_ranking=batch_ranking, top_k=top_k,
@@ -398,7 +400,7 @@ class List_IR_GAN(AdversarialMachine):
         weighting w.r.t. the discriminator
         without reward, there is not connection between generator and discriminator
         '''
-        g_batch_loss = torch.mean(g_batch_log_ranking_prob_4_gen * batch_rewards.detach())
+        g_batch_loss = -torch.mean(g_batch_log_ranking_prob_4_gen * batch_rewards.detach())
 
         generator.optimizer.zero_grad()
         g_batch_loss.backward()
@@ -419,7 +421,8 @@ class List_IR_GAN(AdversarialMachine):
         return self.super_discriminator if super else self.discriminator
 
 
-def get_list_irgan_paras_str(model_para_dict, log=False):
+def get_list_irfgan_paras_str(model_para_dict, log=False):
+
     s1 = ':' if log else '_'
 
     d_epoches, g_epoches, temperature, ad_training_order = model_para_dict['d_epoches'], model_para_dict['g_epoches'], \
@@ -427,16 +430,16 @@ def get_list_irgan_paras_str(model_para_dict, log=False):
 
     prefix = s1.join([str(d_epoches), str(g_epoches), '{:,g}'.format(temperature), ad_training_order])
 
-    top_k, PL, repTrick, dropLog = model_para_dict['top_k'], model_para_dict['PL'], model_para_dict['repTrick'],\
-                                   model_para_dict['dropLog']
+    #top_k, PL, repTrick, dropLog = model_para_dict['top_k'], model_para_dict['PL'], model_para_dict['repTrick'], model_para_dict['dropLog']
+    top_k, PL, f_div_str = model_para_dict['top_k'], model_para_dict['PL'], model_para_dict['f_div_str']
 
     top_k_str = 'topAll' if top_k is None else 'top'+str(top_k)
     s_str  = 'S'+str(model_para_dict['samples_per_query'])
     df_str = 'PL' if PL else 'BT'
-    prefix = s1.join([prefix, top_k_str, s_str, df_str])
+    prefix = s1.join([prefix, top_k_str, s_str, df_str, f_div_str])
 
-    if repTrick: prefix += '_Rep'
-    if dropLog:  prefix += '_DropLog'
+    #if repTrick: prefix += '_Rep'
+    #if dropLog:  prefix += '_DropLog'
     if model_para_dict['shuffle_ties']: prefix += '_STie'
 
     list_irgan_paras_str = prefix

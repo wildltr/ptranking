@@ -69,20 +69,17 @@ class Point_IR_GAN(AdversarialMachine):
         '''
         super(Point_IR_GAN, self).__init__(eval_dict=eval_dict, data_dict=data_dict)
 
-        if self.eval_dict['query_aware']:
-            raise NotImplementedError
-        else:
-            ''' required final layer setting for Point_IR_GAN '''
-            # the setting of 'apply_tl_af=False' is due to the later application of softmax function w.r.t. all documents
-            # todo experiments show it is quite important to be True, otherwise will be nan issues.
+        ''' required final layer setting for Point_IR_GAN '''
+        # the setting of 'apply_tl_af=False' is due to the later application of softmax function w.r.t. all documents
+        # todo experiments show it is quite important to be True, otherwise will be nan issues.
 
-            assert sf_para_dict['ffnns']['apply_tl_af'] == True # local assignment affects the grid-evaluation
+        assert sf_para_dict['ffnns']['apply_tl_af'] == True # local assignment affects the grid-evaluation
 
-            g_sf_para_dict = sf_para_dict
+        g_sf_para_dict = sf_para_dict
 
-            d_sf_para_dict = copy.deepcopy(g_sf_para_dict)
-            #d_sf_para_dict['ffnns']['apply_tl_af'] = True
-            d_sf_para_dict['ffnns']['TL_AF'] = 'S' # as required by the IRGAN model
+        d_sf_para_dict = copy.deepcopy(g_sf_para_dict)
+        #d_sf_para_dict['ffnns']['apply_tl_af'] = True
+        d_sf_para_dict['ffnns']['TL_AF'] = 'S' # as required by the IRGAN model
 
         self.generator = IRGAN_Point_Generator(sf_para_dict=g_sf_para_dict, temperature=temperature)
         self.discriminator = IRGAN_Point_Discriminator(sf_para_dict=d_sf_para_dict)

@@ -141,9 +141,9 @@ def check_dataset_statistics(data_id, dir_data, buffer=False):
 
 if __name__ == '__main__':
     # 1
-    #data_id  = 'MQ2007_Super'
-    #dir_data = '/Users/dryuhaitao/WorkBench/Corpus/LETOR4.0/MQ2007/'
-    #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
+    data_id  = 'MQ2007_Super'
+    dir_data = '/Users/dryuhaitao/WorkBench/Corpus/LETOR4.0/MQ2007/'
+    dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
 
     #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
     ''' results as below
@@ -180,9 +180,9 @@ if __name__ == '__main__':
     avg documents per query 696.7602040816327
     '''
 
-    data_id  = 'Istella_S'
-    dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/'
-    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    #data_id  = 'Istella_S'
+    #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/'
+    #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
     '''
     Dataset:	 Istella_S
     Total queries:	 33018
@@ -194,8 +194,9 @@ if __name__ == '__main__':
     avg documents per query 103.23550790477921
     '''
 
-    #data_id  = 'Istella_X'
-    #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/'
+    data_id  = 'Istella_X'
+    dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/'
+    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=True)
     '''
     Dataset:	 Istella_X
     Total queries:	 10000
@@ -211,4 +212,3 @@ if __name__ == '__main__':
     #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/'
 
     #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
-

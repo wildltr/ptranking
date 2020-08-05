@@ -6,7 +6,6 @@
 
 """
 
-import ot
 import numpy as np
 
 import torch
@@ -388,19 +387,3 @@ def eval_cost_mat_group(sorted_std_labels, group_div_cost=np.e, margin_to_non_re
 						cost_mat[i, j] += margin_to_non_rele
 
 	return cost_mat
-
-
-def EMD_at_k(k, ideal_desc_labels, sys_corresponding_scores, group_div_cost=np.e, margin_to_non_rele=100.0, rele_gain_base=4.0):
-	if k>len(ideal_desc_labels):
-		return 0.0
-
-	cost_mat = eval_cost_mat_group(ideal_desc_labels, group_div_cost=group_div_cost, margin_to_non_rele=margin_to_non_rele, rele_gain_base=rele_gain_base)
-
-	ideal_histogram = np_stable_softmax_e(ideal_desc_labels)
-	sys_historgram = np_stable_softmax_e(sys_corresponding_scores)
-
-	# %% EMD
-	G0 = ot.emd(a=sys_historgram, b=ideal_histogram, M=cost_mat)
-	emd_value = np.sum(G0 * cost_mat)
-
-	return emd_value
