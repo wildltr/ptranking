@@ -9,12 +9,11 @@
 import torch
 import torch.nn.functional as F
 
+from org.archive.ltr_global import torch_zero
 from org.archive.base.ranker import NeuralRanker
+from org.archive.eval.parameter import ModelParameter
 from org.archive.metric.metric_utils import get_delta_ndcg
 from org.archive.ltr_adhoc.util.gather_utils import torch_triu_indice
-
-
-from org.archive.l2r_global import global_gpu as gpu, global_device as device, tensor, torch_zero
 
 def lambdaRank_loss_diagonal(batch_preds=None, batch_stds=None, sigma=None):
     '''
@@ -48,7 +47,7 @@ def lambdaRank_loss_diagonal(batch_preds=None, batch_stds=None, sigma=None):
     return batch_loss
 
 
-def lambdaRank_loss_full(batch_preds=None, batch_stds=None, sigma=None):
+def lambdaRank_loss_full(batch_preds=None, batch_stds=None, sigma=None, multi_level_rele=None):
     '''
     Instead of strictly getting the uppper diagonal entries, here we compute the lambdaloss by fully making use of the properties as follows:
     (1) using the full pairwise difference matrix is twice the loss of using merely the uppper diagonal entries
@@ -62,7 +61,7 @@ def lambdaRank_loss_full(batch_preds=None, batch_stds=None, sigma=None):
 
     batch_pred_s_ij = torch.unsqueeze(batch_preds_sorted, dim=2) - torch.unsqueeze(batch_preds_sorted, dim=1)  # computing pairwise differences, i.e., s_i - s_j
 
-    batch_delta_ndcg = get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds)
+    batch_delta_ndcg = get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds, multi_level_rele=multi_level_rele)
 
     batch_loss_1st = 0.5 * sigma * batch_pred_s_ij * (1.0 - batch_std_Sij) # cf. the 1st equation in page-3
     batch_loss_2nd = torch.log(torch.exp(-sigma * batch_pred_s_ij) + 1.0)  # cf. the 1st equation in page-3
@@ -152,11 +151,12 @@ class LambdaRank(NeuralRanker):
     Christopher J.C. Burges, Robert Ragno, and Quoc Viet Le. 2006.
     Learning to Rank with Nonsmooth Cost Functions. In Proceedings of NIPS conference. 193–200.
     '''
-
-    def __init__(self, sf_para_dict=None, lambda_para_dict=None):
+    def __init__(self, sf_para_dict=None, model_para_dict=None):
         super(LambdaRank, self).__init__(id='LambdaRank', sf_para_dict=sf_para_dict)
-        self.sigma = lambda_para_dict['sigma']
-        self.loss_version = lambda_para_dict['loss_version']
+        self.sigma = model_para_dict['sigma']
+        self.loss_version = model_para_dict['loss_version']
+        # todo revise all loss functions correspondingly [now only full is done]
+        self.multi_level_rele = False if model_para_dict['std_rele_is_permutation'] else True
 
     def inner_train(self, batch_preds, batch_stds, **kwargs):
         '''
@@ -164,10 +164,6 @@ class LambdaRank(NeuralRanker):
         :param batch_stds:  [batch, ranking_size] each row represents the standard relevance grades for documents within a ltr_adhoc
         :return:
         '''
-
-        #print('batch_preds', batch_preds)
-        #print()
-        #print('batch_stds', batch_stds)
 
         if 'FullSoft' == self.loss_version: # ''' softplus version '''
             batch_loss = lambdaRank_loss_full_soft(batch_preds, batch_stds, sigma=self.sigma)
@@ -178,7 +174,8 @@ class LambdaRank(NeuralRanker):
             Thus lambdaRank_loss_full is used as the default.
             Elapsed time: 0:04:04.392835 LambdaRank 2-fold cross validation scores: nDCG@1:0.4855, nDCG@3:0.4911, nDCG@5:0.5028, nDCG@10:0.5330, nDCG@20:0.5987, nDCG@50:0.0158
             '''
-            batch_loss = lambdaRank_loss_full(batch_preds, batch_stds, sigma=self.sigma)
+            batch_loss = lambdaRank_loss_full(batch_preds, batch_stds, sigma=self.sigma,
+                                              multi_level_rele=self.multi_level_rele)
 
         elif 'Diag' == self.loss_version:
             # Elapsed time: 0:06:19.067998 LambdaRank 2-fold cross validation scores: nDCG@1:0.4849, nDCG@3:0.4909, nDCG@5:0.5028, nDCG@10:0.5328, nDCG@20:0.5985, nDCG@50:0.0158
@@ -199,23 +196,45 @@ class LambdaRank(NeuralRanker):
 
 ###### Parameter of LambdaRank ######
 
-def get_default_lambda_para_dict():
-    lambda_para_dict = dict(model_id='LambdaRank', sigma=1.0, loss_version='Full')
-    return lambda_para_dict
+class LambdaRankParameter(ModelParameter):
+    ''' Parameter class for LambdaRank '''
+    def __init__(self, debug=False, std_rele_is_permutation=False):
+        super(LambdaRankParameter, self).__init__(model_id='LambdaRank')
+        self.debug = debug
+        self.std_rele_is_permutation = std_rele_is_permutation
 
+    def default_para_dict(self):
+        """
+        Default parameter setting for LambdaRank
+        :return:
+        """
+        self.lambda_para_dict = dict(model_id=self.model_id, sigma=1.0, loss_version='Full',
+                                     std_rele_is_permutation=self.std_rele_is_permutation)
+        return self.lambda_para_dict
 
-def lambda_grid(plus_choice_sigma=None):
-    for sigma in plus_choice_sigma:
-        lambda_para_dict = dict(model_id='LambdaRank', sigma=sigma, loss_version='Full')
-        yield lambda_para_dict
+    def to_para_string(self, log=False, given_para_dict=None):
+        """
+        String identifier of parameters
+        :param log:
+        :param given_para_dict: a given dict, which is used for maximum setting w.r.t. grid-search
+        :return:
+        """
+        # using specified para-dict or inner para-dict
+        lambda_para_dict = given_para_dict if given_para_dict is not None else self.lambda_para_dict
 
+        s1, s2 = (':', '\n') if log else ('_', '_')
+        lambdarank_para_str = s1.join([lambda_para_dict['loss_version'], 'Sigma',
+                                    '{:,g}'.format(lambda_para_dict['sigma'])])
+        return lambdarank_para_str
 
-def lambda_para_iterator(debug):
-    plus_choice_sigma = [50.0, 1.0] if debug else [1.0] # 1.0, 10.0, 50.0, 100.0
-    return lambda_grid(plus_choice_sigma=plus_choice_sigma)
-
-
-def get_lambda_para_str(lambda_para_dict=None, log=False):
-    s1, s2 = (':', '\n') if log else ('_', '_')
-    lambda_paras_str = s1.join([lambda_para_dict['loss_version'], 'Sigma', '{:,g}'.format(lambda_para_dict['sigma'])])
-    return lambda_paras_str
+    def grid_search(self):
+        """
+        Iterator of parameter settings for LambdaRank
+        :param debug:
+        :return:
+        """
+        plus_choice_sigma = [5.0, 1.0] if self.debug else [1.0]  # 1.0, 10.0, 50.0, 100.0
+        for sigma in plus_choice_sigma:
+            self.lambda_para_dict = dict(model_id=self.model_id, sigma=sigma, loss_version='Full',
+                                         std_rele_is_permutation=self.std_rele_is_permutation)
+            yield self.lambda_para_dict

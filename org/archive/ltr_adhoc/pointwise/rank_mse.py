@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 """Description
-
 """
 
 import torch
@@ -30,7 +28,7 @@ def rankMSE_loss_function(batch_pred=None, batch_label=None, TL_AF=None):
 class RankMSE(NeuralRanker):
 	def __init__(self, sf_para_dict=None):
 		super(RankMSE, self).__init__(id='RankMSE', sf_para_dict=sf_para_dict)
-		self.TL_AF = self.sf.get_tl_af()
+		self.TL_AF = self.get_tl_af()
 
 	def inner_train(self, batch_pred, batch_label, **kwargs):
 		'''

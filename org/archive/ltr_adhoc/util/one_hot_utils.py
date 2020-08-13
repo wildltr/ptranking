@@ -6,6 +6,7 @@
 """
 
 import torch
+from org.archive.ltr_global import global_gpu as gpu
 
 def get_one_hot_reprs(batch_stds):
     """ Get one-hot representation of batch ground-truth labels """

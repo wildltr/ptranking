@@ -11,7 +11,7 @@ import torch.nn.functional as F
 
 from org.archive.metric.adhoc_metric import rele_gain
 
-from org.archive.l2r_global import global_gpu as gpu, global_device as device, tensor
+from org.archive.ltr_global import global_gpu as gpu, global_device as device, tensor
 
 def tor_sum_norm(histogram):
     probs = torch.div(histogram, torch.sum(histogram, dim=1, keepdim=True))

@@ -9,22 +9,27 @@
 import torch
 
 from org.archive.metric.adhoc_metric import torch_ideal_dcg
-from org.archive.l2r_global import global_gpu as gpu, tensor
+from org.archive.ltr_global import global_gpu as gpu, tensor
 
 #######
 # For Delta Metrics
 #######
 
-def get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds):
+def get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds, multi_level_rele=True):
     '''
     Delta-nDCG w.r.t. pairwise swapping of the currently predicted ltr_adhoc
     :param batch_stds: the standard labels sorted in a descending order
     :param batch_stds_sorted_via_preds: the standard labels sorted based on the corresponding predictions
     :return:
     '''
-    batch_idcgs = torch_ideal_dcg(batch_sorted_labels=batch_stds, gpu=gpu)                      # ideal discount cumulative gains
+    # ideal discount cumulative gains
+    batch_idcgs = torch_ideal_dcg(batch_sorted_labels=batch_stds, gpu=gpu, multi_level_rele=multi_level_rele)
 
-    batch_gains = torch.pow(2.0, batch_stds_sorted_via_preds) - 1.0
+    if multi_level_rele:
+        batch_gains = torch.pow(2.0, batch_stds_sorted_via_preds) - 1.0
+    else:
+        batch_gains = batch_stds_sorted_via_preds
+
     batch_n_gains = batch_gains / batch_idcgs               # normalised gains
     batch_ng_diffs = torch.unsqueeze(batch_n_gains, dim=2) - torch.unsqueeze(batch_n_gains, dim=1)
 
@@ -80,3 +85,17 @@ def get_sharp_swap_deltas(batch_stds, batch_stds_sorted_via_preds, pos_swap_cons
     batch_swap_streths = torch.ones_like(batch_swap_ndcg)
 
     return batch_swap_streths
+
+
+def metric_results_to_string(list_scores=None, list_cutoffs=None, split_str=', '):
+    """
+    Convert metric results to a string representation
+    :param list_scores:
+    :param list_cutoffs:
+    :param split_str:
+    :return:
+    """
+    list_str = []
+    for i in range(len(list_scores)):
+        list_str.append('nDCG@{}:{:.4f}'.format(list_cutoffs[i], list_scores[i]))
+    return split_str.join(list_str)

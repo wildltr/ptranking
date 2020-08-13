@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 """Description
 
 """
@@ -17,7 +16,7 @@ class ListNet(NeuralRanker):
 	Learning to Rank: From Pairwise Approach to Listwise Approach. In Proceedings of the 24th ICML. 129–136.
 	'''
 
-	def __init__(self, sf_para_dict=None, sampling=False):
+	def __init__(self, sf_para_dict=None):
 		super(ListNet, self).__init__(id='ListNet', sf_para_dict=sf_para_dict)
 
 	def inner_train(self, batch_preds, batch_stds, **kwargs):
