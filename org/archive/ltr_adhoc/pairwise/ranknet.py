@@ -65,4 +65,3 @@ class RankNet(NeuralRanker):
         self.optimizer.step()
 
         return batch_loss
-

@@ -7,10 +7,9 @@
 
 import torch
 
-from org.archive.data import data_utils
-from org.archive.metric.adhoc_metric import torch_nDCG_at_k, torch_nDCG_at_ks, EMD_at_k
+from org.archive.metric.adhoc_metric import torch_nDCG_at_k, torch_nDCG_at_ks
 
-from org.archive.l2r_global import global_gpu as gpu, global_device as device
+from org.archive.ltr_global import global_gpu as gpu, global_device as device
 
 
 def ndcg_at_k(ranker=None, test_data=None, k=10, multi_level_rele=True, batch_mode=True):
@@ -81,45 +80,6 @@ def ndcg_at_ks(ranker=None, test_data=None, ks=[1, 5, 10], multi_level_rele=True
 
     avg_ndcg_at_ks = sum_ndcg_at_ks/cnt
     return avg_ndcg_at_ks
-
-
-def emd_at_k(ranker=None, test_Qs=None, k=10, TL_AF=None, multi_level_rele=True):
-    '''
-    There is no check based on the assumption (say light_filtering() is called)
-    that each test instance Q includes at least k(k=max(ks)) documents, and at least one relevant document.
-    Or there will be errors.
-    '''
-    assert 'S'==TL_AF or 'ST'==TL_AF
-
-    sum_emd = 0.0
-    cnt = 0
-    for entry in test_Qs:
-        tor_test_ranking, tor_test_std_label_vec = torch.squeeze(entry[0], dim=0), torch.squeeze(entry[1], dim=0)  # remove the size 1 of dim=0 from loader itself
-        if tor_test_std_label_vec.size(0) < k:
-            continue
-
-        if gpu:
-            tor_test_ranking = tor_test_ranking.to(device)
-            tor_rele_pred = ranker(tor_test_ranking)
-            tor_rele_pred = torch.squeeze(tor_rele_pred)
-            tor_rele_pred = tor_rele_pred.cpu()
-        else:
-            tor_rele_pred = ranker(tor_test_ranking)
-            tor_rele_pred = torch.squeeze(tor_rele_pred)
-
-        ideal_desc_labels, ideal_sorted_inds = torch.sort(tor_test_std_label_vec, descending=True)
-        sys_corresponding_scores = tor_rele_pred[ideal_sorted_inds]
-
-        tor_max_rele_level = torch.max(ideal_desc_labels)
-        sys_corresponding_scores = sys_corresponding_scores * tor_max_rele_level
-
-        emd_v = EMD_at_k(k=k, ideal_desc_labels=ideal_desc_labels[0:k].numpy(), sys_corresponding_scores=sys_corresponding_scores[0:k].numpy())
-        sum_emd += emd_v
-
-        cnt += 1
-
-    avg_emd = sum_emd/cnt
-    return avg_emd  # averaged value
 
 
 if __name__ == '__main__':

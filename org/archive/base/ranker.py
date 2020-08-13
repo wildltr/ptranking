@@ -15,8 +15,8 @@ from torch.optim.lr_scheduler import StepLR
 #from torch.nn.init import kaiming_normal_ as nr_init
 from torch.nn.init import xavier_normal_ as nr_init
 
-from org.archive.base.base_utils import get_AF, ResidualBlock_FFNNs
-from org.archive.l2r_global import global_gpu as gpu, global_device as device
+from org.archive.base.neural_utils import get_AF, ResidualBlock_FFNNs
+from org.archive.ltr_global import global_gpu as gpu, global_device as device
 
 '''
 1. reset parameters optimizer for cross validataion
@@ -196,7 +196,8 @@ class NeuralRanker(AbstractNeuralRanker):
     def stop_training(self, preds):
         ''' stop training if the predictions are all zeros or include nan value(s)'''
 
-        if torch.nonzero(preds).size(0) <= 0: # todo-as-note: 'preds.byte().any()' seems wrong operation w.r.t. gpu
+        #if torch.nonzero(preds).size(0) <= 0: # todo-as-note: 'preds.byte().any()' seems wrong operation w.r.t. gpu
+        if torch.nonzero(preds, as_tuple=False).size(0) <= 0: # due to the UserWarning: This overload of nonzero is deprecated:
             print('All zero error.\n')
             #print('All zero error.\n', preds)
             return True
