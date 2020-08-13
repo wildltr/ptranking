@@ -23,17 +23,24 @@ from org.archive.utils.bigdata.BigPickle import pickle_save, pickle_load
 
 ## Supported datasets and formats ##
 
-MSLETOR_SEMI  = ['MQ2007_Semi', 'MQ2008_Semi', 'IRGAN_Adhoc_Semi']
+MSLETOR_SEMI  = ['MQ2007_Semi', 'MQ2008_Semi']
 MSLETOR_LIST  = ['MQ2007_List', 'MQ2008_List']
 MSLETOR_SUPER = ['MQ2007_Super', 'MQ2008_Super']
-MSLETOR       = ['MQ2007_Super', 'MQ2008_Super', 'MQ2007_Semi', 'MQ2008_Semi', 'MQ2007_List', 'MQ2008_List', 'IRGAN_Adhoc_Semi']
+MSLETOR       = ['MQ2007_Super', 'MQ2008_Super', 'MQ2007_Semi', 'MQ2008_Semi', 'MQ2007_List', 'MQ2008_List']
+
+'''
+The dataset used in the IRGAN paper, which is a revised version of MQ2008_Semi by adding some document vectors per query
+in order to mimic unlabeled documents. Unfortunately, the details on how to generate these personally added documents
+are not described.
+'''
+IRGAN_MQ2008_SEMI = ['IRGAN_MQ2008_Semi']
 
 MSLRWEB       = ['MSLRWEB10K', 'MSLRWEB30K']
 
-YAHOO_L2R     = ['Set1', 'Set2']
-YAHOO_L2R_5Fold     = ['5FoldSet1', '5FoldSet2']
+YAHOO_LTR     = ['Set1', 'Set2']
+YAHOO_LTR_5Fold     = ['5FoldSet1', '5FoldSet2']
 
-ISTELLA_L2R   = ['Istella_S', 'Istella', 'Istella_X']
+ISTELLA_LTR   = ['Istella_S', 'Istella', 'Istella_X']
 ISTELLA_MAX = 1000000 # As ISTELLA contain extremely large features, e.g., 1.79769313486e+308, we replace features of this kind with a constant 1000000
 
 GLTR_LIBSVM = ['LTR_LibSVM', 'LTR_LibSVM_K']
@@ -108,21 +115,21 @@ def get_data_meta(data_id=None):
         has_comment = True
         fold_num = 5
 
-    elif data_id in YAHOO_L2R:
+    elif data_id in YAHOO_LTR:
         max_rele_level = 4
         multi_level_rele = True
         num_features = 700 # libsvm format, rather than uniform number
         has_comment = False
         fold_num = 1
 
-    elif data_id in YAHOO_L2R_5Fold:
+    elif data_id in YAHOO_LTR_5Fold:
         max_rele_level = 4
         multi_level_rele = True
         num_features = 700  # libsvm format, rather than uniform number
         has_comment = False
         fold_num = 5
 
-    elif data_id in ISTELLA_L2R:
+    elif data_id in ISTELLA_LTR:
         max_rele_level = 4
         multi_level_rele = True
         num_features = 220  # libsvm format, rather than uniform number
@@ -149,18 +156,42 @@ def get_scaler(scaler_id):
 
     return scaler
 
-def get_default_scaler_setting(data_id):
-    ''' a default setting for loading a dataset '''
-    if data_id in MSLRWEB or data_id in ISTELLA_L2R:
-        scale_data=True
-        scaler_id='StandardScaler'
-        scaler_level='QUERY'
-    else:
-        scale_data=False
-        scaler_id=None
-        scaler_level=None
+def get_default_scaler_setting(data_id, grid_search=False):
+    """
+    A default scaler-setting for loading a dataset
+    :param data_id:
+    :param grid_search: used for grid-search
+    :return:
+    """
+    ''' According to {Introducing {LETOR} 4.0 Datasets}, "QueryLevelNorm version: Conduct query level normalization based on data in MIN version. This data can be directly used for learning. We further provide 5 fold partitions of this version for cross fold validation".
+     --> Thus there is no need to perform query_level_scale again for {MQ2007_super | MQ2008_super | MQ2007_semi | MQ2008_semi}
+     --> But for {MSLRWEB10K | MSLRWEB30K}, the query-level normalization is ## not conducted yet##.
+     --> For {Yahoo_LTR_Set_1 | Yahoo_LTR_Set_1 }, the query-level normalization is already conducted.
+     --> For Istella! LETOR, the query-level normalization is not conducted yet.
+         We note that ISTELLA contains extremely large features, e.g., 1.79769313486e+308, we replace features of this kind with a constant 1000000.
+    '''
+    if grid_search:
+        if data_id in MSLRWEB or data_id in ISTELLA_LTR:
+            choice_scale_data = [True]  # True, False
+            choice_scaler_id = ['StandardScaler']  # ['MinMaxScaler', 'RobustScaler', 'StandardScaler']
+            choice_scaler_level = ['QUERY']  # SCALER_LEVEL = ['QUERY', 'DATASET']
+        else:
+            choice_scale_data = [False]
+            choice_scaler_id = [None]
+            choice_scaler_level = [None]
 
-    return scale_data, scaler_id, scaler_level
+        return choice_scale_data, choice_scaler_id, choice_scaler_level
+    else:
+        if data_id in MSLRWEB or data_id in ISTELLA_LTR:
+            scale_data = True
+            scaler_id = 'StandardScaler'  # ['MinMaxScaler', 'StandardScaler']
+            scaler_level = 'QUERY'  # SCALER_LEVEL = ['QUERY', 'DATASET']
+        else:
+            scale_data = False
+            scaler_id = None
+            scaler_level = None
+
+        return scale_data, scaler_id, scaler_level
 
 def get_buffer_file_name(data_id, file, data_dict):
     ''' Generate the file name '''
@@ -198,9 +229,9 @@ def get_buffer_file_name(data_id, file, data_dict):
         else:
             pq_suffix = '_'.join([pq_suffix, 'QS', scaler_id])
 
-    if data_id in YAHOO_L2R:
+    if data_id in YAHOO_LTR:
         perquery_file = file[:file.find('.txt')].replace(data_id.lower() + '.', 'Buffered' + data_id + '/') + '_' + pq_suffix + res_suffix + '.np'
-    elif data_id in ISTELLA_L2R:
+    elif data_id in ISTELLA_LTR:
         perquery_file = file[:file.find('.txt')].replace(data_id, 'Buffered_' + data_id) + '_' + pq_suffix + res_suffix + '.np'
     else:
         perquery_file = file[:file.find('.txt')].replace('Fold', 'BufferedFold') + '_' + pq_suffix + res_suffix +'.np'
@@ -406,12 +437,19 @@ def iter_queries(in_file, data_dict=None, scale_data=None, scaler_id=None, perqu
 
             for qid in qids_unique:
                 tmp = list(zip(*dict_data[qid]))
+
                 list_labels_per_q = tmp[0]
+                if data_dict['data_id'] in MSLETOR_LIST:
+                    ''' convert the original rank-position into grade-labels '''
+                    ranking_size = len(list_labels_per_q)
+                    list_labels_per_q = [ranking_size-r for r in list_labels_per_q]
+
                 #list_docids_per_q = tmp[1]
                 list_features_per_q = tmp[2]
                 feature_mat = np.vstack(list_features_per_q)
+
                 if scale_data:
-                    if data_dict['data_id'] in ISTELLA_L2R:
+                    if data_dict['data_id'] in ISTELLA_LTR:
                         # due to the possible extremely large features, e.g., 1.79769313486e+308
                         feature_mat = scaler.fit_transform(np.clip(feature_mat, a_min=None, a_max=ISTELLA_MAX))
                     else:
@@ -445,9 +483,15 @@ def iter_queries(in_file, data_dict=None, scale_data=None, scaler_id=None, perqu
             for qid in qids_unique:
                 tmp = list(zip(*dict_data[qid]))
                 list_labels_per_q = tmp[0]
+                if data_dict['data_id'] in MSLETOR_LIST:
+                    ''' convert the original rank-position into grade-labels '''
+                    ranking_size = len(list_labels_per_q)
+                    list_labels_per_q = [ranking_size-r for r in list_labels_per_q]
+
                 list_features_per_q = tmp[1]
                 feature_mat = np.vstack(list_features_per_q)
-                if data_dict['data_id'] in ISTELLA_L2R:
+
+                if data_dict['data_id'] in ISTELLA_LTR:
                     # due to the possible extremely large features, e.g., 1.79769313486e+308
                     feature_mat = scaler.fit_transform(np.clip(feature_mat, a_min=None, a_max=ISTELLA_MAX))
                 else:
@@ -471,7 +515,7 @@ def iter_queries(in_file, data_dict=None, scale_data=None, scaler_id=None, perqu
 
 ## ---------------------------------------------------- ##
 
-class L2RDataset(data.Dataset):
+class LTRDataset(data.Dataset):
     '''
     Loading the specified dataset as data.Dataset, a pytorch format
     '''
@@ -484,9 +528,9 @@ class L2RDataset(data.Dataset):
         self.train = train
 
         if data_dict['data_id'] in MSLETOR or data_dict['data_id'] in MSLRWEB \
-                or data_dict['data_id'] in YAHOO_L2R or data_dict['data_id'] in YAHOO_L2R_5Fold \
-                or data_dict['data_id'] in ISTELLA_L2R \
-                or data_dict['data_id'] == 'IRGAN_Adhoc_Semi': # supported datasets
+                or data_dict['data_id'] in YAHOO_LTR or data_dict['data_id'] in YAHOO_LTR_5Fold \
+                or data_dict['data_id'] in ISTELLA_LTR \
+                or data_dict['data_id'] == 'IRGAN_MQ2008_Semi': # supported datasets
 
             self.check_load_setting(data_dict, eval_dict)
 
@@ -504,12 +548,13 @@ class L2RDataset(data.Dataset):
                     torch_perquery_file = perquery_file.replace('.np', '.torch')
 
             if eval_dict is not None:
-                semi_context, mask_ratio, mask_type = eval_dict['semi_context'], eval_dict['mask_ratio'], eval_dict['mask_type']
-                if semi_context:
-                    semi_ratio_str = '_'.join(['Semi', mask_type, 'Ratio', '{:,g}'.format(mask_ratio)])
-                    torch_perquery_file = torch_perquery_file.replace('.torch', semi_ratio_str)
+                mask_label, mask_ratio, mask_type = eval_dict['mask_label'], eval_dict['mask_ratio'], eval_dict['mask_type']
+                print(eval_dict)
+                if mask_label:
+                    mask_label_str = '_'.join([mask_type, 'Ratio', '{:,g}'.format(mask_ratio)])
+                    torch_perquery_file = torch_perquery_file.replace('.torch', '_'+mask_label_str+'.torch')
             else:
-                semi_context = False
+                mask_label = False
 
             if os.path.exists(torch_perquery_file):
                 print('loading buffered file ...')
@@ -526,7 +571,7 @@ class L2RDataset(data.Dataset):
                     qid, doc_reprs, doc_labels = list_Qs[ind]
 
                     if sample_rankings_per_q > 1:
-                        assert semi_context is not True # not supported since it is rarely used.
+                        assert mask_label is not True # not supported since it is rarely used.
 
                         list_ranking = []
                         list_labels = []
@@ -547,7 +592,7 @@ class L2RDataset(data.Dataset):
                         torch_batch_std_labels = torch.from_numpy(doc_labels).type(torch.FloatTensor)
                         torch_batch_std_labels = torch.unsqueeze(torch_batch_std_labels, dim=0)
 
-                        if semi_context: # masking
+                        if mask_label: # masking
                             if mask_type == 'rand_mask_rele':
                                 torch_batch_rankings, torch_batch_std_labels = random_mask_rele_labels(batch_ranking=torch_batch_rankings, batch_label=torch_batch_std_labels, mask_ratio=mask_ratio, mask_value=0, presort=data_dict['presort'])
 
@@ -560,7 +605,7 @@ class L2RDataset(data.Dataset):
                             else:
                                 raise NotImplementedError
                     if hot:
-                        assert semi_context is not True # not supported since it is rarely used.
+                        assert mask_label is not True # not supported since it is rarely used.
                         max_rele_level = data_dict['max_rele_level']
                         assert max_rele_level is not None
 
@@ -588,7 +633,7 @@ class L2RDataset(data.Dataset):
         min_docs = 1
         min_rele = -1 # we note that it includes dumb queries that has no relevant documents
         scale_data, scaler_id, scaler_level = get_default_scaler_setting(data_id=data_id)
-        data_dict = dict(data_id=data_id, min_docs=min_docs, min_rele=min_rele, sample_times_per_q=1,
+        data_dict = dict(data_id=data_id, min_docs=min_docs, min_rele=min_rele, sample_rankings_per_q=1,
                          presort=True, binary_rele=False, unknown_as_zero=False,
                          scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
 
@@ -605,14 +650,14 @@ class L2RDataset(data.Dataset):
             assert data_dict['unknown_as_zero'] is not True # since there is no non-labeled documents
 
         if data_dict['data_id'] in MSLETOR_LIST: # the dataset, for which the standard ltr_adhoc of each query is unique
-            assert self.data_dict['sample_times_per_q'] == 1
+            assert data_dict['sample_rankings_per_q'] == 1
 
         if data_dict['scale_data']:
             scaler_level = data_dict['scaler_level'] if 'scaler_level' in data_dict else None
             assert not scaler_level== 'DATASET' # not supported setting
 
         if eval_dict is not None:
-            if eval_dict['semi_context']: # True: use supervised data to mimic semi-supervised data by masking
+            if eval_dict['mask_label']: # True: use supervised data to mimic semi-supervised data by masking
                 assert not data_dict['data_id'] in MSLETOR_SEMI
 
     def __len__(self):
@@ -639,25 +684,23 @@ def get_buffer_file_name_libsvm(in_file, data_id=None, eval_dict=None, need_grou
         buffer_prefix       = in_file.replace('Fold', 'BufferedFold')
         file_buffered_data  = buffer_prefix.replace('txt', 'data')
         if need_group: file_buffered_group = buffer_prefix.replace('txt', 'group')
-    elif data_id in YAHOO_L2R:
+    elif data_id in YAHOO_LTR:
         buffer_prefix       = in_file[:in_file.find('.txt')].replace(data_id.lower() + '.', 'Buffered' + data_id + '/')
         file_buffered_data  = buffer_prefix  + '.data'
         if need_group: file_buffered_group = buffer_prefix  + '.group'
-    elif data_id in ISTELLA_L2R:
+    elif data_id in ISTELLA_LTR:
         buffer_prefix       = in_file[:in_file.find('.txt')].replace(data_id, 'Buffered_' + data_id)
         file_buffered_data  = buffer_prefix  + '.data'
         if need_group: file_buffered_group = buffer_prefix  + '.group'
     else:
         raise NotImplementedError
 
-    if eval_dict is not None and eval_dict['semi_context']:
+    if eval_dict is not None and eval_dict['mask_label']:
         mask_ratio = eval_dict['mask_ratio']
         mask_type = eval_dict['mask_type']
-        semi_ratio_str = '_'.join(['Semi', mask_type, 'Ratio', '{:,g}'.format(mask_ratio)])
-        file_buffered_data = file_buffered_data.replace('.data', '_'+semi_ratio_str+'.data')
-        file_buffered_group = file_buffered_group.replace('.group', '_'+semi_ratio_str+'.group')
-        #print('file_buffered_data', file_buffered_data)
-        #print('file_buffered_group', file_buffered_group)
+        mask_label_str = '_'.join([mask_type, 'Ratio', '{:,g}'.format(mask_ratio)])
+        file_buffered_data = file_buffered_data.replace('.data', '_'+mask_label_str+'.data')
+        file_buffered_group = file_buffered_group.replace('.group', '_'+mask_label_str+'.group')
 
     if need_group:
         return file_buffered_data, file_buffered_group
@@ -719,7 +762,7 @@ def load_letor_data_as_libsvm_data(in_file, train=False, data_id=None, min_docs=
         perquery_file = get_buffer_file_name(data_id=data_id, file=in_file, data_dict=data_dict)
         list_Qs = iter_queries(in_file=in_file, data_dict=data_dict, scale_data=data_dict['scale_data'], scaler_id=data_dict['scaler_id'], perquery_file=perquery_file, buffer=True)
 
-        if eval_dict is not None and eval_dict['semi_context'] and train:
+        if eval_dict is not None and eval_dict['mask_label'] and train:
             if 'rand_mask_rele' == eval_dict['mask_type']:
                 for qid, doc_reprs, doc_labels in list_Qs:
                     doc_labels = np_random_mask_rele_labels(batch_label=doc_labels, mask_ratio=eval_dict['mask_ratio'], mask_value=0)

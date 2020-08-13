@@ -9,7 +9,7 @@ import torch
 
 import numpy as np
 
-from org.archive.l2r_global import global_gpu as gpu, global_device as device
+from org.archive.ltr_global import global_gpu as gpu, global_device as device
 
 #######
 # For Pair Extraction

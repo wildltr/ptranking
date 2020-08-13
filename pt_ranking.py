@@ -8,9 +8,9 @@
 
 from org.archive.utils.args.argsUtil import ArgsUtil
 
-from org.archive.ltr_adhoc.eval.l2r import L2REvaluator
+from org.archive.ltr_adhoc.eval.ltr import LTREvaluator
 from org.archive.ltr_tree.lambdamart.lambdaMART import LambdaMARTEvaluator
-from org.archive.ltr_adversarial_learning.eval.ad_l2r import AdL2REvaluator
+from org.archive.ltr_adversarial.eval.ltr_adversarial import AdLTREvaluator
 
 
 """
@@ -55,9 +55,9 @@ if __name__ == '__main__':
     -----------------------------------------------------------------------------------------
     | MSLRWEB   | MSLRWEB10K %  MSLRWEB30K                                                  |
     -----------------------------------------------------------------------------------------
-    | Yahoo_L2R | Set1 % Set2                                                               |
+    | Yahoo_LTR | Set1 % Set2                                                               |
     -----------------------------------------------------------------------------------------
-    | ISTELLA_L2R | Istella_S | Istella | Istella_X                                         |
+    | ISTELLA_LTR | Istella_S | Istella | Istella_X                                         |
     -----------------------------------------------------------------------------------------
 
     """
@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     if 'IR_GAN' in l2r_args.model:
 
-        evaluator = AdL2REvaluator()
+        evaluator = AdLTREvaluator()
         evaluator.default_run(model_id=l2r_args.model, data_id=l2r_args.data_id, dir_data=l2r_args.dir_data, dir_output=l2r_args.dir_output)
 
     elif 'LambdaMART' in l2r_args.model:
@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
     elif '' == l2r_args.framework:
 
-        evaluator = L2REvaluator()
+        evaluator = LTREvaluator()
         evaluator.default_run(model_id=l2r_args.model, data_id=l2r_args.data_id, dir_data=l2r_args.dir_data, dir_output=l2r_args.dir_output)
 
     else:

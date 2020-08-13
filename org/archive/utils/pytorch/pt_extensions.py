@@ -6,7 +6,7 @@ from torch.distributions.multivariate_normal import MultivariateNormal
 import math
 import numpy as np
 
-from org.archive.l2r_global import global_gpu as gpu
+from org.archive.ltr_global import global_gpu as gpu
 
 
 

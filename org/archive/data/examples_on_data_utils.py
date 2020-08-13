@@ -5,7 +5,7 @@
 Examples on how to use data_utils module
 """
 
-from org.archive.data.data_utils import L2RDataset, YAHOO_L2R, ISTELLA_L2R
+from org.archive.data.data_utils import LTRDataset, YAHOO_LTR, ISTELLA_LTR
 import torch
 
 def get_doc_num(dataset):
@@ -84,11 +84,11 @@ def check_dataset_statistics(data_id, dir_data, buffer=False):
     '''
     Get the basic statistics on the specified dataset
     '''
-    if data_id in YAHOO_L2R:
+    if data_id in YAHOO_LTR:
         data_prefix = dir_data + data_id.lower() + '.'
         file_train, file_vali, file_test = data_prefix + 'train.txt', data_prefix + 'valid.txt', data_prefix + 'test.txt'
 
-    elif data_id in ISTELLA_L2R:
+    elif data_id in ISTELLA_LTR:
         data_prefix = dir_data + data_id + '/'
         if data_id == 'Istella_X' or data_id=='Istella_S':
             file_train, file_vali, file_test = data_prefix + 'train.txt', data_prefix + 'vali.txt', data_prefix + 'test.txt'
@@ -101,8 +101,8 @@ def check_dataset_statistics(data_id, dir_data, buffer=False):
 
     # common
     if 'Istella' == data_id:
-        train_dataset = L2RDataset(train=True, file=file_train, data_id=data_id, shuffle=False, buffer=buffer)
-        test_dataset =  L2RDataset(train=False, file=file_test, data_id=data_id, shuffle=False, buffer=buffer)
+        train_dataset = LTRDataset(train=True, file=file_train, data_id=data_id, shuffle=False, buffer=buffer)
+        test_dataset =  LTRDataset(train=False, file=file_test, data_id=data_id, shuffle=False, buffer=buffer)
 
         num_queries = train_dataset.__len__() + test_dataset.__len__()
         print('Dataset:\t', data_id)
@@ -114,9 +114,9 @@ def check_dataset_statistics(data_id, dir_data, buffer=False):
 
         min_doc, max_doc, sum_rele = get_min_max_docs(train_dataset=train_dataset, vali_dataset=None, test_dataset=test_dataset)
     else:
-        train_dataset = L2RDataset(train=True, file=file_train, data_id=data_id, shuffle=False, buffer=buffer)
-        vali_dataset =  L2RDataset(train=False, file=file_vali, data_id=data_id, shuffle=False, buffer=buffer)
-        test_dataset =  L2RDataset(train=False, file=file_test, data_id=data_id, shuffle=False, buffer=buffer)
+        train_dataset = LTRDataset(train=True, file=file_train, data_id=data_id, shuffle=False, buffer=buffer)
+        vali_dataset =  LTRDataset(train=False, file=file_vali, data_id=data_id, shuffle=False, buffer=buffer)
+        test_dataset =  LTRDataset(train=False, file=file_test, data_id=data_id, shuffle=False, buffer=buffer)
 
         num_queries = train_dataset.__len__() + vali_dataset.__len__() + test_dataset.__len__()
         print('Dataset:\t', data_id)
@@ -194,9 +194,9 @@ if __name__ == '__main__':
     avg documents per query 103.23550790477921
     '''
 
-    data_id  = 'Istella_X'
-    dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/'
-    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=True)
+    #data_id  = 'Istella_X'
+    #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/'
+    #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=True)
     '''
     Dataset:	 Istella_X
     Total queries:	 10000
@@ -212,3 +212,31 @@ if __name__ == '__main__':
     #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/'
 
     #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+
+    data_id  = 'MQ2007_List'
+    dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2007-list/'
+    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    '''
+    Dataset:	 MQ2007_List
+    Total queries:	 1692
+        Train: 1017 Vali: 339 Test: 336
+    Total docs:	 1231351
+    min, max documents per query 257 1346
+    total relevant documents 1231351
+    avg rele documents per query 727.7488179669031
+    avg documents per query 727.7488179669031
+    '''
+
+    data_id  = 'MQ2008_List'
+    dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008-list/'
+    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    '''
+    Dataset:	 MQ2008_List
+    Total queries:	 784
+        Train: 471 Vali: 157 Test: 156
+    Total docs:	 902220
+    min, max documents per query 204 1831
+    total relevant documents 902220
+    avg rele documents per query 1150.7908163265306
+    avg documents per query 1150.7908163265306
+    '''

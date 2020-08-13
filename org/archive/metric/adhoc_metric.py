@@ -10,20 +10,26 @@ import numpy as np
 
 import torch
 
-from org.archive.l2r_global import global_gpu as gpu, global_device as device, tensor
+from org.archive.ltr_global import global_gpu as gpu, global_device as device, tensor
 
-""" Evaluation Metrics """
+"""
+The commonly used IR evaluation metrics
+"""
 
 def rele_gain(rele_level, gain_base=2.0):
 	gain = np.power(gain_base, rele_level) - 1.0
 	return gain
 
-def torch_ideal_dcg(batch_sorted_labels, gpu=False):
+def torch_ideal_dcg(batch_sorted_labels, gpu=False, multi_level_rele=True):
 	'''
 	:param sorted_labels: [batch, ranking_size]
 	:return: [batch, 1]
 	'''
-	batch_gains = torch.pow(2.0, batch_sorted_labels) - 1.0
+	if multi_level_rele:
+		batch_gains = torch.pow(2.0, batch_sorted_labels) - 1.0
+	else:
+		batch_gains = batch_sorted_labels
+
 	batch_ranks = torch.arange(batch_sorted_labels.size(1))
 
 	batch_discounts = torch.log2(2.0 + batch_ranks.type(torch.cuda.FloatTensor)) if gpu else torch.log2(2.0 + batch_ranks.type(torch.FloatTensor))
@@ -203,6 +209,25 @@ def torch_nerr_at_ks(sys_sorted_labels, ideal_sorted_labels, ks=None, multi_leve
 
 
 """ nDCG """
+
+def idcg_std(sorted_labels, multi_level_rele=True):
+	'''
+	nums = np.power(2, sorted_labels) - 1.0
+	denoms = np.log2(np.arange(len(sorted_labels)) + 2)
+	idcgs = np.sum(nums/denoms, axis=1)
+	return idcgs
+	'''
+	if multi_level_rele:
+		nums = torch.pow(2.0, sorted_labels) - 1.0
+	else:
+		nums = sorted_labels
+
+	a_range = torch.arange(sorted_labels.size(1), dtype=torch.float).to(device) if gpu else torch.arange(sorted_labels.size(1), dtype=torch.float)
+	denoms = torch.log2(2.0 + a_range)
+	idcgs = torch.sum(nums / denoms, dim=1)
+
+	return idcgs
+
 def torch_discounted_cumu_gain_at_k(sorted_labels, cutoff, multi_level_rele=True):
 	'''
 	ICML-nDCG, which places stronger emphasis on retrieving relevant documents

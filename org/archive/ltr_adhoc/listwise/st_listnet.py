@@ -11,8 +11,9 @@ import torch
 import torch.nn.functional as F
 
 from org.archive.base.ranker import NeuralRanker
+from org.archive.eval.parameter import ModelParameter
 
-from org.archive.l2r_global import global_gpu as gpu, global_device as device
+from org.archive.ltr_global import global_gpu as gpu, global_device as device
 
 EPS = 1e-20
 
@@ -25,9 +26,9 @@ class STListNet(NeuralRanker):
     pages = {61–69},
     '''
 
-    def __init__(self, sf_para_dict=None, temperature=1.0):
+    def __init__(self, sf_para_dict=None, model_para_dict=None):
         super(STListNet, self).__init__(id='STListNet', sf_para_dict=sf_para_dict)
-        self.temperature = temperature
+        self.temperature = model_para_dict['temperature']
 
     def inner_train(self, batch_preds, batch_stds, **kwargs):
         '''
@@ -53,3 +54,45 @@ class STListNet(NeuralRanker):
         self.optimizer.step()
 
         return batch_loss
+
+###### Parameter of STListNet ######
+
+class STListNetParameter(ModelParameter):
+    ''' Parameter class for STListNet '''
+    def __init__(self, debug=False):
+        super(STListNetParameter, self).__init__(model_id='STListNet')
+        self.debug = debug
+
+    def default_para_dict(self):
+        """
+        Default parameter setting for STListNet
+        :return:
+        """
+        self.stlistnet_para_dict = dict(model_id=self.model_id, temperature=1.0)
+        return self.stlistnet_para_dict
+
+    def to_para_string(self, log=False, given_para_dict=None):
+        """
+        String identifier of parameters
+        :param log:
+        :param given_para_dict: a given dict, which is used for maximum setting w.r.t. grid-search
+        :return:
+        """
+        # using specified para-dict or inner para-dict
+        stlistnet_para_dict = given_para_dict if given_para_dict is not None else self.stlistnet_para_dict
+
+        s1 = ':' if log else '_'
+        stlistnet_para_str = s1.join(['Tem', str(stlistnet_para_dict['temperature'])])
+        return stlistnet_para_str
+
+
+    def grid_search(self):
+        """
+        Iterator of parameter settings for STListNet
+        :param debug:
+        :return:
+        """
+        plus_choice_temperature = [1.0] if self.debug else [1.0]  # 1.0, 10.0, 50.0, 100.0
+        for temperature in plus_choice_temperature:
+            self.stlistnet_para_dict = dict(model_id=self.model_id, temperature=temperature)
+            yield self.stlistnet_para_dict

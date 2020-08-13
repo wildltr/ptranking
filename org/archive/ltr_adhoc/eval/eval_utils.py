@@ -9,7 +9,7 @@ import torch
 
 from org.archive.metric.adhoc_metric import torch_nDCG_at_k, torch_nDCG_at_ks
 
-from org.archive.l2r_global import global_gpu as gpu, global_device as device
+from org.archive.ltr_global import global_gpu as gpu, global_device as device
 
 
 def ndcg_at_k(ranker=None, test_data=None, k=10, multi_level_rele=True, batch_mode=True):

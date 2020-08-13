@@ -7,7 +7,7 @@
 
 import torch
 
-from org.archive.l2r_global import global_gpu as gpu, global_device as device, tensor
+from org.archive.ltr_global import tensor
 
 
 def unique_count(std_labels, descending=True):
