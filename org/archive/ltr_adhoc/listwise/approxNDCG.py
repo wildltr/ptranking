@@ -11,7 +11,7 @@ import torch
 from org.archive.base.ranker import NeuralRanker
 from org.archive.eval.parameter import ModelParameter
 from org.archive.metric.adhoc_metric import torch_ideal_dcg
-from org.archive.ltr_adhoc.util.twin_sigmoid import robust_sigmoid
+from org.archive.base.neural_utils import robust_sigmoid
 
 from org.archive.ltr_global import global_gpu as gpu
 

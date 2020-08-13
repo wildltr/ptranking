@@ -13,8 +13,9 @@ from org.archive.data.data_utils import YAHOO_LTR, ISTELLA_LTR, MSLETOR, MSLRWEB
 from org.archive.ltr_tree.eval.tree_parameter import TreeDataSetting, TreeEvalSetting
 from org.archive.metric.adhoc_metric import torch_nDCG_at_ks, torch_nerr_at_ks, torch_ap_at_ks, torch_p_at_ks
 from org.archive.ltr_adhoc.eval.ltr import LTREvaluator
-from org.archive.ltr_tree.lambdamart.lightgbm_lambdaMART import LightGBMLambdaMART
-from org.archive.ltr_tree.lambdamart.lightgbm_lambdaMART import LightGBMLambdaMARTParameter
+from org.archive.ltr_tree.lambdamart.lightgbm_lambdaMART import LightGBMLambdaMART, LightGBMLambdaMARTParameter
+
+LTR_TREE_MODEL = ['LightGBMLambdaMART']
 
 
 class TreeLTREvaluator(LTREvaluator):

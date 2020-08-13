@@ -29,11 +29,13 @@ from org.archive.ltr_adhoc.listwise.st_listnet  import STListNet, STListNetParam
 from org.archive.ltr_adhoc.listwise.approxNDCG        import ApproxNDCG, ApproxNDCGParameter
 from org.archive.ltr_adhoc.listwise.wassrank.wassRank import WassRank, WassRankParameter
 from org.archive.ltr_adhoc.listwise.lambdarank        import LambdaRank, LambdaRankParameter
-from org.archive.ltr_adhoc.listwise.direct_opt import DirectOpt, DirectOptParameter
 from org.archive.ltr_adhoc.listwise.lambdaloss import LambdaLoss, LambdaLossParameter
-from org.archive.ltr_adhoc.listwise.margin_lambda_loss import MarginLambdaLoss, MarginLambdaLossParameter
 
 from org.archive.ltr_global import global_gpu as gpu, global_device as device, tensor
+
+LTR_ADHOC_MODEL = ['RankMSE',
+                   'RankNet',
+                   'RankCosine', 'ListNet', 'ListMLE', 'STListNet', 'ApproxNDCG', 'WassRank', 'LambdaRank', 'LambdaLoss']
 
 class LTREvaluator():
     """

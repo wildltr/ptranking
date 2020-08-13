@@ -23,7 +23,7 @@ from org.archive.ltr_adhoc.eval.eval_utils import ndcg_at_ks, ndcg_at_k
 from org.archive.ltr_adversarial.eval.ad_parameter import AdDataSetting, AdEvalSetting, AdScoringFunctionParameter
 from org.archive.ltr_global import global_gpu as gpu
 
-
+LTR_ADVERSARIAL_MODEL = ['IRGAN_Point', 'IRGAN_Pair', 'IRGAN_List']
 
 class AdLTREvaluator(LTREvaluator):
     """
