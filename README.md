@@ -5,7 +5,7 @@ This open-source project, referred to as **PT-Ranking** (Learning to Rank in PyT
 **Key Features**:
 
 - A number of representative learning-to-rank models, including not only the traditional optimization framework via empirical risk minimization but also the adversarial optimization framework
-- Supports widely used benchmark datasets. Meanwhile, random masking of the ground-truth labels with a specified ratio is also supportd
+- Supports widely used benchmark datasets. Meanwhile, random masking of the ground-truth labels with a specified ratio is also supported
 - Supports different metrics, such as Precision, MAP, nDCG and nERR
 - Highly configurable functionalities for fine-tuning hyper-parameters, e.g., grid-search over hyper-parameters of a specific model
 - Provides easy-to-use APIs for developing a new learning-to-rank model
@@ -34,6 +34,16 @@ All specific learning-to-rank models inherit NeuralRanker and mainly differ in t
 
 ![NewLoss](./img/new_loss.png)
 
+## Parameter Setting
+
+An easy-to-use parameter setting is necessary for any ML library. PT-Ranking offers a self-contained strategy.
+In other words, we appeals to particularly designed class objects for setting. For example, **DataSetting** for data loading, **EvalSetting** for evaluation setting and **ModelParameter** for a model's parameter setting. 
+
+When incorporating a newly developed model (say ModelA), it is commonly required to develop the subclass ModelAParameter by inheriting **[ModelParameter](./org.archive.eval.paramete)** and customizing the functions, such as to_para_string(), default_para_dict() and grid_search(). Please refer to [LambdaRankParameter](./from org.archive.ltr_adhoc.listwise.lambdarank) as an example.
+
+Thanks to this strategy, on one hand, we can initialize the settings for data-loading, evaluation, and models in a simple way. On the other hand, the parameter setting of a model is self-contained, and easy to customize.
+
+
 To fully leverage PT-Ranking, one needs to [be familiar with PyTorch](https://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html).
 
 For detailed introduction on learning-to-rank, please refer to the book: [Learning to Rank for Information Retrieval](https://link.springer.com/book/10.1007/978-3-642-14267-3).
@@ -46,7 +56,7 @@ For detailed introduction on learning-to-rank, please refer to the book: [Learni
 |:----|:----|
 | Pointwise | RankMSE |
 | Pairwise  | RankNet |
-| Listwise  | LambdaRank ・ ListNet ・ ListMLE ・ RankCosine ・  ApproxNDCG ・  WassRank ・ STListNet | 
+| Listwise  | ListNet ・ ListMLE ・ RankCosine ・  LambdaRank ・ ApproxNDCG ・  WassRank ・ STListNet ・ LambdaLoss| 
     
 - Adversarial Optimization
 
@@ -60,7 +70,7 @@ For detailed introduction on learning-to-rank, please refer to the book: [Learni
 
 | |Model|
 |:----|:----|
-| Listwise | LambdaMART(L)  ・ LambdaMART(X) |
+| Listwise | LightGBMLambdaMART |
 
 ### References
 
@@ -145,7 +155,7 @@ This functionality is required when using the implementation of LambdaMART provi
 
 # Test Setting
 
-PyTorch (1.3)
+PyTorch (1.6)
 
 Python (3.7)
 

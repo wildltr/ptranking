@@ -489,14 +489,24 @@ class LTREvaluator():
         return self.sf_parameter.grid_search(data_dict=data_dict)
 
     def set_model_setting(self, debug=False, model_id=None, data_dict=None):
+        """
+        Initialize the parameter class for a specified model
+        :param debug:
+        :param model_id:
+        :param data_dict:
+        :return:
+        """
         if model_id in ['RankMSE', 'RankNet', 'ListNet', 'ListMLE', 'RankCosine']:
+            # the 1st type with model_id, where ModelParameter is sufficient
             self.model_parameter = ModelParameter(model_id=model_id)
         elif model_id in ['LambdaRank', 'ApproxNDCG', 'DirectOpt', 'MarginLambdaLoss']:
+            # the 2nd type, where the information of the type of relevance label is required.
             if data_dict['multi_level_rele']:
                 self.model_parameter = globals()[model_id + "Parameter"](debug=debug, std_rele_is_permutation=False)
             else: # the case like MSLETOR_LIST
                 self.model_parameter = globals()[model_id + "Parameter"](debug=debug, std_rele_is_permutation=True)
         else:
+            # the 3rd type, where debug-mode enables quick test
             self.model_parameter = globals()[model_id + "Parameter"](debug=debug)
 
     def get_default_model_setting(self):
