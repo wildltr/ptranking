@@ -39,7 +39,7 @@ All specific learning-to-rank models inherit NeuralRanker and mainly differ in t
 An easy-to-use parameter setting is necessary for any ML library. PT-Ranking offers a self-contained strategy.
 In other words, we appeals to particularly designed class objects for setting. For example, **DataSetting** for data loading, **EvalSetting** for evaluation setting and **ModelParameter** for a model's parameter setting. 
 
-When incorporating a newly developed model (say ModelA), it is commonly required to develop the subclass ModelAParameter by inheriting **[ModelParameter](./org.archive.eval.paramete)** and customizing the functions, such as to_para_string(), default_para_dict() and grid_search(). Please refer to [LambdaRankParameter](./from org.archive.ltr_adhoc.listwise.lambdarank) as an example.
+When incorporating a newly developed model (say ModelA), it is commonly required to develop the subclass ModelAParameter by inheriting **[ModelParameter](./org/archive/eval/parameter.py)** and customizing the functions, such as to_para_string(), default_para_dict() and grid_search(). Please refer to [LambdaRankParameter](./org/archive/ltr_adhoc/listwise/lambdarank.py) as an example.
 
 Thanks to this strategy, on one hand, we can initialize the settings for data-loading, evaluation, and models in a simple way. On the other hand, the parameter setting of a model is self-contained, and easy to customize.
 
