@@ -5,7 +5,7 @@
 Examples on how to use data_utils module
 """
 
-from pt_ranking.data.data_utils import LTRDataset, YAHOO_LTR, ISTELLA_LTR
+from ptranking.data import LTRDataset, YAHOO_LTR, ISTELLA_LTR
 import torch
 
 def get_doc_num(dataset):

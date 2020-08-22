@@ -10,7 +10,7 @@ import torch
 
 from scipy import stats
 
-from pt_ranking.metric.adhoc_metric import torch_ap_at_ks, torch_nDCG_at_ks, torch_kendall_tau, torch_nerr_at_ks
+from ptranking.metric.adhoc_metric import torch_ap_at_ks, torch_nDCG_at_ks, torch_kendall_tau, torch_nerr_at_ks
 
 
 def test_ap():

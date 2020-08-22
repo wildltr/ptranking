@@ -13,16 +13,15 @@ install_requires = [
 extras_requires = None
 
 setuptools.setup(
-    name="pt_ranking",
+    name="ptranking",
     version="0.1",
     author="II-Research",
     author_email="yuhaitao@slis.tsukuba.ac.jp",
     description="A library of scalable and extendable implementations of typical learning-to-rank methods based on PyTorch.",
     license="MIT License",
     keywords=['Learning-to-rank', 'PyTorch'],
-    url="https://pt-ranking.github.io",
-    package_dir={"": "pt_ranking"},
-    packages=setuptools.find_packages(where="pt_ranking"),
+    url="https://ptranking.github.io",
+    packages=setuptools.find_namespace_packages(include=["ptranking", "ptranking.*"]),
     long_description=long_description,
     long_description_content_type='text/markdown',
     classifiers=[
