@@ -1,6 +1,6 @@
 # Introduction
 
-This open-source project, referred to as **ptranking** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous learning-to-rank methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank. 
+This open-source project, referred to as **PTRanking** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous learning-to-rank methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank. 
 
 **Key Features**:
 
@@ -170,7 +170,7 @@ anyone who are interested in any kinds of contributions and/or collaborations ar
 
 | Name | Language | Deep Learning |
 |---|---|---|
-| [PT-Ranking](https://pt-ranking.github.io/) | Python  |  [PyTorch](https://pytorch.org) | 
+| [PTRanking](https://ptranking.github.io/) | Python  |  [PyTorch](https://pytorch.org) | 
 | [TF-Ranking](https://github.com/tensorflow/ranking)  |  Python | [TensorFlow](https://tensorflow.org) |
 | [MatchZoo](https://github.com/NTMC-Community/MatchZoo) | Python  | [Keras](https://github.com/keras-team/keras) / [PyTorch](https://pytorch.org) | 
 | [Shoelace](https://github.com/rjagerman/shoelace)  |  Python | [Chainer](https://chainer.org) |
