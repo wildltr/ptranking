@@ -16,11 +16,11 @@ This open-source project, referred to as **PT-Ranking** (Learning to Rank in PyT
 
 To get a taste of learning-to-rank models without writing any code, you could try the following script. You just need to specify the model name, the dataset id, as well as the directories for input and output.
 
-- [Jupyter Notebook example with RankNet](./demo/pt_ranking_default_ltr.ipynb)
+- [Jupyter Notebook example with RankNet](example/pt_ranking_default_ltr.ipynb)
 
 To get familiar with the process of data loading, you could try the following script, namely, get the statistics of a dataset. 
 
-- [Jupyter Notebook example on loading a dataset](./demo/pt_ranking_data_loading.ipynb)
+- [Jupyter Notebook example on loading a dataset](example/pt_ranking_demo_check_data_statistics.ipynb)
 
 ## Develop a new model based on PT-Ranking
 
@@ -39,7 +39,7 @@ All specific learning-to-rank models inherit NeuralRanker and mainly differ in t
 An easy-to-use parameter setting is necessary for any ML library. PT-Ranking offers a self-contained strategy.
 In other words, we appeals to particularly designed class objects for setting. For example, **DataSetting** for data loading, **EvalSetting** for evaluation setting and **ModelParameter** for a model's parameter setting. 
 
-When incorporating a newly developed model (say ModelA), it is commonly required to develop the subclass ModelAParameter by inheriting **[ModelParameter](./org/archive/eval/parameter.py)** and customizing the functions, such as to_para_string(), default_para_dict() and grid_search(). Please refer to [LambdaRankParameter](./org/archive/ltr_adhoc/listwise/lambdarank.py) as an example.
+When incorporating a newly developed model (say ModelA), it is commonly required to develop the subclass ModelAParameter by inheriting **[ModelParameter](pt_ranking/eval/parameter.py)** and customizing the functions, such as to_para_string(), default_para_dict() and grid_search(). Please refer to [LambdaRankParameter](pt_ranking/ltr_adhoc/listwise/lambdarank.py) as an example.
 
 Thanks to this strategy, on one hand, we can initialize the settings for data-loading, evaluation, and models in a simple way. On the other hand, the parameter setting of a model is self-contained, and easy to customize.
 
