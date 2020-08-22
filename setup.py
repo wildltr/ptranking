@@ -6,8 +6,8 @@ install_requires = [
     'numpy',
     'scikit-learn',
     'tqdm',
-    'torch >= 1.6.0',
-    'torchvision',
+    #'torch >= 1.6.0', # todo torch-gpu
+    #'torchvision',
 ]
 
 extras_requires = None
@@ -33,3 +33,5 @@ setuptools.setup(
     install_requires=install_requires,
     extras_require=extras_requires
 )
+
+#todo package_data

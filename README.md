@@ -16,11 +16,11 @@ This open-source project, referred to as **ptranking** (Learning to Rank in PyTo
 
 To get a taste of learning-to-rank models without writing any code, you could try the following script. You just need to specify the model name, the dataset id, as well as the directories for input and output.
 
-- [Jupyter Notebook example with RankNet](example/pt_ranking_default_ltr.ipynb)
+- [Jupyter Notebook example on RankNet & LambdaRank](example/ptranking_demo_ltr.ipynb)
 
 To get familiar with the process of data loading, you could try the following script, namely, get the statistics of a dataset. 
 
-- [Jupyter Notebook example on loading a dataset](example/pt_ranking_demo_check_data_statistics.ipynb)
+- [Jupyter Notebook example on getting dataset statistics](example/ptranking_demo_dataset_statistics.ipynb)
 
 ## Develop a new model based on PT-Ranking
 
@@ -89,7 +89,7 @@ For detailed introduction on learning-to-rank, please refer to the book: [Learni
 - **AppoxNDCG**: Tao Qin, Tie-Yan Liu, and Hang Li. 2010. A general approximation framework for direct optimization of information retrieval measures. Journal of Information Retrieval 13, 4 (2010), 375–397.
 
 - **LambdaMART**: Q. Wu, C.J.C. Burges, K. Svore and J. Gao. Adapting Boosting for Information Retrieval Measures. Journal of Information Retrieval, 2007.
-(We note that the implementations are provided by [LightGBM](https://lightgbm.readthedocs.io/en/latest/)  and [XGBoost](https://xgboost.readthedocs.io/en/latest/))
+(We note that the implementation is provided by [LightGBM](https://lightgbm.readthedocs.io/en/latest/))
 
 - **IRGAN**: Wang, Jun and Yu, Lantao and Zhang, Weinan and Gong, Yu and Xu, Yinghui and Wang, Benyou and Zhang, Peng and Zhang, Dell. IRGAN: A Minimax Game for Unifying Generative and Discriminative Information Retrieval Models. Proceedings of the 40th International ACM SIGIR Conference on Research and Development in Information Retrieval, 515–524, 2017. (**Besides the pointwise and pairiwse adversarial learning-to-rank methods introduced in the paper, we also include the listwise version in PT-Ranking**)
 
@@ -146,7 +146,7 @@ The above sample dataset includes two queries, the query "105" has 2 documents, 
 
 - Converting LETOR datasets into LibSVM format with a corresponding **group** file
 
-This functionality is required when using the implementation of LambdaMART provided in [LightGBM](https://lightgbm.readthedocs.io/en/latest/)  and [XGBoost](https://xgboost.readthedocs.io/en/latest/).
+This functionality is required when using the implementation of LambdaMART provided in [LightGBM](https://lightgbm.readthedocs.io/en/latest/).
 
 
 
@@ -155,9 +155,9 @@ This functionality is required when using the implementation of LambdaMART provi
 
 # Test Setting
 
-PyTorch (1.6)
+PyTorch (>=1.3)
 
-Python (3.7)
+Python (3)
 
 Ubuntu 16.04 LTS
 
