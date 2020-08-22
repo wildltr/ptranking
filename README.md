@@ -43,10 +43,13 @@ When incorporating a newly developed model (say ModelA), it is commonly required
 
 Thanks to this strategy, on one hand, we can initialize the settings for data-loading, evaluation, and models in a simple way. On the other hand, the parameter setting of a model is self-contained, and easy to customize.
 
-
 To fully leverage PT-Ranking, one needs to [be familiar with PyTorch](https://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html).
 
 For detailed introduction on learning-to-rank, please refer to the book: [Learning to Rank for Information Retrieval](https://link.springer.com/book/10.1007/978-3-642-14267-3).
+
+## Source Codes
+
+Please refer to the [GitHub Repository](https://github.com/ptranking/ptranking.github.io) for PTRanking's implementation details.
 
 # List of implemented models & References
 
