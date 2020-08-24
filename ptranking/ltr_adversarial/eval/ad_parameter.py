@@ -7,7 +7,7 @@
 from itertools import product
 
 from ptranking.eval.parameter import ScoringFunctionParameter
-from ptranking.data import get_default_scaler_setting, MSLETOR_SEMI, get_data_meta
+from ptranking.data.data_utils import get_default_scaler_setting, MSLETOR_SEMI, get_data_meta
 
 class AdScoringFunctionParameter(ScoringFunctionParameter):
 	"""  """
@@ -122,7 +122,7 @@ class AdEvalSetting():
 
 		# more evaluation settings that are rarely changed
 		self.eval_dict = dict(debug=self.debug, grid_search=False, dir_output=self.dir_output,
-						 cutoffs=[1, 3, 5, 10, 20], do_validation=do_validation, vali_k=vali_k,
+						 cutoffs=[1, 3, 5, 10, 20, 50], do_validation=do_validation, vali_k=vali_k,
 						 do_summary=do_summary, do_log=do_log, log_step=log_step, loss_guided=False, epochs=epochs,
 						 mask_label=mask_label, mask_ratio=mask_ratio, mask_type=mask_type)
 

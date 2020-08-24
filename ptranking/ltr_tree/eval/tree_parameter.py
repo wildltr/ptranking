@@ -4,7 +4,7 @@
 from itertools import product
 
 from ptranking.eval.parameter import DataSetting, EvalSetting
-from ptranking.data import get_default_scaler_setting, MSLETOR_SEMI, get_data_meta
+from ptranking.data.data_utils import get_default_scaler_setting, MSLETOR_SEMI, get_data_meta
 
 
 class TreeDataSetting(DataSetting):
@@ -85,7 +85,7 @@ class TreeEvalSetting(EvalSetting):
 
         # more evaluation settings that are rarely changed
         self.eval_dict = dict(debug=self.debug, grid_search=False, dir_output=self.dir_output, do_log=do_log,
-                              cutoffs=[1, 3, 5, 10, 20], do_validation=do_validation, epochs=epochs,
+                              cutoffs=[1, 3, 5, 10, 20, 50], do_validation=do_validation, epochs=epochs,
                               mask_label=False)
 
         return self.eval_dict
@@ -100,7 +100,7 @@ class TreeEvalSetting(EvalSetting):
         ''' common settings without grid-search '''
         do_log = False if self.debug else True
         common_eval_dict = dict(debug=self.debug, grid_search=True, do_log=do_log, dir_output=self.dir_output,
-                                cutoffs=[1, 3, 5, 10, 20])
+                                cutoffs=[1, 3, 5, 10, 20, 50])
 
         ''' some settings for grid-search '''
         choice_validation = [False] if self.debug else [True]  # True, False

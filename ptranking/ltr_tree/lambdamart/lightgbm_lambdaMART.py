@@ -9,9 +9,9 @@ import lightgbm as lgbm
 from lightgbm import Dataset
 
 from ptranking.eval.parameter import ModelParameter
-from ptranking.data import load_letor_data_as_libsvm_data, YAHOO_LTR
+from ptranking.data.data_utils import load_letor_data_as_libsvm_data, YAHOO_LTR
 
-from ptranking.ltr_tree import \
+from ptranking.ltr_tree.util.lightgbm_util import \
     lightgbm_custom_obj_lambdarank, lightgbm_custom_obj_ranknet, lightgbm_custom_obj_listnet,\
     lightgbm_custom_obj_lambdarank_fobj, lightgbm_custom_obj_ranknet_fobj, lightgbm_custom_obj_listnet_fobj
 

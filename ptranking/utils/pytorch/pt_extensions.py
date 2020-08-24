@@ -302,7 +302,7 @@ def pl_normalize(batch_scores=None):
     m, _ = torch.max(batch_scores, dim=1, keepdim=True)  # for higher stability
     y = batch_scores - m
     y = torch.exp(y)
-    y_cumsum_t2h = flip(torch.cumsum(flip(y, dim=1), dim=1), dim=1)  # row-wise cumulative sum, from tail to head
+    y_cumsum_t2h = torch.flip(torch.cumsum(torch.flip(y, dim=1), dim=1), dim=1)  # row-wise cumulative sum, from tail to head
     batch_pros = torch.div(y, y_cumsum_t2h)
 
     return batch_pros

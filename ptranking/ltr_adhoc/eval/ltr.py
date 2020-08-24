@@ -227,24 +227,13 @@ class LTREvaluator():
         :return:
         """
         # update data_meta given the debug mode
-        if eval_dict['debug']: data_dict['fold_num'], eval_dict['epochs'] = 1, 2  # for quick check
-        if eval_dict['do_summary']: data_dict['fold_num'] = 1 # using the Fold1 only
-        if data_dict['data_id'] == 'IRGAN_MQ2008_Semi': data_dict['fold_num'] = 1
-
         if sf_para_dict['id'] == 'ffnns':
             sf_para_dict['ffnns'].update(dict(num_features=data_dict['num_features']))
         else:
             raise NotImplementedError
 
         self.dir_run  = self.setup_output(data_dict, eval_dict)
-
-        # for quick access of common evaluation settings
-        self.fold_num = data_dict['fold_num']
-        self.epochs, self.loss_guided              = eval_dict['epochs'], eval_dict['loss_guided']
-        self.vali_k, self.log_step, self.cutoffs   = eval_dict['vali_k'], eval_dict['log_step'], eval_dict['cutoffs']
-        self.do_vali, self.do_summary, self.do_log = eval_dict['do_validation'], eval_dict['do_summary'], eval_dict['do_log']
-
-        if self.do_log: sys.stdout = open(self.dir_run + 'log.txt', "w")
+        if eval_dict['do_log']: sys.stdout = open(self.dir_run + 'log.txt', "w")
         #if self.do_summary: self.summary_writer = SummaryWriter(self.dir_run + 'summary')
 
 
@@ -308,22 +297,27 @@ class LTREvaluator():
         self.setup_eval(data_dict, eval_dict, sf_para_dict, model_para_dict)
 
         model_id = model_para_dict['model_id']
+        fold_num = data_dict['fold_num']
+        # for quick access of common evaluation settings
+        epochs, loss_guided = eval_dict['epochs'], eval_dict['loss_guided']
+        vali_k, log_step, cutoffs   = eval_dict['vali_k'], eval_dict['log_step'], eval_dict['cutoffs']
+        do_vali, do_summary = eval_dict['do_validation'], eval_dict['do_summary']
 
         ranker   = self.load_ranker(model_para_dict=model_para_dict, sf_para_dict=sf_para_dict)
 
         time_begin = datetime.datetime.now()            # timing
-        l2r_cv_avg_scores = np.zeros(len(self.cutoffs)) # fold average
+        l2r_cv_avg_scores = np.zeros(len(cutoffs)) # fold average
 
-        for fold_k in range(1, self.fold_num + 1): # evaluation over k-fold data
+        for fold_k in range(1, fold_num + 1): # evaluation over k-fold data
             ranker.reset_parameters()              # reset with the same random initialization
 
             train_data, test_data, vali_data = self.load_data(eval_dict, data_dict, fold_k)
 
-            if self.do_vali: fold_optimal_ndcgk = 0.0
-            if self.do_summary: list_epoch_loss, list_fold_k_train_eval_track, list_fold_k_test_eval_track, list_fold_k_vali_eval_track = [], [], [], []
-            if not self.do_vali and self.loss_guided: first_round, threshold_epoch_loss = True, tensor([10000000.0])
+            if do_vali: fold_optimal_ndcgk = 0.0
+            if do_summary: list_epoch_loss, list_fold_k_train_eval_track, list_fold_k_test_eval_track, list_fold_k_vali_eval_track = [], [], [], []
+            if not do_vali and loss_guided: first_round, threshold_epoch_loss = True, tensor([10000000.0])
 
-            for epoch_k in range(1, self.epochs + 1):
+            for epoch_k in range(1, epochs + 1):
                 torch_fold_k_epoch_k_loss, stop_training = self.train_ranker(ranker=ranker, train_data=train_data, model_para_dict=model_para_dict, epoch_k=epoch_k)
 
                 ranker.scheduler.step()  # adaptive learning rate with step_size=40, gamma=0.5
@@ -332,28 +326,28 @@ class LTREvaluator():
                     print('training is failed !')
                     break
 
-                if (self.do_summary or self.do_vali) and (epoch_k % self.log_step == 0 or epoch_k == 1):  # stepwise check
-                    if self.do_vali:     # per-step validation score
-                        vali_eval_tmp = ndcg_at_k(ranker=ranker, test_data=vali_data, k=self.vali_k, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+                if (do_summary or do_vali) and (epoch_k % log_step == 0 or epoch_k == 1):  # stepwise check
+                    if do_vali:     # per-step validation score
+                        vali_eval_tmp = ndcg_at_k(ranker=ranker, test_data=vali_data, k=vali_k, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
                         vali_eval_v = vali_eval_tmp.data.numpy()
                         if epoch_k > 1:  # further validation comparison
                             curr_vali_ndcg = vali_eval_v
-                            if (curr_vali_ndcg > fold_optimal_ndcgk) or (epoch_k == self.epochs and curr_vali_ndcg == fold_optimal_ndcgk):  # we need at least a reference, in case all zero
-                                print('\t', epoch_k, '- nDCG@{} - '.format(self.vali_k), curr_vali_ndcg)
+                            if (curr_vali_ndcg > fold_optimal_ndcgk) or (epoch_k == epochs and curr_vali_ndcg == fold_optimal_ndcgk):  # we need at least a reference, in case all zero
+                                print('\t', epoch_k, '- nDCG@{} - '.format(vali_k), curr_vali_ndcg)
                                 fold_optimal_ndcgk = curr_vali_ndcg
                                 fold_optimal_checkpoint = '-'.join(['Fold', str(fold_k)])
                                 fold_optimal_epoch_val = epoch_k
                                 ranker.save(dir=self.dir_run + fold_optimal_checkpoint + '/', name='_'.join(['net_params_epoch', str(epoch_k)]) + '.pkl')  # buffer currently optimal model
                             else:
-                                print('\t\t', epoch_k, '- nDCG@{} - '.format(self.vali_k), curr_vali_ndcg)
+                                print('\t\t', epoch_k, '- nDCG@{} - '.format(vali_k), curr_vali_ndcg)
 
-                    if self.do_summary:  # summarize per-step performance w.r.t. train, test
-                        fold_k_epoch_k_train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=self.cutoffs,
+                    if do_summary:  # summarize per-step performance w.r.t. train, test
+                        fold_k_epoch_k_train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs,
                                                                            multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
                         np_fold_k_epoch_k_train_ndcg_ks = fold_k_epoch_k_train_ndcg_ks.cpu().numpy() if gpu else fold_k_epoch_k_train_ndcg_ks.data.numpy()
                         list_fold_k_train_eval_track.append(np_fold_k_epoch_k_train_ndcg_ks)
 
-                        fold_k_epoch_k_test_ndcg_ks  = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=self.cutoffs,
+                        fold_k_epoch_k_test_ndcg_ks  = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs,
                                                                            multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
                         np_fold_k_epoch_k_test_ndcg_ks  = fold_k_epoch_k_test_ndcg_ks.cpu().numpy() if gpu else fold_k_epoch_k_test_ndcg_ks.data.numpy()
                         list_fold_k_test_eval_track.append(np_fold_k_epoch_k_test_ndcg_ks)
@@ -361,9 +355,9 @@ class LTREvaluator():
                         fold_k_epoch_k_loss = torch_fold_k_epoch_k_loss.cpu().numpy() if gpu else torch_fold_k_epoch_k_loss.data.numpy()
                         list_epoch_loss.append(fold_k_epoch_k_loss)
 
-                        if self.do_vali: list_fold_k_vali_eval_track.append(vali_eval_v)
+                        if do_vali: list_fold_k_vali_eval_track.append(vali_eval_v)
 
-                elif self.loss_guided:  # stopping check via epoch-loss
+                elif loss_guided:  # stopping check via epoch-loss
                     if first_round and torch_fold_k_epoch_k_loss >= threshold_epoch_loss:
                         print('Bad threshold: ', torch_fold_k_epoch_k_loss, threshold_epoch_loss)
 
@@ -375,7 +369,7 @@ class LTREvaluator():
                         print('\tStopped according epoch-loss!', torch_fold_k_epoch_k_loss, threshold_epoch_loss)
                         break
 
-            if self.do_summary:  # track
+            if do_summary:  # track
                 sy_prefix = '_'.join(['Fold', str(fold_k)])
                 fold_k_train_eval = np.vstack(list_fold_k_train_eval_track)
                 fold_k_test_eval  = np.vstack(list_fold_k_test_eval_track)
@@ -384,11 +378,11 @@ class LTREvaluator():
 
                 fold_k_epoch_loss = np.hstack(list_epoch_loss)
                 pickle_save((fold_k_epoch_loss, train_data.__len__()), file=self.dir_run + '_'.join([sy_prefix, 'epoch_loss.np']))
-                if self.do_vali:
+                if do_vali:
                     fold_k_vali_eval = np.hstack(list_fold_k_vali_eval_track)
                     pickle_save(fold_k_vali_eval, file=self.dir_run + '_'.join([sy_prefix, 'vali_eval.np']))
 
-            if self.do_vali: # using the fold-wise optimal model for later testing based on validation data
+            if do_vali: # using the fold-wise optimal model for later testing based on validation data
                 buffered_model = '_'.join(['net_params_epoch', str(fold_optimal_epoch_val)]) + '.pkl'
                 ranker.load(self.dir_run + fold_optimal_checkpoint + '/' + buffered_model)
                 fold_optimal_ranker = ranker
@@ -397,12 +391,12 @@ class LTREvaluator():
                 ranker.save(dir=self.dir_run + fold_optimal_checkpoint + '/', name='_'.join(['net_params_epoch', str(epoch_k)]) + '.pkl')
                 fold_optimal_ranker = ranker
 
-            torch_fold_ndcg_ks = ndcg_at_ks(ranker=fold_optimal_ranker, test_data=test_data, ks=self.cutoffs,
+            torch_fold_ndcg_ks = ndcg_at_ks(ranker=fold_optimal_ranker, test_data=test_data, ks=cutoffs,
                                                      multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
             fold_ndcg_ks = torch_fold_ndcg_ks.data.numpy()
 
             performance_list = [model_id + ' Fold-' + str(fold_k)]      # fold-wise performance
-            for i, co in enumerate(self.cutoffs):
+            for i, co in enumerate(cutoffs):
                 performance_list.append('nDCG@{}:{:.4f}'.format(co, fold_ndcg_ks[i]))
             performance_str = '\t'.join(performance_list)
             print('\t', performance_str)
@@ -413,9 +407,9 @@ class LTREvaluator():
         elapsed_time_str = str(time_end - time_begin)
         print('Elapsed time:\t', elapsed_time_str + "\n\n")
 
-        l2r_cv_avg_scores = np.divide(l2r_cv_avg_scores, self.fold_num)
-        eval_prefix = str(self.fold_num) + '-fold cross validation scores:' if self.do_vali else str(self.fold_num) + '-fold average scores:'
-        print(model_id, eval_prefix, metric_results_to_string(list_scores=l2r_cv_avg_scores, list_cutoffs=self.cutoffs))  # print either cv or average performance
+        l2r_cv_avg_scores = np.divide(l2r_cv_avg_scores, fold_num)
+        eval_prefix = str(fold_num) + '-fold cross validation scores:' if do_vali else str(fold_num) + '-fold average scores:'
+        print(model_id, eval_prefix, metric_results_to_string(list_scores=l2r_cv_avg_scores, list_cutoffs=cutoffs))  # print either cv or average performance
 
         return l2r_cv_avg_scores
 

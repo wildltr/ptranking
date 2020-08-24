@@ -9,8 +9,8 @@ import numpy as np
 import torch
 
 from ptranking.utils.bigdata.BigPickle import pickle_save
-from ptranking.data import YAHOO_LTR, ISTELLA_LTR, MSLETOR, MSLRWEB
-from ptranking.ltr_tree import TreeDataSetting, TreeEvalSetting
+from ptranking.data.data_utils import YAHOO_LTR, ISTELLA_LTR, MSLETOR, MSLRWEB
+from ptranking.ltr_tree.eval.tree_parameter import TreeDataSetting, TreeEvalSetting
 from ptranking.metric.adhoc_metric import torch_nDCG_at_ks, torch_nerr_at_ks, torch_ap_at_ks, torch_p_at_ks
 from ptranking.ltr_adhoc.eval.ltr import LTREvaluator
 
@@ -154,11 +154,7 @@ class TreeLTREvaluator(LTREvaluator):
         :param eval_dict:
         :return:
         """
-        self.fold_num = 2 if eval_dict['debug'] else 5
-
         # required setting to be consistent with the dataset
-        if data_dict['data_id'] in YAHOO_LTR or data_dict['data_id'] is ISTELLA_LTR : self.fold_num = 1
-
         if data_dict['data_id'] == 'Istella':
             assert eval_dict['do_validation'] is not True  # since there is no validation data
 
@@ -194,7 +190,7 @@ class TreeLTREvaluator(LTREvaluator):
         self.setup_eval(data_dict=data_dict, eval_dict=eval_dict)
         model_id, data_id = self.model_parameter.model_id, data_dict['data_id']
 
-        fold_num = self.fold_num # updated due to the debug mode
+        fold_num = eval_dict['fold_num'] # updated due to the debug mode
         cutoffs, do_validation = eval_dict['cutoffs'], eval_dict['do_validation']
 
         tree_ranker = globals()[model_id](model_para_dict)
@@ -210,7 +206,7 @@ class TreeLTREvaluator(LTREvaluator):
         list_all_fold_ap_at_ks_per_q = []
         list_all_fold_p_at_ks_per_q = []
 
-        for fold_k in range(1, self.fold_num + 1):
+        for fold_k in range(1, fold_num + 1):
             # determine the file paths
             file_train, file_vali, file_test = self.determine_files(data_dict=data_dict, fold_k=fold_k)
 
@@ -225,7 +221,7 @@ class TreeLTREvaluator(LTREvaluator):
                                     self.cal_metric_at_ks(model_id=model_id, all_std_labels=y_test, all_preds=y_pred,
                                                           group=group_test, ks=cutoffs)
 
-            performance_list = [model_id] if data_id in YAHOO_LTR else [model_id + ' Fold-' + str(fold_k)]
+            performance_list = [model_id] if data_id in YAHOO_LTR or data_id in ISTELLA_LTR else [model_id + ' Fold-' + str(fold_k)]
 
             for i, co in enumerate(cutoffs):
                 performance_list.append('\nnDCG@{}:{:.4f}'.format(co, fold_avg_ndcg_at_ks[i]))

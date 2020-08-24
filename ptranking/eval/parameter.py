@@ -191,7 +191,7 @@ class EvalSetting():
         do_log = False if self.debug else True
         do_validation, do_summary = False, False  # checking loss variation
         log_step = 2
-        epochs = 50
+        epochs = 20 if self.debug else 100
         vali_k = 5
 
         ''' setting for exploring the impact of randomly removing some ground-truth labels '''
@@ -201,7 +201,7 @@ class EvalSetting():
 
         # more evaluation settings that are rarely changed
         self.eval_dict = dict(debug=self.debug, grid_search=False, dir_output=self.dir_output,
-                         cutoffs=[1, 3, 5, 10, 20], do_validation=do_validation, vali_k=vali_k,
+                         cutoffs=[1, 3, 5, 10, 20, 50], do_validation=do_validation, vali_k=vali_k,
                          do_summary=do_summary, do_log=do_log, log_step=log_step, loss_guided=False, epochs=epochs,
                          mask_label=mask_label, mask_type=mask_type, mask_ratio=mask_ratio)
 
