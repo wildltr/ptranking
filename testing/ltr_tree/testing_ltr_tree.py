@@ -40,8 +40,8 @@ if __name__ == '__main__':
     ''' selected dataset & location of the adopted data '''
     data_id = 'MQ2008_Super'
 
-    #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
-    dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
+    dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
+    #dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
 
     #data_id  = 'Istella_S'
     #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/'
