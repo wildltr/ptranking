@@ -13,7 +13,9 @@ from ptranking.utils.bigdata.BigPickle import pickle_save
 
 from ptranking.ltr_adhoc.eval.ltr import LTREvaluator
 
-from ptranking.ltr_adversarial.listwise.irgan_list   import IRGAN_List
+from ptranking.ltr_adversarial.pointwise.irgan_point import IRGAN_Point, IRGAN_PointParameter
+from ptranking.ltr_adversarial.pairwise.irgan_pair   import IRGAN_Pair, IRGAN_PairParameter
+from ptranking.ltr_adversarial.listwise.irgan_list   import IRGAN_List, IRGAN_ListParameter
 
 from ptranking.metric.metric_utils import metric_results_to_string
 from ptranking.ltr_adhoc.eval.eval_utils import ndcg_at_ks, ndcg_at_k
@@ -81,6 +83,11 @@ class AdLTREvaluator(LTREvaluator):
         self.setup_eval(data_dict, eval_dict, sf_para_dict, model_para_dict=ad_para_dict)
 
         model_id = ad_para_dict['model_id']
+        fold_num = data_dict['fold_num']
+        # for quick access of common evaluation settings
+        epochs, loss_guided = eval_dict['epochs'], eval_dict['loss_guided']
+        vali_k, log_step, cutoffs = eval_dict['vali_k'], eval_dict['log_step'], eval_dict['cutoffs']
+        do_vali, do_summary = eval_dict['do_validation'], eval_dict['do_summary']
 
         if sf_para_dict['id'] == 'ffnns':
             sf_para_dict['ffnns'].update(dict(num_features=data_dict['num_features']))
@@ -90,9 +97,9 @@ class AdLTREvaluator(LTREvaluator):
         ad_machine = self.get_ad_machine(eval_dict=eval_dict, data_dict=data_dict, sf_para_dict=sf_para_dict, ad_para_dict=ad_para_dict)
 
         time_begin = datetime.datetime.now()  # timing
-        g_l2r_cv_avg_scores, d_l2r_cv_avg_scores = np.zeros(len(self.cutoffs)), np.zeros(len(self.cutoffs))  # fold average
+        g_l2r_cv_avg_scores, d_l2r_cv_avg_scores = np.zeros(len(cutoffs)), np.zeros(len(cutoffs))  # fold average
 
-        for fold_k in range(1, self.fold_num + 1):
+        for fold_k in range(1, fold_num + 1):
             dict_buffer = dict()  # for buffering frequently used objs
             ad_machine.reset_generator_discriminator()
 
@@ -100,8 +107,8 @@ class AdLTREvaluator(LTREvaluator):
 
             train_data, test_data, vali_data = self.load_data(eval_dict, data_dict, fold_k)
 
-            if self.do_vali: g_fold_optimal_ndcgk, d_fold_optimal_ndcgk= 0.0, 0.0
-            if self.do_summary:
+            if do_vali: g_fold_optimal_ndcgk, d_fold_optimal_ndcgk= 0.0, 0.0
+            if do_summary:
                 list_epoch_loss = [] # not used yet
                 g_list_fold_k_train_eval_track, g_list_fold_k_test_eval_track, g_list_fold_k_vali_eval_track = [], [], []
                 d_list_fold_k_train_eval_track, d_list_fold_k_test_eval_track, d_list_fold_k_vali_eval_track = [], [], []
@@ -110,7 +117,7 @@ class AdLTREvaluator(LTREvaluator):
                 ad_machine.burn_in(train_data=train_data)
 
 
-            for epoch_k in range(1, self.epochs + 1):
+            for epoch_k in range(1, epochs + 1):
 
                 if model_id == 'IR_GMAN_List':
                     stop_training = ad_machine.mini_max_train(train_data=train_data, generator=ad_machine.generator,
@@ -129,53 +136,55 @@ class AdLTREvaluator(LTREvaluator):
                     print('training is failed !')
                     break
 
-                if (self.do_summary or self.do_vali) and (epoch_k % self.log_step == 0 or epoch_k == 1):  # stepwise check
-                    if self.do_vali:
-                        g_vali_eval_tmp = ndcg_at_k(ranker=g_ranker, test_data=vali_data, k=self.vali_k, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
-                        d_vali_eval_tmp = ndcg_at_k(ranker=d_ranker, test_data=vali_data, k=self.vali_k, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+                if (do_summary or do_vali) and (epoch_k % log_step == 0 or epoch_k == 1):  # stepwise check
+                    if do_vali:
+                        g_vali_eval_tmp = ndcg_at_k(ranker=g_ranker, test_data=vali_data, k=vali_k, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+                        d_vali_eval_tmp = ndcg_at_k(ranker=d_ranker, test_data=vali_data, k=vali_k, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
                         g_vali_eval_v, d_vali_eval_v = g_vali_eval_tmp.data.numpy(), d_vali_eval_tmp.data.numpy()
 
                         if epoch_k > 1:
                             g_buffer, g_tmp_metric_val, g_tmp_epoch = \
                                 self.per_epoch_validation(ranker=g_ranker, curr_metric_val=g_vali_eval_v,
                                                           fold_optimal_metric_val=g_fold_optimal_ndcgk, curr_epoch=epoch_k,
-                                                          id_str='G', fold_optimal_checkpoint=fold_optimal_checkpoint)
+                                                          id_str='G', fold_optimal_checkpoint=fold_optimal_checkpoint, epochs=epochs)
                             # observe better performance
                             if g_buffer: g_fold_optimal_ndcgk, g_fold_optimal_epoch_val = g_tmp_metric_val, g_tmp_epoch
 
                             d_buffer, d_tmp_metric_val, d_tmp_epoch = \
                                 self.per_epoch_validation(ranker=d_ranker, curr_metric_val=d_vali_eval_v,
                                                           fold_optimal_metric_val=d_fold_optimal_ndcgk, curr_epoch=epoch_k,
-                                                          id_str='D', fold_optimal_checkpoint=fold_optimal_checkpoint)
+                                                          id_str='D', fold_optimal_checkpoint=fold_optimal_checkpoint, epochs=epochs)
                             if d_buffer: d_fold_optimal_ndcgk, d_fold_optimal_epoch_val = d_tmp_metric_val, d_tmp_epoch
 
-                    if self.do_summary: # summarize per-step performance w.r.t. train, test
+                    if do_summary: # summarize per-step performance w.r.t. train, test
                         self.per_epoch_summary_step1(ranker=g_ranker, train_data=train_data, test_data=test_data,
                                                      list_fold_k_train_eval_track=g_list_fold_k_train_eval_track,
                                                      list_fold_k_test_eval_track=g_list_fold_k_test_eval_track,
                                                      vali_eval_v=g_vali_eval_v,
-                                                     list_fold_k_vali_eval_track=g_list_fold_k_vali_eval_track)
+                                                     list_fold_k_vali_eval_track=g_list_fold_k_vali_eval_track,
+                                                     cutoffs=cutoffs, do_vali=do_vali)
 
                         self.per_epoch_summary_step1(ranker=d_ranker, train_data=train_data, test_data=test_data,
                                                      list_fold_k_train_eval_track=d_list_fold_k_train_eval_track,
                                                      list_fold_k_test_eval_track=d_list_fold_k_test_eval_track,
                                                      vali_eval_v=d_vali_eval_v,
-                                                     list_fold_k_vali_eval_track=d_list_fold_k_vali_eval_track)
+                                                     list_fold_k_vali_eval_track=d_list_fold_k_vali_eval_track,
+                                                     cutoffs=cutoffs, do_vali=do_vali)
 
-            if self.do_summary:
+            if do_summary:
                 self.per_epoch_summary_step2(id_str='G', fold_k=fold_k,
                                              list_fold_k_train_eval_track=g_list_fold_k_train_eval_track,
                                              list_fold_k_test_eval_track=g_list_fold_k_test_eval_track,
-                                             list_epoch_loss=list_epoch_loss,
+                                             do_vali=do_vali,
                                              list_fold_k_vali_eval_track=g_list_fold_k_vali_eval_track)
 
                 self.per_epoch_summary_step2(id_str='D', fold_k=fold_k,
                                              list_fold_k_train_eval_track=d_list_fold_k_train_eval_track,
                                              list_fold_k_test_eval_track=d_list_fold_k_test_eval_track,
-                                             list_epoch_loss=list_epoch_loss,
+                                             do_vali=do_vali,
                                              list_fold_k_vali_eval_track=d_list_fold_k_vali_eval_track)
 
-            if self.do_vali: # using the fold-wise optimal model for later testing based on validation data #
+            if do_vali: # using the fold-wise optimal model for later testing based on validation data #
                     g_buffered_model = '_'.join(['net_params_epoch', str(g_fold_optimal_epoch_val), 'G']) + '.pkl'
                     g_ranker.load(self.dir_run + fold_optimal_checkpoint + '/' + g_buffered_model)
                     g_fold_optimal_ranker = g_ranker
@@ -191,19 +200,19 @@ class AdLTREvaluator(LTREvaluator):
                 d_ranker.save(dir=self.dir_run + fold_optimal_checkpoint + '/', name='_'.join(['net_params_epoch', str(epoch_k), 'D']) + '.pkl')
                 d_fold_optimal_ranker = d_ranker
 
-            g_torch_fold_ndcg_ks = ndcg_at_ks(ranker=g_fold_optimal_ranker, test_data=test_data, ks=self.cutoffs, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+            g_torch_fold_ndcg_ks = ndcg_at_ks(ranker=g_fold_optimal_ranker, test_data=test_data, ks=cutoffs, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
             g_fold_ndcg_ks = g_torch_fold_ndcg_ks.data.numpy()
 
-            d_torch_fold_ndcg_ks = ndcg_at_ks(ranker=d_fold_optimal_ranker, test_data=test_data, ks=self.cutoffs, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+            d_torch_fold_ndcg_ks = ndcg_at_ks(ranker=d_fold_optimal_ranker, test_data=test_data, ks=cutoffs, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
             d_fold_ndcg_ks = d_torch_fold_ndcg_ks.data.numpy()
 
             performance_list = [' Fold-' + str(fold_k)]  # fold-wise performance
             performance_list.append('Generator')
-            for i, co in enumerate(self.cutoffs):
+            for i, co in enumerate(cutoffs):
                 performance_list.append('nDCG@{}:{:.4f}'.format(co, g_fold_ndcg_ks[i]))
 
             performance_list.append('\nDiscriminator')
-            for i, co in enumerate(self.cutoffs):
+            for i, co in enumerate(cutoffs):
                 performance_list.append('nDCG@{}:{:.4f}'.format(co, d_fold_ndcg_ks[i]))
 
             performance_str = '\t'.join(performance_list)
@@ -217,23 +226,23 @@ class AdLTREvaluator(LTREvaluator):
         print('Elapsed time:\t', elapsed_time_str + "\n\n")
 
         # begin to print either cv or average performance
-        g_l2r_cv_avg_scores = np.divide(g_l2r_cv_avg_scores, self.fold_num)
-        d_l2r_cv_avg_scores = np.divide(d_l2r_cv_avg_scores, self.fold_num)
+        g_l2r_cv_avg_scores = np.divide(g_l2r_cv_avg_scores, fold_num)
+        d_l2r_cv_avg_scores = np.divide(d_l2r_cv_avg_scores, fold_num)
 
-        if self.do_vali:
-            eval_prefix = str(self.fold_num) + '-fold cross validation scores:'
+        if do_vali:
+            eval_prefix = str(fold_num) + '-fold cross validation scores:'
         else:
-            eval_prefix = str(self.fold_num) + '-fold average scores:'
+            eval_prefix = str(fold_num) + '-fold average scores:'
 
-        print('Generator', eval_prefix, metric_results_to_string(list_scores=g_l2r_cv_avg_scores, list_cutoffs=self.cutoffs))
-        print('Discriminator', eval_prefix, metric_results_to_string(list_scores=d_l2r_cv_avg_scores, list_cutoffs=self.cutoffs))
+        print('Generator', eval_prefix, metric_results_to_string(list_scores=g_l2r_cv_avg_scores, list_cutoffs=cutoffs))
+        print('Discriminator', eval_prefix, metric_results_to_string(list_scores=d_l2r_cv_avg_scores, list_cutoffs=cutoffs))
 
 
-    def per_epoch_validation(self, ranker, curr_metric_val, fold_optimal_metric_val, curr_epoch, id_str, fold_optimal_checkpoint):
+    def per_epoch_validation(self, ranker, curr_metric_val, fold_optimal_metric_val, curr_epoch, id_str, fold_optimal_checkpoint, epochs):
         info_str = ' '.join([str(curr_epoch), ' ', id_str, ' - nDCG@k - ', str(curr_metric_val)])
 
         if (curr_metric_val > fold_optimal_metric_val) or \
-                (curr_epoch == self.epochs and curr_metric_val == fold_optimal_metric_val):  # we need at least a reference, in case all zero
+                (curr_epoch == epochs and curr_metric_val == fold_optimal_metric_val):  # we need at least a reference, in case all zero
             print('\t', info_str)
             fold_optimal_metric_val = curr_metric_val
             fold_optimal_epoch_val = curr_epoch
@@ -246,22 +255,22 @@ class AdLTREvaluator(LTREvaluator):
             return False, None, None
 
     def per_epoch_summary_step1(self, ranker, train_data, list_fold_k_train_eval_track,
-                          test_data, list_fold_k_test_eval_track, vali_eval_v, list_fold_k_vali_eval_track):
+                          test_data, list_fold_k_test_eval_track, vali_eval_v, list_fold_k_vali_eval_track, cutoffs, do_vali):
 
-        fold_k_epoch_k_train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=self.cutoffs, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+        fold_k_epoch_k_train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
         np_fold_k_epoch_k_train_ndcg_ks = fold_k_epoch_k_train_ndcg_ks.cpu().numpy() if gpu else fold_k_epoch_k_train_ndcg_ks.data.numpy()
         list_fold_k_train_eval_track.append(np_fold_k_epoch_k_train_ndcg_ks)
 
-        fold_k_epoch_k_test_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=self.cutoffs, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+        fold_k_epoch_k_test_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
         np_fold_k_epoch_k_test_ndcg_ks = fold_k_epoch_k_test_ndcg_ks.cpu().numpy() if gpu else fold_k_epoch_k_test_ndcg_ks.data.numpy()
         list_fold_k_test_eval_track.append(np_fold_k_epoch_k_test_ndcg_ks)
 
         #fold_k_epoch_k_loss = torch_fold_k_epoch_k_loss.cpu().numpy() if gpu else torch_fold_k_epoch_k_loss.data.numpy()
         #list_epoch_loss.append(fold_k_epoch_k_loss)
 
-        if self.do_vali: list_fold_k_vali_eval_track.append(vali_eval_v)
+        if do_vali: list_fold_k_vali_eval_track.append(vali_eval_v)
 
-    def per_epoch_summary_step2(self, id_str, fold_k, list_fold_k_train_eval_track, list_fold_k_test_eval_track, list_epoch_loss, list_fold_k_vali_eval_track):
+    def per_epoch_summary_step2(self, id_str, fold_k, list_fold_k_train_eval_track, list_fold_k_test_eval_track, do_vali, list_fold_k_vali_eval_track):
         sy_prefix = '_'.join(['Fold', str(fold_k)])
 
         fold_k_train_eval = np.vstack(list_fold_k_train_eval_track)
@@ -275,7 +284,7 @@ class AdLTREvaluator(LTREvaluator):
                     file=self.dir_run + '_'.join([sy_prefix, id_str, 'epoch_loss.np']))
         '''
 
-        if self.do_vali:
+        if do_vali:
             fold_k_vali_eval = np.hstack(list_fold_k_vali_eval_track)
             pickle_save(fold_k_vali_eval, file=self.dir_run + '_'.join([sy_prefix, id_str, 'vali_eval.np']))
 
