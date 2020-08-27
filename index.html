@@ -1,0 +1,710 @@
+
+
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      <link rel="shortcut icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.5.9">
+    
+    
+      
+        <title>ptranking</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.36ee6aaa.min.css">
+      
+        <link rel="stylesheet" href="assets/stylesheets/palette.83bccb1f.min.css">
+      
+      
+        
+        
+        <meta name="theme-color" content="#ef5552">
+      
+    
+    
+    
+      
+        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="red" data-md-color-accent="red">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#learning-to-rank-in-pytorch" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="." title="ptranking" class="md-header-nav__button md-logo" aria-label="ptranking">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      
+        <div class="md-header-nav__ellipsis">
+          <span class="md-header-nav__topic md-ellipsis">
+            ptranking
+          </span>
+          <span class="md-header-nav__topic md-ellipsis">
+            
+              Home
+            
+          </span>
+        </div>
+      
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/ptranking/ptranking.github.io/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ptranking
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+        
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="ptranking" class="md-nav__button md-logo" aria-label="ptranking">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    ptranking
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/ptranking/ptranking.github.io/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ptranking
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Home
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
+        </span>
+      </label>
+    
+    <a href="." title="Home" class="md-nav__link md-nav__link--active">
+      Home
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    Introduction
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-start-and-learning-more" class="md-nav__link">
+    How-to-Start and Learning more
+  </a>
+  
+    <nav class="md-nav" aria-label="How-to-Start and Learning more">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#demo-scripts" class="md-nav__link">
+    Demo Scripts
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#develop-a-new-model" class="md-nav__link">
+    Develop A New Model
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parameter-setting" class="md-nav__link">
+    Parameter Setting
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#source-codes" class="md-nav__link">
+    Source Codes
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#call-for-contribution" class="md-nav__link">
+    Call for Contribution
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#relevant-resources" class="md-nav__link">
+    Relevant Resources
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="data/" title="Data" class="md-nav__link">
+      Data
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="metric.md" title="Metric" class="md-nav__link">
+      Metric
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-4" type="checkbox" id="nav-4">
+    
+    <label class="md-nav__link" for="nav-4">
+      LTR_Adhoc
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="LTR_Adhoc" data-md-level="1">
+      <label class="md-nav__title" for="nav-4">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        LTR_Adhoc
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="lambda_framework.md" title="None" class="md-nav__link">
+      None
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-5" type="checkbox" id="nav-5">
+    
+    <label class="md-nav__link" for="nav-5">
+      LTR_Adversarial
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="LTR_Adversarial" data-md-level="1">
+      <label class="md-nav__title" for="nav-5">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        LTR_Adversarial
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="irgan.md" title="None" class="md-nav__link">
+      None
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-6" type="checkbox" id="nav-6">
+    
+    <label class="md-nav__link" for="nav-6">
+      LTR_Tree
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="LTR_Tree" data-md-level="1">
+      <label class="md-nav__title" for="nav-6">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        LTR_Tree
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="lambda_mart.md" title="None" class="md-nav__link">
+      None
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    Introduction
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-start-and-learning-more" class="md-nav__link">
+    How-to-Start and Learning more
+  </a>
+  
+    <nav class="md-nav" aria-label="How-to-Start and Learning more">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#demo-scripts" class="md-nav__link">
+    Demo Scripts
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#develop-a-new-model" class="md-nav__link">
+    Develop A New Model
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parameter-setting" class="md-nav__link">
+    Parameter Setting
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#source-codes" class="md-nav__link">
+    Source Codes
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#call-for-contribution" class="md-nav__link">
+    Call for Contribution
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#relevant-resources" class="md-nav__link">
+    Relevant Resources
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/ptranking/ptranking.github.io/edit/master/docs/index.md" title="Edit this page" class="md-content__button md-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+                  </a>
+                
+                
+                  
+                
+                
+                <h1 id="learning-to-rank-in-pytorch">Learning to Rank in PyTorch<a class="headerlink" href="#learning-to-rank-in-pytorch" title="Permanent link">&para;</a></h1>
+<h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h2>
+<p>This open-source project, referred to as <strong>PTRanking</strong> (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous learning-to-rank methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank.</p>
+<p><strong>Key Features</strong>:</p>
+<ul>
+<li>A number of representative learning-to-rank models, including not only the traditional optimization framework via empirical risk minimization but also the adversarial optimization framework</li>
+<li>Supports widely used benchmark datasets. Meanwhile, random masking of the ground-truth labels with a specified ratio is also supported</li>
+<li>Supports different metrics, such as Precision, MAP, nDCG and nERR</li>
+<li>Highly configurable functionalities for fine-tuning hyper-parameters, e.g., grid-search over hyper-parameters of a specific model</li>
+<li>Provides easy-to-use APIs for developing a new learning-to-rank model</li>
+</ul>
+<h2 id="how-to-start-and-learning-more">How-to-Start and Learning more<a class="headerlink" href="#how-to-start-and-learning-more" title="Permanent link">&para;</a></h2>
+<h3 id="demo-scripts">Demo Scripts<a class="headerlink" href="#demo-scripts" title="Permanent link">&para;</a></h3>
+<p>To get a taste of learning-to-rank models without writing any code, you could try the following script. You just need to specify the model name, the dataset id, as well as the directories for input and output.</p>
+<ul>
+<li><a href="../example/ptranking_demo_ltr.ipynb">Jupyter Notebook example on RankNet &amp; LambdaRank</a></li>
+</ul>
+<p>To get familiar with the process of data loading, you could try the following script, namely, get the statistics of a dataset.</p>
+<ul>
+<li><a href="../example/ptranking_demo_dataset_statistics.ipynb">Jupyter Notebook example on getting dataset statistics</a></li>
+</ul>
+<h3 id="develop-a-new-model">Develop A New Model<a class="headerlink" href="#develop-a-new-model" title="Permanent link">&para;</a></h3>
+<p>PT-Ranking offers deep neural networks as the basis to construct a scoring function based on PyTorch and can thus fully leverage the advantages of PyTorch.
+NeuralRanker is a class that represents a general learning-to-rank model.
+A key component of NeuralRanker is the neural scoring function. The configurable hyper-parameters include activation function, number of layers, number of neurons per layer, etc.
+All specific learning-to-rank models inherit NeuralRanker and mainly differ in the way of computing the training loss.
+ The following figure shows the main step in developing a new learning-to-rank model based on Empirical Risk Minimization,
+ where batch_preds and batch_stds correspond to outputs of the scoring function and ground-truth lables, respectively.
+ We can observe that the main work is to define the surrogate loss function.</p>
+<p><img alt="NewLoss" src="img/new_loss.png" /></p>
+<h3 id="parameter-setting">Parameter Setting<a class="headerlink" href="#parameter-setting" title="Permanent link">&para;</a></h3>
+<p>An easy-to-use parameter setting is necessary for any ML library. PT-Ranking offers a self-contained strategy.
+In other words, we appeals to particularly designed class objects for setting. For example, <strong>DataSetting</strong> for data loading, <strong>EvalSetting</strong> for evaluation setting and <strong>ModelParameter</strong> for a model's parameter setting.</p>
+<p>When incorporating a newly developed model (say ModelA), it is commonly required to develop the subclass ModelAParameter by inheriting <strong><a href="ptranking/eval/parameter.py">ModelParameter</a></strong> and customizing the functions, such as to_para_string(), default_para_dict() and grid_search(). Please refer to <a href="ptranking/ltr_adhoc/listwise/lambdarank.py">LambdaRankParameter</a> as an example.</p>
+<p>Thanks to this strategy, on one hand, we can initialize the settings for data-loading, evaluation, and models in a simple way. On the other hand, the parameter setting of a model is self-contained, and easy to customize.</p>
+<p>To fully leverage PT-Ranking, one needs to <a href="https://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html">be familiar with PyTorch</a>.</p>
+<p>For detailed introduction on learning-to-rank, please refer to the book: <a href="https://link.springer.com/book/10.1007/978-3-642-14267-3">Learning to Rank for Information Retrieval</a>.</p>
+<h3 id="source-codes">Source Codes<a class="headerlink" href="#source-codes" title="Permanent link">&para;</a></h3>
+<p>Please refer to the <a href="https://github.com/ptranking/ptranking.github.io">GitHub Repository</a> for PTRanking's implementation details.</p>
+<h2 id="call-for-contribution">Call for Contribution<a class="headerlink" href="#call-for-contribution" title="Permanent link">&para;</a></h2>
+<p>We are adding more learning-to-rank models all the time. Please submit an issue if there is something you want to have implemented and included. Meanwhile,
+anyone who are interested in any kinds of contributions and/or collaborations are warmly welcomed.</p>
+<h2 id="relevant-resources">Relevant Resources<a class="headerlink" href="#relevant-resources" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Language</th>
+<th>Deep Learning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://ptranking.github.io/">PTRanking</a></td>
+<td>Python</td>
+<td><a href="https://pytorch.org">PyTorch</a></td>
+</tr>
+<tr>
+<td><a href="https://github.com/tensorflow/ranking">TF-Ranking</a></td>
+<td>Python</td>
+<td><a href="https://tensorflow.org">TensorFlow</a></td>
+</tr>
+<tr>
+<td><a href="https://github.com/NTMC-Community/MatchZoo">MatchZoo</a></td>
+<td>Python</td>
+<td><a href="https://github.com/keras-team/keras">Keras</a> / <a href="https://pytorch.org">PyTorch</a></td>
+</tr>
+<tr>
+<td><a href="https://github.com/rjagerman/shoelace">Shoelace</a></td>
+<td>Python</td>
+<td><a href="https://chainer.org">Chainer</a></td>
+</tr>
+<tr>
+<td><a href="https://bitbucket.org/ilps/lerot">LEROT</a></td>
+<td>Python</td>
+<td>x</td>
+</tr>
+<tr>
+<td><a href="http://www.lemurproject.org/ranklib.php">Rank Lib</a></td>
+<td>Java</td>
+<td>x</td>
+</tr>
+<tr>
+<td><a href="http://www.cs.cornell.edu/people/tj/svm_light/svm_proprank.html">Propensity SVM^Rank</a></td>
+<td>C</td>
+<td>x</td>
+</tr>
+<tr>
+<td><a href="https://github.com/hpclab/quickrank">QuickRank</a></td>
+<td>C++</td>
+<td>x</td>
+</tr>
+</tbody>
+</table>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+        
+          <a href="data/" title="Data" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Data
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="assets/javascripts/vendor.df0def68.min.js"></script>
+      <script src="assets/javascripts/bundle.ba57d267.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      
+      <script>
+        app = initialize({
+          base: ".",
+          features: [],
+          search: Object.assign({
+            worker: "assets/javascripts/worker/search.5eca75d3.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>
