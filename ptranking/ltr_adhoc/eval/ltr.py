@@ -16,6 +16,7 @@ import torch
 from ptranking.eval.parameter import ModelParameter, DataSetting, EvalSetting, ScoringFunctionParameter
 from ptranking.utils.bigdata.BigPickle import pickle_save
 from ptranking.metric.metric_utils import metric_results_to_string
+from ptranking.data.data_utils import get_data_meta
 from ptranking.ltr_adhoc.eval.eval_utils import ndcg_at_ks, ndcg_at_k
 from ptranking.data.data_utils import LTRDataset, YAHOO_LTR, ISTELLA_LTR, MSLETOR_SEMI
 
@@ -484,12 +485,12 @@ class LTREvaluator():
     def iterate_scoring_function_setting(self, data_dict=None):
         return self.sf_parameter.grid_search(data_dict=data_dict)
 
-    def set_model_setting(self, debug=False, model_id=None, data_dict=None):
+    def set_model_setting(self, debug=False, model_id=None, data_id=None):
         """
         Initialize the parameter class for a specified model
         :param debug:
         :param model_id:
-        :param data_dict:
+        :param data_id:
         :return:
         """
         if model_id in ['RankMSE', 'RankNet', 'ListNet', 'ListMLE', 'RankCosine']:
@@ -497,7 +498,8 @@ class LTREvaluator():
             self.model_parameter = ModelParameter(model_id=model_id)
         elif model_id in ['LambdaRank', 'ApproxNDCG', 'DirectOpt', 'MarginLambdaLoss']:
             # the 2nd type, where the information of the type of relevance label is required.
-            if data_dict['multi_level_rele']:
+            data_meta = get_data_meta(data_id=data_id)  # add meta-information
+            if data_meta['multi_level_rele']:
                 self.model_parameter = globals()[model_id + "Parameter"](debug=debug, std_rele_is_permutation=False)
             else: # the case like MSLETOR_LIST
                 self.model_parameter = globals()[model_id + "Parameter"](debug=debug, std_rele_is_permutation=True)
@@ -539,7 +541,7 @@ class LTREvaluator():
         self.set_scoring_function_setting(debug=debug, data_dict=data_dict)
         sf_para_dict = self.get_default_scoring_function_setting()
 
-        self.set_model_setting(debug=debug, model_id=model_id, data_dict=data_dict)
+        self.set_model_setting(debug=debug, model_id=model_id, data_id=data_id)
         model_para_dict = self.get_default_model_setting()
 
         self.declare_global(model_id=model_id)
@@ -562,7 +564,7 @@ class LTREvaluator():
 
         self.set_scoring_function_setting(debug=debug)
 
-        self.set_model_setting(debug=debug, model_id=model_id)
+        self.set_model_setting(debug=debug, model_id=model_id, data_id=data_id)
 
         self.declare_global(model_id=model_id)
 

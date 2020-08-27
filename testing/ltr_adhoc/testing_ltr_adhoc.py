@@ -67,7 +67,7 @@ if __name__ == '__main__':
 
 
 	debug = True # in a debug mode, we just check whether the model can operate
-	grid_search = False # with grid_search, we can explore the effects of different hyper-parameters of a model
+	grid_search = True # with grid_search, we can explore the effects of different hyper-parameters of a model
 
 	evaluator = LTREvaluator()
 
