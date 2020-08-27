@@ -1,0 +1,24 @@
+site_name: ptranking
+nav:
+    - Home: index.md
+    - Data: data.md
+    - Metric: metric.md
+    - LTR_Adhoc:
+      - lambda_framework.md
+    - LTR_Adversarial:
+      - irgan.md
+    - LTR_Tree:
+      - lambda_mart.md
+
+theme:
+  name: 'material'
+  palette:
+    primary: 'red'
+    accent: 'red'
+markdown_extensions:
+  - codehilite
+  - toc:
+      permalink: true
+  - attr_list
+repo_name: 'ptranking'
+repo_url: 'https://github.com/ptranking/ptranking.github.io'
