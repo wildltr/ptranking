@@ -47,9 +47,9 @@ To fully leverage PT-Ranking, one needs to [be familiar with PyTorch](https://py
 
 For detailed introduction on learning-to-rank, please refer to the book: [Learning to Rank for Information Retrieval](https://link.springer.com/book/10.1007/978-3-642-14267-3).
 
-## Source Codes
+## API Document
 
-Please refer to the [GitHub Repository](https://github.com/ptranking/ptranking.github.io) for PTRanking's implementation details.
+Please refer to [Learning to Rank in the Wild](https://wildltr.github.io) for details of each component (under construction).
 
 # List of implemented models & References
 
