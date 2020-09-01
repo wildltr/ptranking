@@ -169,6 +169,21 @@ Ubuntu 16.04 LTS
 We are adding more learning-to-rank models all the time. Please submit an issue if there is something you want to have implemented and included. Meanwhile, 
 anyone who are interested in any kinds of contributions and/or collaborations are warmly welcomed.
 
+# Citation
+
+If you use PTRanking in your research, please use the following BibTex entry.
+
+```
+@misc{yu2020ptranking,
+    title={PT-Ranking: A Benchmarking Platform for Neural Learning-to-Rank},
+    author={Hai-Tao Yu},
+    year={2020},
+    eprint={2008.13368},
+    archivePrefix={arXiv},
+    primaryClass={cs.IR}
+}
+```
+
 # Relevant Resources
 
 | Name | Language | Deep Learning |
