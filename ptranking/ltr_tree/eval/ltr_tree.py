@@ -11,6 +11,7 @@ import torch
 from ptranking.utils.bigdata.BigPickle import pickle_save
 from ptranking.data.data_utils import YAHOO_LTR, ISTELLA_LTR, MSLETOR, MSLRWEB
 from ptranking.ltr_tree.eval.tree_parameter import TreeDataSetting, TreeEvalSetting
+from ptranking.ltr_tree.lambdamart.lightgbm_lambdaMART import LightGBMLambdaMART, LightGBMLambdaMARTParameter
 from ptranking.metric.adhoc_metric import torch_nDCG_at_ks, torch_nerr_at_ks, torch_ap_at_ks, torch_p_at_ks
 from ptranking.ltr_adhoc.eval.ltr import LTREvaluator
 
@@ -190,7 +191,7 @@ class TreeLTREvaluator(LTREvaluator):
         self.setup_eval(data_dict=data_dict, eval_dict=eval_dict)
         model_id, data_id = self.model_parameter.model_id, data_dict['data_id']
 
-        fold_num = eval_dict['fold_num'] # updated due to the debug mode
+        fold_num = data_dict['fold_num'] # updated due to the debug mode
         cutoffs, do_validation = eval_dict['cutoffs'], eval_dict['do_validation']
 
         tree_ranker = globals()[model_id](model_para_dict)
