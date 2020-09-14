@@ -1,6 +1,10 @@
 import setuptools
 
-long_description = ''
+from os import path
+
+this_directory = path.abspath(path.dirname(__file__))
+with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
 
 install_requires = [
     'numpy',
@@ -14,7 +18,7 @@ extras_requires = None
 
 setuptools.setup(
     name="ptranking",
-    version="0.8.1",
+    version="0.0.1",
     author="II-Research",
     author_email="yuhaitao@slis.tsukuba.ac.jp",
     description="A library of scalable and extendable implementations of typical learning-to-rank methods based on PyTorch.",
