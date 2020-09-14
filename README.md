@@ -127,7 +127,7 @@ Please refer to [Learning to Rank in the Wild](https://wildltr.github.io) for de
 
 - Bruch, Sebastian and Han, Shuguang and Bendersky, Michael and Najork, Marc. A Stochastic Treatment of Learning to Rank Scoring Functions. Proceedings of the 13th International Conference on Web Search and Data Mining (WSDM), 61–69, 2020. 
 
-# Supported Datasets and Formats
+# <span id="dataset">Supported Datasets and Formats</span>
 
 ## The widely used benchmark datasets listed below can be directly used once downloaded
 
