@@ -24,7 +24,7 @@ setuptools.setup(
     description="A library of scalable and extendable implementations of typical learning-to-rank methods based on PyTorch.",
     license="MIT License",
     keywords=['Learning-to-rank', 'PyTorch'],
-    url="https://ptranking.github.io",
+    url="https://github.com/wildltr/ptranking",
     packages=setuptools.find_namespace_packages(include=["ptranking", "ptranking.*"]),
     long_description=long_description,
     long_description_content_type='text/markdown',
