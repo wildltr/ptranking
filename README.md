@@ -57,7 +57,7 @@ All specific learning-to-rank models inherit NeuralRanker and mainly differ in t
  where batch_preds and batch_stds correspond to outputs of the scoring function and ground-truth lables, respectively. 
  We can observe that the main work is to define the surrogate loss function.
 
-![NewLoss](./img/new_loss.png)
+![](https://github.com/ptranking/ptranking.github.io/raw/master/img/new_loss.png)
 
 ## Parameter Setting
 
