@@ -8,7 +8,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 install_requires = [
     'numpy',
-    'scikit-learn',
+    #'scikit-learn',
     'tqdm',
     #'torch >= 1.6.0', # todo torch-gpu
     #'torchvision',
