@@ -1,0 +1,27 @@
+site_name: PT-Ranking
+nav:
+    - Home: index.md
+    - Data: data.md
+    - Metric: metric.md
+    - LTR_Adhoc:
+      - ltr_adhoc/about.md
+      - lambda_framework.md
+    - LTR_Adversarial:
+      - ltr_adversarial/about.md
+      - irgan.md
+    - LTR_Tree:
+      - ltr_tree/about.md
+      - lambda_mart.md
+
+theme:
+  name: 'material'
+  palette:
+    primary: 'red'
+    accent: 'red'
+markdown_extensions:
+  - codehilite
+  - toc:
+      permalink: true
+  - attr_list
+repo_name: 'PT-Ranking'
+repo_url: 'https://github.com/wildltr/ptranking/'
