@@ -5,13 +5,13 @@ nav:
     - Metric: metric.md
     - LTR_Adhoc:
       - ltr_adhoc/about.md
-      - lambda_framework.md
+      - ltr_adhoc/lambda_framework.md
     - LTR_Adversarial:
       - ltr_adversarial/about.md
-      - irgan.md
+      - ltr_adversarial/irgan.md
     - LTR_Tree:
       - ltr_tree/about.md
-      - lambda_mart.md
+      - ltr_tree/lambda_mart.md
 
 theme:
   name: 'material'
