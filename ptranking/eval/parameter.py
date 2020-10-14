@@ -75,7 +75,7 @@ class ScoringFunctionParameter(ModelParameter):
         FBN = False if self.data_dict['scale_data'] else True # for feature normalization
 
         # feed-forward neural networks
-        ffnns_para_dict = dict(num_layers=5, HD_AF='R', HN_AF='R', TL_AF='S', apply_tl_af=True, BN=True, RD=False, FBN=FBN)
+        ffnns_para_dict = dict(num_layers=5, HD_AF='R', HN_AF='R', TL_AF='R', apply_tl_af=True, BN=True, RD=False, FBN=FBN)
 
         sf_para_dict = dict()
         sf_para_dict['id'] = self.model_id
@@ -97,10 +97,10 @@ class ScoringFunctionParameter(ModelParameter):
         choice_apply_BN = [False] if self.debug else [True]  # True, False
         choice_apply_RD = [False] if self.debug else [False]  # True, False
 
-        choice_layers = [3]     if self.debug else [3]  # 1, 2, 3, 4
+        choice_layers = [3]     if self.debug else [5]  # 1, 2, 3, 4
         choice_hd_hn_af = ['S'] if self.debug else ['R']  # 'R6' | 'RK' | 'S' activation function w.r.t. head hidden layers
         choice_tl_af = ['S']    if self.debug else ['R']  # activation function for the last layer, sigmoid is suggested due to zero-prediction
-        choice_hd_hn_tl_af = ['R', 'CE'] if self.debug else ['R', 'LR', 'RR', 'E', 'SE', 'CE', 'S'] # ['R', 'LR', 'RR', 'E', 'SE', 'CE', 'S']
+        choice_hd_hn_tl_af = ['R', 'CE'] if self.debug else ['R', 'CE', 'S'] # ['R', 'LR', 'RR', 'E', 'SE', 'CE', 'S']
         choice_apply_tl_af = [True]  # True, False
 
         if choice_hd_hn_tl_af is not None:
@@ -282,7 +282,7 @@ class DataSetting():
         """
         unknown_as_zero = True if self.data_id in MSLETOR_SEMI else False
         binary_rele = False  # using the original values
-        presort = True  # a default setting
+        presort = False  # a default setting
 
         scale_data, scaler_id, scaler_level = get_default_scaler_setting(data_id=self.data_id)
 
@@ -305,7 +305,8 @@ class DataSetting():
         :return:
         """
         ''' common settings without grid-search '''
-        binary_rele, unknown_as_zero = False, False
+        binary_rele = False
+        unknown_as_zero = True if self.data_id in MSLETOR_SEMI else False
         common_data_dict = dict(data_id=self.data_id, dir_data=self.dir_data, min_docs=10, min_rele=1,
                                 unknown_as_zero=unknown_as_zero, binary_rele=binary_rele)
 

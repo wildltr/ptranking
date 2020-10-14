@@ -37,9 +37,9 @@ class AdScoringFunctionParameter(ScoringFunctionParameter):
 		choice_apply_BN = [False] if self.debug else [False]  # True, False
 		choice_apply_RD = [False] if self.debug else [False]  # True, False
 
-		choice_layers = [3] if self.debug else [3]  # 1, 2, 3, 4
+		choice_layers = [3] if self.debug else [5]  # 1, 2, 3, 4
 		choice_hd_hn_af = ['S'] if self.debug else ['R']  # 'R6' | 'RK' | 'S' activation function w.r.t. head hidden layers
-		choice_tl_af = ['S'] if self.debug else ['R']  # activation function for the last layer, sigmoid is suggested due to zero-prediction
+		choice_tl_af = ['S'] if self.debug else ['S']  # activation function for the last layer, sigmoid is suggested due to zero-prediction
 		choice_hd_hn_tl_af = None
 
 		choice_apply_tl_af = [True]  # True, False
@@ -104,7 +104,7 @@ class AdEvalSetting():
 		do_log = False if self.debug else True
 		do_validation, do_summary = False, False
 		log_step = 2
-		epochs = 50
+		epochs = 100
 		vali_k = 5
 
 		'''on the usage of mask_label

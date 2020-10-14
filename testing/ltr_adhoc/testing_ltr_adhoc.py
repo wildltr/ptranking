@@ -43,11 +43,10 @@ if __name__ == '__main__':
     """
 
 	''' selected dataset '''
-	data_id = 'MQ2007_Super'
-	#data_id = 'MQ2008_Super'
+	data_id = 'MQ2008_Super'
 
 	''' location of the adopted data '''
-	dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2007/'
+	dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
 	#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
 	#dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
 
@@ -66,15 +65,15 @@ if __name__ == '__main__':
 	#dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
 
 
-	debug = True # in a debug mode, we just check whether the model can operate
-	grid_search = True # with grid_search, we can explore the effects of different hyper-parameters of a model
+	debug = False # in a debug mode, we just check whether the model can operate
+	grid_search = False # with grid_search, we can explore the effects of different hyper-parameters of a model
 
 	evaluator = LTREvaluator()
 
 	to_run_models = [
 		#'RankMSE', 'RankNet',
-		'LambdaRank',
-		#'ListNet', 'ListMLE', 'RankCosine',
+		#'ListNet',
+		'ListNet', 'ListMLE', 'ApproxNDCG', 'WassRank'
 		#'ApproxNDCG',
 		#'WassRank',
 		#'STListNet', 'LambdaLoss'

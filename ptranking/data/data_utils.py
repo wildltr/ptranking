@@ -633,8 +633,11 @@ class LTRDataset(data.Dataset):
         min_docs = 1
         min_rele = -1 # we note that it includes dumb queries that has no relevant documents
         scale_data, scaler_id, scaler_level = get_default_scaler_setting(data_id=data_id)
+
+        presort = False if data_id in MSLETOR_SEMI else True
+
         data_dict = dict(data_id=data_id, min_docs=min_docs, min_rele=min_rele, sample_rankings_per_q=1,
-                         presort=True, binary_rele=False, unknown_as_zero=False,
+                         presort=presort, binary_rele=False, unknown_as_zero=False,
                          scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
 
         data_meta = get_data_meta(data_id=data_id)

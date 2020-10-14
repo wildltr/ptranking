@@ -255,7 +255,7 @@ class IRGAN_PairParameter(ModelParameter):
         Default parameter setting for IRGAN_Pair
         :return:
         """
-        temperature = 0.2
+        temperature = 0.5
         d_epoches, g_epoches = 1, 1
         ad_training_order = 'DG'
         # ad_training_order = 'GD'

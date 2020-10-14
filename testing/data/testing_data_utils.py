@@ -5,7 +5,7 @@
 Examples on how to use data_utils module
 """
 
-from ptranking.data.data_utils import LTRDataset, YAHOO_LTR, ISTELLA_LTR
+from ptranking.data.data_utils import LTRDataset, YAHOO_LTR, ISTELLA_LTR, MSLETOR_SEMI
 import torch
 
 def get_doc_num(dataset):
@@ -16,11 +16,13 @@ def get_doc_num(dataset):
 
     return doc_num
 
-def get_min_max_docs(train_dataset, vali_dataset, test_dataset):
+def get_min_max_docs(train_dataset, vali_dataset, test_dataset, semi_supervised=False):
     ''' get the minimum / maximum number of documents per query '''
     min_doc = 10000000
     max_doc = 0
     sum_rele = 0
+    if semi_supervised:
+        sum_unknown = 0
 
     for qid, torch_batch_rankings, torch_batch_std_labels in train_dataset:
         #print('torch_batch_std_labels', torch_batch_std_labels.size())
@@ -28,6 +30,8 @@ def get_min_max_docs(train_dataset, vali_dataset, test_dataset):
         min_doc = min(doc_num, min_doc)
         max_doc = max(max_doc, doc_num)
         sum_rele += (torch_batch_std_labels>0).sum()
+        if semi_supervised:
+            sum_unknown += (torch_batch_std_labels<0).sum()
 
     if vali_dataset is not None:
         for qid, torch_batch_rankings, torch_batch_std_labels in vali_dataset:
@@ -35,14 +39,21 @@ def get_min_max_docs(train_dataset, vali_dataset, test_dataset):
             min_doc = min(doc_num, min_doc)
             max_doc = max(max_doc, doc_num)
             sum_rele += (torch_batch_std_labels>0).sum()
+            if semi_supervised:
+                sum_unknown += (torch_batch_std_labels < 0).sum()
 
     for qid, torch_batch_rankings, torch_batch_std_labels in test_dataset:
         doc_num = torch_batch_std_labels.size(1)
         min_doc = min(doc_num, min_doc)
         max_doc = max(max_doc, doc_num)
         sum_rele += (torch_batch_std_labels>0).sum()
+        if semi_supervised:
+            sum_unknown += (torch_batch_std_labels<0).sum()
 
-    return min_doc, max_doc, sum_rele.data.numpy()
+    if semi_supervised:
+        return min_doc, max_doc, sum_rele.data.numpy(), sum_unknown.data.numpy()
+    else:
+        return min_doc, max_doc, sum_rele.data.numpy()
 
 
 def get_min_max_feature(train_dataset, vali_dataset, test_dataset):
@@ -126,12 +137,18 @@ def check_dataset_statistics(data_id, dir_data, buffer=False):
         num_docs = get_doc_num(train_dataset) + get_doc_num(vali_dataset) + get_doc_num(test_dataset)
         print('Total docs:\t', num_docs)
 
-        min_doc, max_doc, sum_rele = get_min_max_docs(train_dataset=train_dataset, vali_dataset=vali_dataset, test_dataset=test_dataset)
+        if data_id in MSLETOR_SEMI:
+            min_doc, max_doc, sum_rele, sum_unknown = \
+                get_min_max_docs(train_dataset=train_dataset, vali_dataset=vali_dataset, test_dataset=test_dataset, semi_supervised=True)
+        else:
+            min_doc, max_doc, sum_rele = get_min_max_docs(train_dataset=train_dataset, vali_dataset=vali_dataset, test_dataset=test_dataset)
 
     print('min, max documents per query', min_doc, max_doc)
     print('total relevant documents', sum_rele)
     print('avg rele documents per query', sum_rele * 1.0 / num_queries)
     print('avg documents per query', num_docs * 1.0 / num_queries)
+    if data_id in MSLETOR_SEMI:
+        print('total unlabeled documents', sum_unknown)
 
         #print()
         #get_min_max_feature(train_dataset=train_dataset, vali_dataset=vali_dataset, test_dataset=test_dataset)
@@ -157,13 +174,19 @@ if __name__ == '__main__':
     
     '''
 
+    data_id = 'MQ2008_Super'
+    dir_data = '/Users/dryuhaitao/WorkBench/Corpus/LETOR4.0/MQ2008/'
+    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    '''
+    '''
+
     #2
-    #data_id  = 'MQ2008_Semi'
-    #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008-semi/'
-    #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    data_id  = 'MQ2008_Semi'
+    dir_data = '/Users/dryuhaitao/WorkBench/Corpus/LETOR4.0/MQ2008-semi/'
+    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
     ''' results as below
-    Total queries:	 785
-        Train: 472 Vali: 157 Test: 156
+    Total queries:	 784
+        Train: 471 Vali: 157 Test: 156
     Total docs:	 546260
     min, max documents per query 5 531049
     total relevant documents 2932
@@ -215,7 +238,7 @@ if __name__ == '__main__':
 
     data_id  = 'MQ2007_List'
     dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2007-list/'
-    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
     '''
     Dataset:	 MQ2007_List
     Total queries:	 1692
@@ -229,7 +252,7 @@ if __name__ == '__main__':
 
     data_id  = 'MQ2008_List'
     dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008-list/'
-    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
     '''
     Dataset:	 MQ2008_List
     Total queries:	 784
