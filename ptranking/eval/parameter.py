@@ -98,39 +98,25 @@ class ScoringFunctionParameter(ModelParameter):
                 choice_BN = json_dict['BN']
                 choice_RD = json_dict['RD']
                 choice_layers = json_dict['layers']
-                choice_hd_hn_af = json_dict['hd_hn_af']
-                choice_tl_af = json_dict['tl_af']
                 choice_apply_tl_af = json_dict['apply_tl_af']
                 choice_hd_hn_tl_af = json_dict['hd_hn_tl_af']
         else:
             choice_BN = [False] if self.debug else [True]  # True, False
             choice_RD = [False] if self.debug else [False]  # True, False
             choice_layers = [3]     if self.debug else [5]  # 1, 2, 3, 4
-            choice_hd_hn_af = ['S'] if self.debug else ['R']  # 'R6' | 'RK' | 'S' activation function w.r.t. head hidden layers
-            choice_tl_af = ['S']    if self.debug else ['R']  # activation function for the last layer, sigmoid is suggested due to zero-prediction
             choice_hd_hn_tl_af = ['R', 'CE'] if self.debug else ['R', 'CE', 'S'] # ['R', 'LR', 'RR', 'E', 'SE', 'CE', 'S']
             choice_apply_tl_af = [True]  # True, False
 
-        if choice_hd_hn_tl_af is not None:
-            for BN, RD, num_layers, af, apply_tl_af in product(
-                    choice_BN, choice_RD, choice_layers, choice_hd_hn_tl_af, choice_apply_tl_af):
-                ffnns_para_dict = dict(
-                    FBN=FBN, BN=BN, RD=RD, num_layers=num_layers, HD_AF=af, HN_AF=af, TL_AF=af, apply_tl_af=apply_tl_af)
-                sf_para_dict = dict()
-                sf_para_dict['id'] = 'ffnns'
-                sf_para_dict['ffnns'] = ffnns_para_dict
-                self.sf_para_dict = sf_para_dict
-                yield sf_para_dict
-        else:
-            for BN, RD, num_layers, hd_hn_af, tl_af, apply_tl_af in product(
-                    choice_BN, choice_RD, choice_layers, choice_hd_hn_af, choice_tl_af, choice_apply_tl_af):
-                ffnns_para_dict = dict(FBN=FBN, BN=BN, RD=RD, num_layers=num_layers, HD_AF=hd_hn_af, HN_AF=hd_hn_af,
-                                       TL_AF=tl_af, apply_tl_af=apply_tl_af)
-                sf_para_dict = dict()
-                sf_para_dict['id'] = 'ffnns'
-                sf_para_dict['ffnns'] = ffnns_para_dict
-                self.sf_para_dict = sf_para_dict
-                yield sf_para_dict
+        for BN, RD, num_layers, af, apply_tl_af in product(choice_BN, choice_RD, choice_layers,
+                                                           choice_hd_hn_tl_af, choice_apply_tl_af):
+            ffnns_para_dict = dict(
+                FBN=FBN, BN=BN, RD=RD, num_layers=num_layers, HD_AF=af, HN_AF=af, TL_AF=af, apply_tl_af=apply_tl_af)
+            sf_para_dict = dict()
+            sf_para_dict['id'] = 'ffnns'
+            sf_para_dict['ffnns'] = ffnns_para_dict
+            self.sf_para_dict = sf_para_dict
+            yield sf_para_dict
+
 
     def to_para_string(self, log=False):
         ''' Get the identifier of scoring function '''

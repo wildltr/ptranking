@@ -2,8 +2,6 @@
   "BN":[true],
   "RD":[false],
   "layers":[5],
-  "hd_hn_af":["R"],
-  "tl_af":["S"],
   "apply_tl_af":[true],
   "hd_hn_tl_af":["R"]
 }
