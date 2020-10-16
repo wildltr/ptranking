@@ -5,6 +5,7 @@
 """Description
 
 """
+import json
 
 import torch
 
@@ -101,10 +102,11 @@ def get_apxndcg_paras_str(model_para_dict, log=False):
 
 class ApproxNDCGParameter(ModelParameter):
     ''' Parameter class for ApproxNDCG '''
-    def __init__(self, debug=False, std_rele_is_permutation=False):
+    def __init__(self, debug=False, std_rele_is_permutation=False, para_json=None):
         super(ApproxNDCGParameter, self).__init__(model_id='ApproxNDCG')
         self.debug = debug
         self.std_rele_is_permutation = std_rele_is_permutation
+        self.para_json = para_json
 
     def default_para_dict(self):
         """
@@ -132,12 +134,15 @@ class ApproxNDCGParameter(ModelParameter):
     def grid_search(self):
         """
         Iterator of parameter settings for ApproxNDCG
-        :param debug:
-        :return:
         """
-        plus_choice_alpha = [10.0] if self.debug else [10.0]  # 1.0, 10.0, 50.0, 100.0
+        if self.para_json is not None:
+            with open(self.para_json) as json_file:
+                json_dict = json.load(json_file)
+            choice_alpha = json_dict['alpha']
+        else:
+            choice_alpha = [10.0] if self.debug else [10.0]  # 1.0, 10.0, 50.0, 100.0
 
-        for alpha in plus_choice_alpha:
+        for alpha in choice_alpha:
             self.apxNDCG_para_dict = dict(model_id=self.model_id, alpha=alpha,
                                           std_rele_is_permutation=self.std_rele_is_permutation)
             yield self.apxNDCG_para_dict

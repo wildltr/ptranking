@@ -1,0 +1,11 @@
+{
+  "mode":["WassLossSta"],
+  "itr":[10],
+  "lam":[0.1],
+  "cost_type":["eg"],
+  "non_rele_gap":[10],
+  "var_penalty":[2.71828],
+  "group_base":[4],
+  "smooth":["ST"],
+  "norm":["BothST"]
+}

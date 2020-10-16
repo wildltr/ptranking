@@ -5,6 +5,7 @@
 """Description
 
 """
+import json
 
 import torch
 import torch.nn.functional as F
@@ -198,10 +199,11 @@ class LambdaRank(NeuralRanker):
 
 class LambdaRankParameter(ModelParameter):
     ''' Parameter class for LambdaRank '''
-    def __init__(self, debug=False, std_rele_is_permutation=False):
+    def __init__(self, debug=False, std_rele_is_permutation=False, para_json=None):
         super(LambdaRankParameter, self).__init__(model_id='LambdaRank')
         self.debug = debug
         self.std_rele_is_permutation = std_rele_is_permutation
+        self.para_json = para_json
 
     def default_para_dict(self):
         """
@@ -230,11 +232,15 @@ class LambdaRankParameter(ModelParameter):
     def grid_search(self):
         """
         Iterator of parameter settings for LambdaRank
-        :param debug:
-        :return:
         """
-        plus_choice_sigma = [5.0, 1.0] if self.debug else [1.0]  # 1.0, 10.0, 50.0, 100.0
-        for sigma in plus_choice_sigma:
+        if self.para_json is not None:
+            with open(self.para_json) as json_file:
+                json_dict = json.load(json_file)
+            choice_sigma = json_dict['sigma']
+        else:
+            choice_sigma = [5.0, 1.0] if self.debug else [1.0]  # 1.0, 10.0, 50.0, 100.0
+
+        for sigma in choice_sigma:
             self.lambda_para_dict = dict(model_id=self.model_id, sigma=sigma, loss_version='Full',
                                          std_rele_is_permutation=self.std_rele_is_permutation)
             yield self.lambda_para_dict

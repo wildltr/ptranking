@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+import json
 import numpy as np
 from itertools import product
 from sklearn.datasets import load_svmlight_file
@@ -153,9 +153,10 @@ class LightGBMLambdaMART():
 class LightGBMLambdaMARTParameter(ModelParameter):
     ''' Parameter class for LambdaMART based on LightGBM '''
 
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, para_json=None):
         super(LightGBMLambdaMARTParameter, self).__init__(model_id='LightGBMLambdaMART')
         self.debug = debug
+        self.para_json = para_json
 
     def default_para_dict(self):
         """
@@ -223,20 +224,30 @@ class LightGBMLambdaMARTParameter(ModelParameter):
     def grid_search(self):
         """
         Iterator of parameter settings for LambdaRank
-        :param debug:
-        :return:
         """
         # for custom setting
-        custom_dict = dict(custom=True, custom_obj_id='lambdarank', use_LGBMRanker=False)  #
+        custom_dict = dict(custom=True, custom_obj_id='lambdarank', use_LGBMRanker=False)
 
-        # common setting when using in-built lightgbm's ranker
-        choice_BT = ['gbdt'] if self.debug else ['gbdt']
-        choice_metric = ['ndcg'] if self.debug else ['ndcg']
-        choice_leaves = [400] if self.debug else [400]
-        choice_trees = [1000] if self.debug else [1000]
-        choice_MiData = [50] if self.debug else [50]
-        choice_MSH = [200, 50] if self.debug else [200]
-        choice_LR = [0.05, 0.01] if self.debug else [0.05, 0.01]
+        if self.para_json is not None:
+            with open(self.para_json) as json_file:
+                json_dict = json.load(json_file)
+
+            choice_BT = json_dict['BT']
+            choice_metric = json_dict['metric']
+            choice_leaves = json_dict['leaves']
+            choice_trees = json_dict['trees']
+            choice_MiData = json_dict['MiData']
+            choice_MSH = json_dict['MSH']
+            choice_LR = json_dict['LR']
+        else:
+            # common setting when using in-built lightgbm's ranker
+            choice_BT = ['gbdt'] if self.debug else ['gbdt']
+            choice_metric = ['ndcg'] if self.debug else ['ndcg']
+            choice_leaves = [400] if self.debug else [400]
+            choice_trees = [1000] if self.debug else [1000]
+            choice_MiData = [50] if self.debug else [50]
+            choice_MSH = [200] if self.debug else [200]
+            choice_LR = [0.05, 0.01] if self.debug else [0.05, 0.01]
 
         for BT, metric, num_leaves, num_trees, min_data_in_leaf, min_sum_hessian_in_leaf, lr in product(choice_BT,
                                 choice_metric, choice_leaves, choice_trees, choice_MiData, choice_MSH, choice_LR):

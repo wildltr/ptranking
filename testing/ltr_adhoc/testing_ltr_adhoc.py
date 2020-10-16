@@ -42,42 +42,53 @@ if __name__ == '__main__':
 
     """
 
-	''' selected dataset '''
-	data_id = 'MQ2008_Super'
+	debug = True            # in a debug mode, we just check whether the model can operate
 
-	''' location of the adopted data '''
-	dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
-	#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
-	#dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
+	config_with_json = True # specify configuration with json files or not
 
-	#data_id = 'Istella_X'
-	#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella_X/'
-
-	#data_id = 'Istella'
-	#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella/'
-
-	#data_id = 'Istella_S'
-	#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella_S/'
-
-	''' output directory '''
-	dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/'
-	#dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
-	#dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
-
-
-	debug = False # in a debug mode, we just check whether the model can operate
-	grid_search = False # with grid_search, we can explore the effects of different hyper-parameters of a model
+	models_to_run = [
+		# 'RankMSE',
+		#'ApproxNDCG',
+		# 'ListNet',
+		#'ListNet', 'ListMLE', 'ApproxNDCG', 'WassRank'
+		# 'ApproxNDCG',
+		 'WassRank',
+		# 'STListNet', 'LambdaLoss'
+	]
 
 	evaluator = LTREvaluator()
 
-	to_run_models = [
-		#'RankMSE', 'RankNet',
-		#'ListNet',
-		'ListNet', 'ListMLE', 'ApproxNDCG', 'WassRank'
-		#'ApproxNDCG',
-		#'WassRank',
-		#'STListNet', 'LambdaLoss'
-					]
+	if config_with_json: # specify configuration with json files
+		# the directory of json files
+		dir_json = '/Users/dryuhaitao/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/'
+		for model_id in models_to_run:
+			evaluator.run(debug=debug, model_id=model_id, config_with_json=config_with_json, dir_json=dir_json)
 
-	for model_id in to_run_models:
-		evaluator.run(debug=debug, grid_search=grid_search, model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output)
+	else: # specify configuration manually
+		''' selected dataset '''
+		data_id = 'MQ2008_Super'
+
+		''' location of the adopted data '''
+		dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
+		#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
+		#dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
+
+		#data_id = 'Istella_X'
+		#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella_X/'
+
+		#data_id = 'Istella'
+		#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella/'
+
+		#data_id = 'Istella_S'
+		#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella_S/'
+
+		''' output directory '''
+		dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/'
+		#dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
+		#dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
+
+		grid_search = False # with grid_search, we can explore the effects of different hyper-parameters of a model
+
+		for model_id in models_to_run:
+			evaluator.run(debug=debug, grid_search=grid_search,
+			              model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output)

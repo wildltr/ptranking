@@ -288,37 +288,54 @@ class AdLTREvaluator(LTREvaluator):
             fold_k_vali_eval = np.hstack(list_fold_k_vali_eval_track)
             pickle_save(fold_k_vali_eval, file=self.dir_run + '_'.join([sy_prefix, id_str, 'vali_eval.np']))
 
-    def set_data_setting(self, debug=False, data_id=None, dir_data=None):
-        self.data_setting = AdDataSetting(debug=debug, data_id=data_id, dir_data=dir_data)
+    def set_data_setting(self, debug=False, data_id=None, dir_data=None, ad_data_json=None):
+        if ad_data_json is not None:
+            self.data_setting = AdDataSetting(ad_data_json=ad_data_json)
+        else:
+            self.data_setting = AdDataSetting(debug=debug, data_id=data_id, dir_data=dir_data)
 
-    def set_eval_setting(self, debug=False, dir_output=None):
-        self.eval_setting = AdEvalSetting(debug=debug, dir_output=dir_output)
+    def set_eval_setting(self, debug=False, dir_output=None, ad_eval_json=None):
+        if ad_eval_json is not None:
+            self.eval_setting = AdEvalSetting(debug=debug, ad_eval_json=ad_eval_json)
+        else:
+            self.eval_setting = AdEvalSetting(debug=debug, dir_output=dir_output)
 
-    def set_scoring_function_setting(self, debug=None, data_dict=None):
-        self.sf_parameter = AdScoringFunctionParameter(debug=debug, data_dict=data_dict)
+    def set_scoring_function_setting(self, debug=None, data_dict=None, sf_json=None):
+        if sf_json is not None:
+            self.sf_parameter = AdScoringFunctionParameter(sf_json=sf_json)
+        else:
+            self.sf_parameter = AdScoringFunctionParameter(debug=debug, data_dict=data_dict)
 
     def iterate_scoring_function_setting(self):
         return self.sf_parameter.grid_search()
 
-    def set_model_setting(self, debug=False, model_id=None):
-        self.model_parameter = globals()[model_id + "Parameter"](debug=debug)
+    def set_model_setting(self, debug=False, model_id=None, para_json=None):
+        if para_json is not None:
+            self.model_parameter = globals()[model_id + "Parameter"](para_json=para_json)
+        else:
+            self.model_parameter = globals()[model_id + "Parameter"](debug=debug)
 
-    def grid_run(self, debug=True, model_id=None, data_id=None, dir_data=None, dir_output=None):
+    def grid_run(self, debug=True, model_id=None, data_id=None, dir_data=None, dir_output=None, dir_json=None):
         """
         Perform adversarial learning-to-rank based on grid search of optimal parameter setting
-        :param debug:
-        :param model_id:
-        :param data_id:
-        :param dir_data:
-        :param dir_output:
-        :return:
         """
-        self.set_eval_setting(debug=debug, dir_output=dir_output)
-        self.set_data_setting(debug=debug, data_id=data_id, dir_data=dir_data)
+        if dir_json is not None:
+            ad_eval_json = dir_json + 'AdEvalSetting.json'
+            ad_data_json = dir_json + 'AdDataSetting.json'
+            ad_sf_json   = dir_json + 'AdSFParameter.json'
+            para_json = dir_json + model_id + "Parameter.json"
 
-        self.set_scoring_function_setting(debug=debug)
+            self.set_eval_setting(debug=debug, ad_eval_json=ad_eval_json)
+            self.set_data_setting(ad_data_json=ad_data_json)
+            self.set_scoring_function_setting(sf_json=ad_sf_json)
+            self.set_model_setting(model_id=model_id, para_json=para_json)
+        else:
+            self.set_eval_setting(debug=debug, dir_output=dir_output)
+            self.set_data_setting(debug=debug, data_id=data_id, dir_data=dir_data)
 
-        self.set_model_setting(debug=debug, model_id=model_id)
+            self.set_scoring_function_setting(debug=debug)
+
+            self.set_model_setting(debug=debug, model_id=model_id)
 
         for data_dict in self.iterate_data_setting():
             for eval_dict in self.iterate_eval_setting():

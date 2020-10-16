@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import json
 from itertools import product
 
 from ptranking.eval.parameter import DataSetting, EvalSetting
@@ -11,13 +12,12 @@ class TreeDataSetting(DataSetting):
     """
     Class object for data settings w.r.t. data loading and pre-process w.r.t. tree-based method
     """
-    def __init__(self, debug=False, data_id=None, dir_data=None):
-        super(TreeDataSetting, self).__init__(debug=debug, data_id=data_id, dir_data=dir_data)
+    def __init__(self, debug=False, data_id=None, dir_data=None, tree_data_json=None):
+        super(TreeDataSetting, self).__init__(debug=debug, data_id=data_id, dir_data=dir_data, data_json=tree_data_json)
 
     def default_setting(self):
         """
         A default setting for data loading when running lambdaMART
-        :return:
         """
         unknown_as_zero = True if self.data_id in MSLETOR_SEMI else False # since lambdaMART is a supervised method
         binary_rele = False  # using the original values
@@ -35,24 +35,13 @@ class TreeDataSetting(DataSetting):
 
         return self.data_dict
 
-    def grid_search(self):
-        """
-        Iterator of settings for data loading when running lambdaMART
-        :param debug:
-        :param data_id:
-        :param dir_data:
-        :return:
-        """
-        self.data_dict = self.default_setting() # a simple setting since there are few factors to grid-search
-        yield self.data_dict
-
 
 class TreeEvalSetting(EvalSetting):
     """
     Class object for evaluation settings w.r.t. tree-based methods
     """
-    def __init__(self, debug=False, dir_output=None):
-        super(TreeEvalSetting, self).__init__(debug=debug, dir_output=dir_output)
+    def __init__(self, debug=False, dir_output=None, tree_eval_json=None):
+        super(TreeEvalSetting, self).__init__(debug=debug, dir_output=dir_output, eval_json=tree_eval_json)
 
     def to_eval_setting_string(self, log=False):
         """
@@ -74,10 +63,6 @@ class TreeEvalSetting(EvalSetting):
     def default_setting(self):
         """
         A default setting for evaluation
-        :param debug:
-        :param data_id:
-        :param dir_output:
-        :return:
         """
         do_validation = True if self.debug else True
         do_log = False if self.debug else True
@@ -93,21 +78,40 @@ class TreeEvalSetting(EvalSetting):
     def grid_search(self):
         """
         Iterator of settings for evaluation
-        :param debug:
-        :param dir_output:
-        :return:
         """
-        ''' common settings without grid-search '''
-        do_log = False if self.debug else True
-        common_eval_dict = dict(debug=self.debug, grid_search=True, do_log=do_log, dir_output=self.dir_output,
-                                cutoffs=[1, 3, 5, 10, 20, 50])
+        if self.eval_json is not None:
+            with open(self.eval_json) as json_file:
+                json_dict = json.load(json_file)
 
-        ''' some settings for grid-search '''
-        choice_validation = [False] if self.debug else [True]  # True, False
-        choice_epoch = [20] if self.debug else [100]
-        choice_mask_label = [False] if self.debug else [False]
+                dir_output = json_dict['dir_output']
+                epochs = 20 if self.debug else json_dict['epochs']
+                do_validation = json_dict['do_validation']
+                cutoffs = json_dict['cutoffs']
+                do_log = json_dict['do_log']
+                mask_label = json_dict['mask']['mask_label']
+                choice_mask_type = json_dict['mask']['mask_type']
+                choice_mask_ratio = json_dict['mask']['mask_ratio']
 
-        for vd, num_epochs, mask_label in product(choice_validation, choice_epoch, choice_mask_label):
-            self.eval_dict = dict(do_validation=vd, epochs=num_epochs, mask_label=mask_label)
-            self.eval_dict.update(common_eval_dict)
+                base_dict = dict(debug=False, grid_search=True, dir_output=dir_output)
+        else:
+            base_dict = dict(debug=self.debug, grid_search=True, dir_output=self.dir_output)
+            epochs = 20 if self.debug else 100
+            do_validation = False if self.debug else True  # True, False
+            cutoffs = 5, [1, 3, 5, 10, 20, 50]
+            do_log = False if self.debug else True
+
+            mask_label = False if self.debug else False
+            choice_mask_type = ['rand_mask_all']
+            choice_mask_ratio = [0.2]
+
+        self.eval_dict = dict(epochs=epochs, do_validation=do_validation, cutoffs=cutoffs,
+                              do_log=do_log, mask_label=mask_label)
+        self.eval_dict.update(base_dict)
+
+        if mask_label:
+            for mask_type, mask_ratio in product(choice_mask_type, choice_mask_ratio):
+                mask_dict = dict(mask_type=mask_type, mask_ratio=mask_ratio)
+                self.eval_dict.update(mask_dict)
+                yield self.eval_dict
+        else:
             yield self.eval_dict

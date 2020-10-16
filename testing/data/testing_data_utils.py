@@ -178,12 +178,13 @@ if __name__ == '__main__':
     dir_data = '/Users/dryuhaitao/WorkBench/Corpus/LETOR4.0/MQ2008/'
     check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
     '''
+    
     '''
 
     #2
     data_id  = 'MQ2008_Semi'
     dir_data = '/Users/dryuhaitao/WorkBench/Corpus/LETOR4.0/MQ2008-semi/'
-    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
     ''' results as below
     Total queries:	 784
         Train: 471 Vali: 157 Test: 156

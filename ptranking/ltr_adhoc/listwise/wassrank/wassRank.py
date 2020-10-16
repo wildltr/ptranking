@@ -5,8 +5,8 @@
 """Description
 
 """
-
 #import ot
+import json
 import numpy as np
 from itertools import product
 
@@ -80,9 +80,10 @@ class WassRank(NeuralRanker):
 
 class WassRankParameter(ModelParameter):
     ''' Parameter class for WassRank '''
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, para_json=None):
         super(WassRankParameter, self).__init__(model_id='WassRank')
         self.debug = debug
+        self.para_json = para_json
 
     def default_para_dict(self):
         """
@@ -138,21 +139,35 @@ class WassRankParameter(ModelParameter):
     def grid_search(self):
         """
         Iterator of parameter settings for WassRank
-        :param debug:
-        :return:
         """
-        wass_choice_mode = ['WassLossSta']  # EOTLossSta | WassLossSta
-        wass_choice_itr = [10]  # number of iterations w.r.t. sink-horn operation
-        wass_choice_lam = [0.1]  # 0.01 | 1e-3 | 1e-1 | 10  regularization parameter
+        if self.para_json is not None:
+            with open(self.para_json) as json_file:
+                json_dict = json.load(json_file)
+            wass_choice_mode = json_dict['mode']
+            wass_choice_itr = json_dict['itr']
+            wass_choice_lam = json_dict['lam']
 
-        wass_cost_type = ['eg']  # p1 | p2 | eg | dg| ddg
-        # member parameters of 'Group' include margin, div, group-base
-        wass_choice_non_rele_gap = [10]  # the gap between a relevant document and an irrelevant document
-        wass_choice_var_penalty = [np.e]  # variance penalty
-        wass_choice_group_base = [4]  # the base for computing gain value
+            wass_cost_type = json_dict['cost_type']
+            # member parameters of 'Group' include margin, div, group-base
+            wass_choice_non_rele_gap = json_dict['non_rele_gap']
+            wass_choice_var_penalty = json_dict['var_penalty']
+            wass_choice_group_base = json_dict['group_base']
 
-        wass_choice_smooth = ['ST']  # 'ST', i.e., ST: softmax | Gain, namely the way on how to get the normalized distribution histograms
-        wass_choice_norm = ['BothST']  # 'BothST': use ST for both prediction and standard labels
+            wass_choice_smooth = json_dict['smooth']
+            wass_choice_norm = json_dict['norm']
+        else:
+            wass_choice_mode = ['WassLossSta']  # EOTLossSta | WassLossSta
+            wass_choice_itr = [10]  # number of iterations w.r.t. sink-horn operation
+            wass_choice_lam = [0.1]  # 0.01 | 1e-3 | 1e-1 | 10  regularization parameter
+
+            wass_cost_type = ['eg']  # p1 | p2 | eg | dg| ddg
+            # member parameters of 'Group' include margin, div, group-base
+            wass_choice_non_rele_gap = [10]  # the gap between a relevant document and an irrelevant document
+            wass_choice_var_penalty = [np.e]  # variance penalty
+            wass_choice_group_base = [4]  # the base for computing gain value
+
+            wass_choice_smooth = ['ST']  # 'ST', i.e., ST: softmax | Gain, namely the way on how to get the normalized distribution histograms
+            wass_choice_norm = ['BothST']  # 'BothST': use ST for both prediction and standard labels
 
         for mode, wsss_lambda, sinkhorn_itr in product(wass_choice_mode, wass_choice_lam, wass_choice_itr):
             for wass_smooth, norm in product(wass_choice_smooth, wass_choice_norm):

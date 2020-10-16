@@ -4,6 +4,7 @@
 """Description
 
 """
+import json
 from itertools import product
 
 from ptranking.eval.parameter import ScoringFunctionParameter
@@ -11,13 +12,12 @@ from ptranking.data.data_utils import get_default_scaler_setting, MSLETOR_SEMI, 
 
 class AdScoringFunctionParameter(ScoringFunctionParameter):
 	"""  """
-	def __init__(self, debug=False, data_dict=None):
-		super(AdScoringFunctionParameter, self).__init__(debug=debug, data_dict=data_dict)
+	def __init__(self, debug=False, data_dict=None, sf_json=None):
+		super(AdScoringFunctionParameter, self).__init__(debug=debug, data_dict=data_dict, sf_json=sf_json)
 
 	def default_para_dict(self):
 		"""
 		A default setting of the hyper-parameters of the stump neural scoring function for adversarial ltr.
-		:return:
 		"""
 		ffnns_para_dict = dict(num_layers=5, HD_AF='R', HN_AF='R', TL_AF='S', apply_tl_af=True, BN=False, RD=False,
 							   FBN=False) # FBN = True leads to error like batchnorm.py"
@@ -31,34 +31,39 @@ class AdScoringFunctionParameter(ScoringFunctionParameter):
 	def grid_search(self):
 		"""
 		Iterator of settinging of the hyper-parameters of the stump neural scoring function for adversarial ltr
-		:param debug:
-		:return:
 		"""
-		choice_apply_BN = [False] if self.debug else [False]  # True, False
-		choice_apply_RD = [False] if self.debug else [False]  # True, False
-
-		choice_layers = [3] if self.debug else [5]  # 1, 2, 3, 4
-		choice_hd_hn_af = ['S'] if self.debug else ['R']  # 'R6' | 'RK' | 'S' activation function w.r.t. head hidden layers
-		choice_tl_af = ['S'] if self.debug else ['S']  # activation function for the last layer, sigmoid is suggested due to zero-prediction
-		choice_hd_hn_tl_af = None
-
-		choice_apply_tl_af = [True]  # True, False
+		if self.sf_json is not None:
+			with open(self.sf_json) as json_file:
+				json_dict = json.load(json_file)
+				choice_BN = json_dict['BN']
+				choice_RD = json_dict['RD']
+				choice_layers = json_dict['layers']
+				choice_hd_hn_af = json_dict['hd_hn_af']
+				choice_tl_af = json_dict['tl_af']
+				choice_apply_tl_af = json_dict['apply_tl_af']
+				choice_hd_hn_tl_af = json_dict['hd_hn_tl_af']
+		else:
+			choice_BN = [False] if self.debug else [False]  # True, False
+			choice_RD = [False] if self.debug else [False]  # True, False
+			choice_layers = [3] if self.debug else [5]  # 1, 2, 3, 4
+			choice_hd_hn_af = ['S'] if self.debug else ['R']  # 'R6' | 'RK' | 'S' activation function w.r.t. head hidden layers
+			choice_tl_af = ['S'] if self.debug else ['S']  # activation function for the last layer, sigmoid is suggested due to zero-prediction
+			choice_hd_hn_tl_af = None
+			choice_apply_tl_af = [True]  # True, False
 
 		if choice_hd_hn_tl_af is not None:
-			for BN, RD, num_layers, af, apply_tl_af in product(choice_apply_BN, choice_apply_RD, choice_layers,
-															   choice_hd_hn_tl_af, choice_apply_tl_af):
-				ffnns_para_dict = dict(FBN=False, BN=BN, RD=RD, num_layers=num_layers, HD_AF=af, HN_AF=af, TL_AF=af,
-									   apply_tl_af=apply_tl_af)
+			for BN, RD, num_layers, af, apply_tl_af in product(
+					choice_BN, choice_RD, choice_layers, choice_hd_hn_tl_af, choice_apply_tl_af):
+				ffnns_para_dict = dict(
+					FBN=False, BN=BN, RD=RD, num_layers=num_layers, HD_AF=af, HN_AF=af, TL_AF=af, apply_tl_af=apply_tl_af)
 				sf_para_dict = dict()
 				sf_para_dict['id'] = 'ffnns'
 				sf_para_dict['ffnns'] = ffnns_para_dict
-
 				self.sf_para_dict = sf_para_dict
 				yield sf_para_dict
 		else:
-			for BN, RD, num_layers, hd_hn_af, tl_af, apply_tl_af in product(choice_apply_BN, choice_apply_RD,
-																			choice_layers, choice_hd_hn_af,
-																			choice_tl_af, choice_apply_tl_af):
+			for BN, RD, num_layers, hd_hn_af, tl_af, apply_tl_af in product(
+					choice_BN, choice_RD, choice_layers, choice_hd_hn_af, choice_tl_af, choice_apply_tl_af):
 				ffnns_para_dict = dict(FBN=False, BN=BN, RD=RD, num_layers=num_layers, HD_AF=hd_hn_af, HN_AF=hd_hn_af,
 									   TL_AF=tl_af, apply_tl_af=apply_tl_af)
 				sf_para_dict = dict()
@@ -73,9 +78,14 @@ class AdEvalSetting():
 	"""
 	Class object for evaluation settings w.r.t. adversarial training, etc.
 	"""
-	def __init__(self, debug=False, dir_output=None):
+	def __init__(self, debug=False, dir_output=None, ad_eval_json=None):
 		self.debug = debug
-		self.dir_output = dir_output
+		if ad_eval_json is not None:
+			self.ad_eval_json = ad_eval_json
+			with open(self.ad_eval_json) as json_file:
+				self.json_dict = json.load(json_file)
+		else:
+			self.dir_output = dir_output
 
 	def to_eval_setting_string(self, log=False):
 		"""
@@ -131,46 +141,61 @@ class AdEvalSetting():
 	def grid_search(self):
 		"""
 		Iterator of settings for evaluation when performing adversarial ltr
-		:param debug:
-		:param dir_output:
-		:return:
 		"""
-		''' common settings without grid-search '''
-		vali_k, cutoffs = 5, [1, 3, 5, 10, 20, 50]
+		if self.ad_eval_json is not None:  # using json file
+			dir_output = self.json_dict['dir_output']
+			epochs = 5 if self.debug else self.json_dict['epochs']
+			do_validation, vali_k = self.json_dict['do_validation'], self.json_dict['vali_k']
+			cutoffs = self.json_dict['cutoffs']
+			do_log, log_step = self.json_dict['do_log'], self.json_dict['log_step']
+			do_summary = self.json_dict['do_summary']
+			loss_guided = self.json_dict['loss_guided']
+			mask_label = self.json_dict['mask']['mask_label']
+			choice_mask_type = self.json_dict['mask']['mask_type']
+			choice_mask_ratio = self.json_dict['mask']['mask_ratio']
 
-		do_log = False if self.debug else True
-		common_eval_dict = dict(debug=self.debug, grid_search=True, dir_output=self.dir_output,
-						 vali_k=vali_k, cutoffs=cutoffs, do_log=do_log, log_step=2, do_summary=False, loss_guided=False)
+			base_dict = dict(debug=False, grid_search=True, dir_output=dir_output)
+		else:
+			base_dict = dict(debug=self.debug, grid_search=True, dir_output=self.dir_output)
+			epochs = 20 if self.debug else 100
+			do_validation = False if self.debug else True  # True, False
+			vali_k, cutoffs = 5, [1, 3, 5, 10, 20, 50]
+			do_log = False if self.debug else True
+			log_step = 2
+			do_summary, loss_guided = False, False
 
-		''' some settings for grid-search '''
-		choice_validation = [False] if self.debug else [True]  # True, False
-		choice_epoch = [20] if self.debug else [100]
-		choice_mask_label = [False] if self.debug else [False]
-		choice_mask_ratios = [0.2] if self.debug else [0.2, 0.4, 0.6, 0.8]  # 0.5, 1.0
-		choice_mask_type = ['rand_mask_rele'] if self.debug else ['rand_mask_rele']
+			mask_label = False if self.debug else False
+			choice_mask_type = ['rand_mask_rele']
+			choice_mask_ratio = [0.2]
 
-		for do_validation, num_epochs, mask_label in product(choice_validation, choice_epoch, choice_mask_label):
-			if mask_label:
-				for mask_ratio, mask_type in product(choice_mask_ratios, choice_mask_type):
-					self.eval_dict = dict(do_validation=do_validation, epochs=num_epochs, mask_label=mask_label,
-					                      mask_ratio=mask_ratio, mask_type=mask_type)
-					self.eval_dict.update(common_eval_dict)
-					yield self.eval_dict
-			else:
-				self.eval_dict =  dict(do_validation=do_validation, epochs=num_epochs, mask_label=mask_label)
-				self.eval_dict.update(common_eval_dict)
+		self.eval_dict = dict(epochs=epochs, do_validation=do_validation, vali_k=vali_k, cutoffs=cutoffs,
+							  do_log=do_log, log_step=log_step, do_summary=do_summary, loss_guided=loss_guided,
+							  mask_label=mask_label)
+		self.eval_dict.update(base_dict)
+
+		if mask_label:
+			for mask_type, mask_ratio in product(choice_mask_type, choice_mask_ratio):
+				mask_dict = dict(mask_type=mask_type, mask_ratio=mask_ratio)
+				self.eval_dict.update(mask_dict)
 				yield self.eval_dict
-
+		else:
+			yield self.eval_dict
 
 
 class AdDataSetting():
 	"""
 	Class object for data settings w.r.t. data loading and pre-process w.r.t. adversarial optimization
 	"""
-	def __init__(self, debug=False, data_id=None, dir_data=None):
-		self.debug = debug
-		self.data_id  = data_id
-		self.dir_data = dir_data
+	def __init__(self, debug=False, data_id=None, dir_data=None, ad_data_json=None):
+		if ad_data_json is not None:
+			self.ad_data_json = ad_data_json
+			with open(self.ad_data_json) as json_file:
+				self.json_dict = json.load(json_file)
+			self.data_id = self.json_dict["data_id"]
+		else:
+			self.debug = debug
+			self.dir_data = dir_data
+			self.data_id = data_id
 
 	def to_data_setting_string(self, log=False):
 		"""
@@ -222,31 +247,46 @@ class AdDataSetting():
 	def grid_search(self):
 		"""
 		Iterator of settings for data loading when performing adversarial ltr
-		:param debug:
-		:param data_id:
-		:param dir_data:
-		:return:
 		"""
-		''' common settings without grid-search '''
-		binary_rele, unknown_as_zero = False, False
-		common_data_dict = dict(data_id=self.data_id, dir_data=self.dir_data, min_docs=10, min_rele=1,
-								unknown_as_zero=unknown_as_zero, binary_rele=binary_rele)
+		if self.ad_data_json is not None:  # using json file
+			choice_presort = self.json_dict['presort']
+			choice_min_docs = self.json_dict['min_docs']
+			choice_min_rele = self.json_dict['min_rele']
+			choice_binary_rele = self.json_dict['binary_rele']
+			choice_unknown_as_zero = self.json_dict['unknown_as_zero']
+			choice_sample_rankings_per_q = self.json_dict['sample_rankings_per_q']
+			base_data_dict = dict(data_id=self.data_id, dir_data=self.json_dict["dir_data"])
+		else:
+			choice_min_docs = [10]
+			choice_min_rele = [1]
+			choice_presort = [True]
+			choice_binary_rele = [False]
+			choice_unknown_as_zero = [True]
+			choice_sample_rankings_per_q = [1]  # number of sample rankings per query
+
+			base_data_dict = dict(data_id=self.data_id, dir_data=self.dir_data)
 
 		data_meta = get_data_meta(data_id=self.data_id)  # add meta-information
-		common_data_dict.update(data_meta)
+		base_data_dict.update(data_meta)
 
-		''' some settings for grid-search '''
-		choice_presort = [True] if self.debug else [True]
-		choice_sample_rankings_per_q = [1] if self.debug else [1]  # number of sample rankings per query
-		choice_scale_data, choice_scaler_id, choice_scaler_level = get_default_scaler_setting(data_id=self.data_id, grid_search=True)
+		choice_scale_data, choice_scaler_id, choice_scaler_level = get_default_scaler_setting(data_id=self.data_id,
+																							  grid_search=True)
 
-		for scale_data, scaler_id, scaler_level, presort, sample_rankings_per_q in product(choice_scale_data,
-																						   choice_scaler_id,
-																						   choice_scaler_level,
-																						   choice_presort,
-																						   choice_sample_rankings_per_q):
+		for min_docs, min_rele, sample_rankings_per_q in product(choice_min_docs, choice_min_rele,
+																 choice_sample_rankings_per_q):
+			threshold_dict = dict(min_docs=min_docs, min_rele=min_rele, sample_rankings_per_q=sample_rankings_per_q)
 
-			self.data_dict = dict(presort=presort, sample_rankings_per_q=sample_rankings_per_q,
-								  scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
-			self.data_dict.update(common_data_dict)
-			yield self.data_dict
+			for binary_rele, unknown_as_zero, presort in product(choice_binary_rele, choice_unknown_as_zero,
+																 choice_presort):
+				custom_dict = dict(binary_rele=binary_rele, unknown_as_zero=unknown_as_zero, presort=presort)
+
+				for scale_data, scaler_id, scaler_level in product(choice_scale_data, choice_scaler_id,
+																   choice_scaler_level):
+					scale_dict = dict(scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
+
+					self.data_dict = dict()
+					self.data_dict.update(base_data_dict)
+					self.data_dict.update(threshold_dict)
+					self.data_dict.update(custom_dict)
+					self.data_dict.update(scale_dict)
+					yield self.data_dict

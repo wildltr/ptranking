@@ -4,7 +4,7 @@
 """Description
 
 """
-
+import json
 import copy
 from itertools import product
 
@@ -425,9 +425,10 @@ class IRGAN_List(AdversarialMachine):
 
 class IRGAN_ListParameter(ModelParameter):
     ''' Parameter class for List_IR_GAN '''
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, para_json=None):
         super(IRGAN_ListParameter, self).__init__(model_id='IRGAN_List')
         self.debug = debug
+        self.para_json = para_json
 
     def default_para_dict(self):
         """
@@ -480,23 +481,40 @@ class IRGAN_ListParameter(ModelParameter):
     def grid_search(self):
         """
         Iterator of parameter settings for IRGAN_List
-        :param debug:
-        :return:
         """
-        choice_samples_per_query = [5]
-        choice_ad_training_order = ['DG']  # GD for irganlist DG for point/pair
-        choice_temperatures = [0.5] if self.debug else [0.5]  # 0.5, 1.0
-        choice_d_g_epoches = [(1, 1)] if self.debug else [(1, 1)]  # discriminator-epoches vs. generator-epoches
+        if self.para_json is not None:
+            with open(self.para_json) as json_file:
+                json_dict = json.load(json_file)
 
-        # settings that are specific to a listwise method#
-        choice_top_k = [5]
-        choice_shuffle_ties = [False]  # todo should be True, otherwise it is probable that the used stdandard ltr_adhoc is in fact not truth ltr_adhoc.
-        choice_PL = [True]  # discriminator formulation
-        choice_repTrick = [False]  # for generator
-        choice_dropLog = [True]  # drop log of discriminator when optimise generator
+            choice_samples_per_query = json_dict['samples_per_query']
+            choice_ad_training_order = json_dict['ad_training_order']
+            choice_temperature = json_dict['temperature']
+            d_g_epoch_strings = json_dict['d_g_epoch']
+            choice_d_g_epoch = []
+            for d_g_epoch_str in d_g_epoch_strings:
+                epoch_arr = d_g_epoch_str.split('-')
+                choice_d_g_epoch.append((int(epoch_arr[0]), int(epoch_arr[1])))
 
-        for d_g_epoches, samples_per_query, ad_training_order, temperature in product(choice_d_g_epoches,
-                                            choice_samples_per_query, choice_ad_training_order, choice_temperatures):
+            choice_top_k = json_dict['top_k']
+            choice_shuffle_ties = json_dict['shuffle_ties']
+            choice_PL = json_dict['PL']
+            choice_repTrick = json_dict['repTrick']
+            choice_dropLog = json_dict['dropLog']
+        else:
+            choice_samples_per_query = [5]
+            choice_ad_training_order = ['DG']  # GD for irganlist DG for point/pair
+            choice_temperature = [0.5] if self.debug else [0.5]  # 0.5, 1.0
+            choice_d_g_epoch = [(1, 1)] if self.debug else [(1, 1)]  # discriminator-epoches vs. generator-epoches
+
+            # settings that are specific to a listwise method#
+            choice_top_k = [5]
+            choice_shuffle_ties = [False]  # todo should be True, otherwise it is probable that the used stdandard ltr_adhoc is in fact not truth ltr_adhoc.
+            choice_PL = [True]  # discriminator formulation
+            choice_repTrick = [False]  # for generator
+            choice_dropLog = [True]  # drop log of discriminator when optimise generator
+
+        for d_g_epoches, samples_per_query, ad_training_order, temperature in product(choice_d_g_epoch,
+                                            choice_samples_per_query, choice_ad_training_order, choice_temperature):
             d_epoches, g_epoches = d_g_epoches
             self.ad_para_dict = dict(model_id=self.model_id, d_epoches=d_epoches, g_epoches=g_epoches,
                                      samples_per_query=samples_per_query, temperature=temperature,

@@ -458,8 +458,11 @@ class LTREvaluator():
 
         return list_losses, train_ndcgs, test_ndcgs
 
-    def set_data_setting(self, debug=False, data_id=None, dir_data=None):
-        self.data_setting = DataSetting(debug=debug, data_id=data_id, dir_data=dir_data)
+    def set_data_setting(self, data_json=None, debug=False, data_id=None, dir_data=None):
+        if data_json is not None:
+            self.data_setting = DataSetting(data_json=data_json)
+        else:
+            self.data_setting = DataSetting(debug=debug, data_id=data_id, dir_data=dir_data)
 
     def get_default_data_setting(self):
         return self.data_setting.default_setting()
@@ -467,8 +470,11 @@ class LTREvaluator():
     def iterate_data_setting(self):
         return self.data_setting.grid_search()
 
-    def set_eval_setting(self, debug=False, dir_output=None):
-        self.eval_setting = EvalSetting(debug=debug, dir_output=dir_output)
+    def set_eval_setting(self, eval_json=None, debug=False, dir_output=None):
+        if eval_json is not None:
+            self.eval_setting = EvalSetting(debug=debug, eval_json=eval_json)
+        else:
+            self.eval_setting = EvalSetting(debug=debug, dir_output=dir_output)
 
     def get_default_eval_setting(self):
         return self.eval_setting.default_setting()
@@ -476,8 +482,11 @@ class LTREvaluator():
     def iterate_eval_setting(self):
         return self.eval_setting.grid_search()
 
-    def set_scoring_function_setting(self, debug=None, data_dict=None):
-        self.sf_parameter = ScoringFunctionParameter(debug=debug, data_dict=data_dict)
+    def set_scoring_function_setting(self, sf_json=None, debug=None, data_dict=None):
+        if sf_json is not None:
+            self.sf_parameter = ScoringFunctionParameter(sf_json=sf_json)
+        else:
+            self.sf_parameter = ScoringFunctionParameter(debug=debug, data_dict=data_dict)
 
     def get_default_scoring_function_setting(self):
         return self.sf_parameter.default_para_dict()
@@ -485,7 +494,7 @@ class LTREvaluator():
     def iterate_scoring_function_setting(self, data_dict=None):
         return self.sf_parameter.grid_search(data_dict=data_dict)
 
-    def set_model_setting(self, debug=False, model_id=None, data_id=None):
+    def set_model_setting(self, model_id=None, data_id=None, dir_json=None, debug=False):
         """
         Initialize the parameter class for a specified model
         :param debug:
@@ -500,12 +509,24 @@ class LTREvaluator():
             # the 2nd type, where the information of the type of relevance label is required.
             data_meta = get_data_meta(data_id=data_id)  # add meta-information
             if data_meta['multi_level_rele']:
-                self.model_parameter = globals()[model_id + "Parameter"](debug=debug, std_rele_is_permutation=False)
+                if dir_json is not None:
+                    para_json = dir_json + model_id + "Parameter.json"
+                    self.model_parameter = globals()[model_id + "Parameter"](para_json=para_json, std_rele_is_permutation=False)
+                else:
+                    self.model_parameter = globals()[model_id + "Parameter"](debug=debug, std_rele_is_permutation=False)
             else: # the case like MSLETOR_LIST
-                self.model_parameter = globals()[model_id + "Parameter"](debug=debug, std_rele_is_permutation=True)
+                if dir_json is not None:
+                    para_json = dir_json + model_id + "Parameter.json"
+                    self.model_parameter = globals()[model_id + "Parameter"](para_json=para_json, std_rele_is_permutation=True)
+                else:
+                    self.model_parameter = globals()[model_id + "Parameter"](debug=debug, std_rele_is_permutation=True)
         else:
             # the 3rd type, where debug-mode enables quick test
-            self.model_parameter = globals()[model_id + "Parameter"](debug=debug)
+            if dir_json is not None:
+                para_json = dir_json + model_id + "Parameter.json"
+                self.model_parameter = globals()[model_id + "Parameter"](para_json=para_json)
+            else:
+                self.model_parameter = globals()[model_id + "Parameter"](debug=debug)
 
     def get_default_model_setting(self):
         return self.model_parameter.default_para_dict()
@@ -549,7 +570,7 @@ class LTREvaluator():
         self.kfold_cv_eval(data_dict=data_dict, eval_dict=eval_dict, model_para_dict=model_para_dict, sf_para_dict=sf_para_dict)
 
 
-    def grid_run(self, debug=False, model_id=None, data_id=None, dir_data=None, dir_output=None):
+    def grid_run(self, model_id=None, dir_json=None, debug=False, data_id=None, dir_data=None, dir_output=None):
         """
         Explore the effects of different hyper-parameters of a model based on grid-search
         :param debug:
@@ -559,12 +580,20 @@ class LTREvaluator():
         :param dir_output:
         :return:
         """
-        self.set_eval_setting(debug=debug, dir_output=dir_output)
-        self.set_data_setting(debug=debug, data_id=data_id, dir_data=dir_data)
+        if dir_json is not None:
+            eval_json = dir_json + 'EvalSetting.json'
+            data_json = dir_json + 'DataSetting.json'
+            sf_json   = dir_json + 'SFParameter.json'
 
-        self.set_scoring_function_setting(debug=debug)
-
-        self.set_model_setting(debug=debug, model_id=model_id, data_id=data_id)
+            self.set_eval_setting(debug=debug, eval_json=eval_json)
+            self.set_data_setting(data_json=data_json)
+            self.set_scoring_function_setting(sf_json=sf_json)
+            self.set_model_setting(model_id=model_id, data_id=self.data_setting.data_id, dir_json=dir_json)
+        else:
+            self.set_eval_setting(debug=debug, dir_output=dir_output)
+            self.set_data_setting(debug=debug, data_id=data_id, dir_data=dir_data)
+            self.set_scoring_function_setting(debug=debug)
+            self.set_model_setting(debug=debug, model_id=model_id, data_id=data_id)
 
         self.declare_global(model_id=model_id)
 
@@ -592,8 +621,13 @@ class LTREvaluator():
                      log_para_str=self.model_parameter.to_para_string(log=True, given_para_dict=max_model_para_dict))
 
 
-    def run(self, debug=True, model_id=None, data_id=None, dir_data=None, dir_output=None, grid_search=False):
-        if grid_search:
-            self.grid_run(debug=debug, model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output)
+    def run(self, debug=False, model_id=None, config_with_json=None, dir_json=None,
+            data_id=None, dir_data=None, dir_output=None, grid_search=False):
+        if config_with_json:
+            assert dir_json is not None
+            self.grid_run(debug=debug, model_id=model_id, dir_json=dir_json)
         else:
-            self.point_run(debug=debug, model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output)
+            if grid_search:
+                self.grid_run(debug=debug, model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output)
+            else:
+                self.point_run(debug=debug, model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output)

@@ -1,0 +1,6 @@
+{
+  "d_g_epoch":["1-1"],
+  "temperature":[0.5],
+  "samples_per_query":[5],
+  "ad_training_order":["DG"]
+}

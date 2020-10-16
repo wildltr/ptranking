@@ -1,0 +1,12 @@
+{
+  "data_id":"MQ2008_Super",
+  "dir_data":"/Users/dryuhaitao/WorkBench/Corpus/LETOR4.0/MQ2008/",
+
+  "min_docs":[10],
+  "min_rele":[1],
+  "sample_rankings_per_q":[1],
+
+  "binary_rele":[false],
+  "unknown_as_zero":[false],
+  "presort":[false]
+}

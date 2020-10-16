@@ -278,14 +278,23 @@ class TreeLTREvaluator(LTREvaluator):
 
         return l2r_cv_avg_ndcg_scores, l2r_cv_avg_nerr_scores, l2r_cv_avg_ap_scores, l2r_cv_avg_p_scores
 
-    def set_data_setting(self, debug=False, data_id=None, dir_data=None):
-        self.data_setting = TreeDataSetting(debug=debug, data_id=data_id, dir_data=dir_data)
+    def set_data_setting(self, debug=False, data_id=None, dir_data=None, tree_data_json=None):
+        if tree_data_json is not None:
+            self.data_setting = TreeDataSetting(tree_data_json=tree_data_json)
+        else:
+            self.data_setting = TreeDataSetting(debug=debug, data_id=data_id, dir_data=dir_data)
 
-    def set_eval_setting(self, debug=False, dir_output=None):
-        self.eval_setting = TreeEvalSetting(debug=debug, dir_output=dir_output)
+    def set_eval_setting(self, debug=False, dir_output=None, tree_eval_json=None):
+        if tree_eval_json is not None:
+            self.eval_setting = TreeEvalSetting(debug=debug, tree_eval_json=tree_eval_json)
+        else:
+            self.eval_setting = TreeEvalSetting(debug=debug, dir_output=dir_output)
 
-    def set_model_setting(self, debug=False, model_id=None):
-        self.model_parameter = globals()[model_id + "Parameter"](debug=debug)
+    def set_model_setting(self, debug=False, model_id=None, para_json=None):
+        if para_json is not None:
+            self.model_parameter = globals()[model_id + "Parameter"](para_json=para_json)
+        else:
+            self.model_parameter = globals()[model_id + "Parameter"](debug=debug)
 
     def point_run(self, debug=False, model_id=None, data_id=None, dir_data=None, dir_output=None):
         """
@@ -305,19 +314,22 @@ class TreeLTREvaluator(LTREvaluator):
                            model_para_dict=self.get_default_model_setting())
 
 
-    def grid_run(self, debug=False, model_id=None, data_id=None, dir_data=None, dir_output=None):
+    def grid_run(self, debug=False, model_id=None, data_id=None, dir_data=None, dir_output=None, dir_json=None):
         """
         Run based on grid-search.
-        :param debug:
-        :param model_id:
-        :param data_id:
-        :param dir_data:
-        :param dir_output:
-        :return:
         """
-        self.set_eval_setting(debug=debug, dir_output=dir_output)
-        self.set_data_setting(debug=debug, data_id=data_id, dir_data=dir_data)
-        self.set_model_setting(debug=debug, model_id=model_id)
+        if dir_json is not None:
+            tree_eval_json = dir_json + 'TreeEvalSetting.json'
+            tree_data_json = dir_json + 'TreeDataSetting.json'
+            para_json = dir_json + model_id + "Parameter.json"
+
+            self.set_eval_setting(debug=debug, tree_eval_json=tree_eval_json)
+            self.set_data_setting(tree_data_json=tree_data_json)
+            self.set_model_setting(model_id=model_id, para_json=para_json)
+        else:
+            self.set_eval_setting(debug=debug, dir_output=dir_output)
+            self.set_data_setting(debug=debug, data_id=data_id, dir_data=dir_data)
+            self.set_model_setting(debug=debug, model_id=model_id)
 
         ''' select the best setting through grid search '''
         for data_dict in self.iterate_data_setting():

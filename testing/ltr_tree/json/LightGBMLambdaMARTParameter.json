@@ -1,0 +1,9 @@
+{
+  "BT":["gbdt"],
+  "metric":["ndcg"],
+  "leaves":[400],
+  "trees":[1000],
+  "MiData":[50],
+  "MSH":[200],
+  "LR":[0.05]
+}
