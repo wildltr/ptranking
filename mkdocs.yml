@@ -1,17 +1,21 @@
 site_name: PT-Ranking
 nav:
     - Home: index.md
-    - Data: data.md
-    - Metric: metric.md
+    - Data: data/data.md
+    - Metric: metric/metric.md
     - LTR_Adhoc:
       - ltr_adhoc/about.md
-      - ltr_adhoc/lambda_framework.md
+      - ltr_adhoc/Lambda_Framework.md
     - LTR_Adversarial:
       - ltr_adversarial/about.md
-      - ltr_adversarial/irgan.md
+      - ltr_adversarial/IRGAN.md
     - LTR_Tree:
       - ltr_tree/about.md
-      - ltr_tree/lambda_mart.md
+      - ltr_tree/LambdaMART.md
+    - How-to-Start:
+      - how_to_start/Get_Started.md
+      - how_to_start/Configuration.md
+      - how_to_start/Develop_A_New_Model.md
 
 theme:
   name: 'material'

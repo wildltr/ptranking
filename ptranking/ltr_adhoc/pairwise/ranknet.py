@@ -26,7 +26,7 @@ def ranknet_loss(batch_pred=None, batch_label=None, sigma=1.0, pair_row_inds=Non
     batch_Sij = batch_Sij[:, pair_row_inds, pair_col_inds]
 
     batch_loss_1st = 0.5 * sigma * batch_s_ij * (1.0 - batch_Sij)     # cf. the 1st equation in page-3
-    batch_loss_2nd = torch.log(torch.exp(-sigma *batch_s_ij) + 1.0)   # cf. the 1st equation in page-3
+    batch_loss_2nd = torch.log(torch.exp(-sigma * batch_s_ij) + 1.0)   # cf. the 1st equation in page-3
     batch_loss = torch.sum(batch_loss_1st + batch_loss_2nd)
 
     return batch_loss
