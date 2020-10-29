@@ -65,14 +65,18 @@ class ListMLE(NeuralRanker):
 	ListMLE: Fen Xia, Tie-Yan Liu, Jue Wang, Wensheng Zhang, and Hang Li. 2008. Listwise Approach to Learning to Rank: Theory and Algorithm.
 	In Proceedings of the 25th ICML. 1192–1199.
 	'''
-
 	def __init__(self, sf_para_dict=None):
 		super(ListMLE, self).__init__(id='ListMLE', sf_para_dict=sf_para_dict)
 
 	def inner_train(self, batch_preds, batch_stds, **kwargs):
-		# loss function of ListMLE
-		batch_logcumsumexps = apply_LogCumsumExp(batch_preds)
-		batch_loss = torch.sum(batch_logcumsumexps - batch_preds)
+		if 'presort' in kwargs and kwargs['presort']:
+			target_batch_preds, target_batch_stds = batch_preds, batch_stds
+		else:
+			target_batch_stds, batch_sorted_inds = torch.sort(batch_stds, dim=1, descending=True)
+			target_batch_preds = torch.gather(batch_preds, dim=1, index=batch_sorted_inds)
+
+		batch_logcumsumexps = apply_LogCumsumExp(target_batch_preds)
+		batch_loss = torch.sum(batch_logcumsumexps - target_batch_preds)
 
 		self.optimizer.zero_grad()
 		batch_loss.backward()

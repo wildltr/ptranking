@@ -77,7 +77,7 @@ class ScoringFunctionParameter(ModelParameter):
         FBN = False if self.data_dict['scale_data'] else True # for feature normalization
 
         # feed-forward neural networks
-        ffnns_para_dict = dict(num_layers=5, HD_AF='R', HN_AF='R', TL_AF='R', apply_tl_af=True, BN=True, RD=False, FBN=FBN)
+        ffnns_para_dict = dict(num_layers=5, HD_AF='R', HN_AF='R', TL_AF='CE', apply_tl_af=True, BN=True, RD=False, FBN=FBN)
 
         sf_para_dict = dict()
         sf_para_dict['id'] = self.model_id
@@ -277,15 +277,11 @@ class DataSetting():
         s1, s2 = (':', '\n') if log else ('_', '_')
 
         data_id, binary_rele = data_dict['data_id'], data_dict['binary_rele']
-        min_docs, min_rele, sample_rankings_per_q = data_dict['min_docs'], data_dict['min_rele'],\
-                                                    data_dict['sample_rankings_per_q']
+        min_docs, min_rele, train_batch_size = data_dict['min_docs'], data_dict['min_rele'], data_dict['train_batch_size']
 
-        setting_string = s2.join([s1.join(['data_id', data_id]),
-                            s1.join(['min_docs', str(min_docs)]),
-                            s1.join(['min_rele', str(min_rele)]),
-                            s1.join(['sample_times_per_q', str(sample_rankings_per_q)])]) if log \
-            else s1.join([data_id, 'MiD', str(min_docs), 'MiR', str(min_rele), 'S', str(sample_rankings_per_q)])
-
+        setting_string = s2.join([s1.join(['data_id', data_id]), s1.join(['min_docs', str(min_docs)]),
+                            s1.join(['min_rele', str(min_rele)]), s1.join(['TrBat', str(train_batch_size)])]) if log \
+                    else s1.join([data_id, 'MiD', str(min_docs), 'MiR', str(min_rele), 'TrBat', str(train_batch_size)])
 
         if binary_rele:
             bi_str = s1.join(['binary_rele', str(binary_rele)]) if log else 'BiRele'
@@ -298,16 +294,18 @@ class DataSetting():
         A default setting for data loading
         :return:
         """
-        unknown_as_zero = True if self.data_id in MSLETOR_SEMI else False
-        binary_rele = False  # using the original values
-        presort = False  # a default setting
-
+        unknown_as_zero = False # using original labels, e.g., w.r.t. semi-supervised dataset
+        binary_rele = False  # using original labels
+        train_presort, validation_presort, test_presort = True, True, True
+        train_batch_size, validation_batch_size, test_batch_size = 1, 1, 1
         scale_data, scaler_id, scaler_level = get_default_scaler_setting(data_id=self.data_id)
 
         # more data settings that are rarely changed
         self.data_dict = dict(data_id=self.data_id, dir_data=self.dir_data, min_docs=10, min_rele=1,
-                         sample_rankings_per_q=1, unknown_as_zero=unknown_as_zero, binary_rele=binary_rele,
-                         presort=presort, scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
+                              scale_data = scale_data, scaler_id = scaler_id, scaler_level = scaler_level,
+                              train_presort=train_presort, validation_presort=validation_presort, test_presort=test_presort,
+                              train_batch_size=train_batch_size, validation_batch_size=validation_batch_size,
+                              test_batch_size=test_batch_size, unknown_as_zero=unknown_as_zero, binary_rele=binary_rele)
 
         data_meta = get_data_meta(data_id=self.data_id) # add meta-information
         self.data_dict.update(data_meta)
@@ -316,33 +314,36 @@ class DataSetting():
 
     def grid_search(self):
         if self.data_json is not None: # using json file
-                choice_presort = self.json_dict['presort']
-                choice_min_docs = self.json_dict['min_docs']
-                choice_min_rele = self.json_dict['min_rele']
-                choice_binary_rele = self.json_dict['binary_rele']
-                choice_unknown_as_zero = self.json_dict['unknown_as_zero']
-                choice_sample_rankings_per_q = self.json_dict['sample_rankings_per_q']
-                base_data_dict = dict(data_id=self.data_id, dir_data=self.json_dict["dir_data"])
+            choice_min_docs = self.json_dict['min_docs']
+            choice_min_rele = self.json_dict['min_rele']
+            choice_binary_rele = self.json_dict['binary_rele']
+            choice_unknown_as_zero = self.json_dict['unknown_as_zero']
+            choice_train_presort = self.json_dict['train_presort']
+            choice_train_batch_size = self.json_dict['train_batch_size']
+            # hard-coding for rarely changed settings
+            base_data_dict = dict(data_id=self.data_id, dir_data=self.json_dict["dir_data"], test_presort=True,
+                                  validation_presort=True, validation_batch_size=1, test_batch_size=1)
         else:
             choice_min_docs = [10]
             choice_min_rele = [1]
-            choice_presort = [True]
             choice_binary_rele = [False]
             choice_unknown_as_zero = [True]
-            choice_sample_rankings_per_q = [1] # number of sample rankings per query
+            choice_train_presort = [True]
+            choice_train_batch_size = [1] # number of sample rankings per query
 
-            base_data_dict = dict(data_id=self.data_id, dir_data=self.dir_data)
+            base_data_dict = dict(data_id=self.data_id, dir_data=self.dir_data, test_presort=True,
+                                  validation_presort=True, validation_batch_size=1, test_batch_size=1)
 
         data_meta = get_data_meta(data_id=self.data_id)  # add meta-information
         base_data_dict.update(data_meta)
 
         choice_scale_data, choice_scaler_id, choice_scaler_level = get_default_scaler_setting(data_id=self.data_id, grid_search=True)
 
-        for min_docs, min_rele, sample_rankings_per_q in product(choice_min_docs, choice_min_rele, choice_sample_rankings_per_q):
-            threshold_dict = dict(min_docs=min_docs, min_rele=min_rele, sample_rankings_per_q=sample_rankings_per_q)
+        for min_docs, min_rele, train_batch_size in product(choice_min_docs, choice_min_rele, choice_train_batch_size):
+            threshold_dict = dict(min_docs=min_docs, min_rele=min_rele, train_batch_size=train_batch_size)
 
-            for binary_rele, unknown_as_zero, presort in product(choice_binary_rele, choice_unknown_as_zero, choice_presort):
-                custom_dict = dict(binary_rele=binary_rele, unknown_as_zero=unknown_as_zero, presort=presort)
+            for binary_rele, unknown_as_zero, train_presort in product(choice_binary_rele, choice_unknown_as_zero, choice_train_presort):
+                custom_dict = dict(binary_rele=binary_rele, unknown_as_zero=unknown_as_zero, train_presort=train_presort)
 
                 for scale_data, scaler_id, scaler_level in product(choice_scale_data, choice_scaler_id, choice_scaler_level):
                     scale_dict = dict(scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)

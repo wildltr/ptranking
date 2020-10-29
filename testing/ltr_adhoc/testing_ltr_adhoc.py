@@ -49,10 +49,10 @@ if __name__ == '__main__':
 	models_to_run = [
 		#'RankMSE',
 		#'LambdaRank',
-		# 'ListNet',
+		'ListMLE',
 		#'ListNet', 'ListMLE', 'ApproxNDCG', 'WassRank'
 		#'ApproxNDCG',
-		'WassRank',
+		#'WassRank',
 		# 'STListNet', 'LambdaLoss'
 	]
 

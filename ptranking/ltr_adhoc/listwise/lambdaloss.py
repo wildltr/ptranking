@@ -66,21 +66,27 @@ class LambdaLoss(NeuralRanker):
         self.k, self.sigma, self.loss_type = model_para_dict['k'], model_para_dict['sigma'], model_para_dict['loss_type']
         if 'NDCG_Loss2++' == self.loss_type: self.mu = model_para_dict['mu']
 
-    def inner_train(self, batch_preds, batch_labels, **kwargs):
+    def inner_train(self, batch_preds, batch_stds, **kwargs):
         '''
         per-query training process
         :param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents within a ltr_adhoc
         :param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ltr_adhoc
         :return:
         '''
-        batch_preds_sorted, batch_preds_sorted_inds = torch.sort(batch_preds, dim=1, descending=True)  # sort documents according to the predicted relevance
-        batch_stds_sorted_via_preds = torch.gather(batch_labels, dim=1, index=batch_preds_sorted_inds)  # reorder batch_stds correspondingly so as to make it consistent. BTW, batch_stds[batch_preds_sorted_inds] only works with 1-D tensor
+        if 'presort' in kwargs and kwargs['presort']:
+            target_batch_preds, target_batch_stds = batch_preds, batch_stds
+        else:
+            target_batch_stds, batch_sorted_inds = torch.sort(batch_stds, dim=1, descending=True)
+            target_batch_preds = torch.gather(batch_preds, dim=1, index=batch_sorted_inds)
 
-        batch_std_ranks = torch.arange(batch_preds.size(1)).type(tensor)
+        batch_preds_sorted, batch_preds_sorted_inds = torch.sort(target_batch_preds, dim=1, descending=True)  # sort documents according to the predicted relevance
+        batch_stds_sorted_via_preds = torch.gather(target_batch_stds, dim=1, index=batch_preds_sorted_inds)  # reorder batch_stds correspondingly so as to make it consistent. BTW, batch_stds[batch_preds_sorted_inds] only works with 1-D tensor
+
+        batch_std_ranks = torch.arange(target_batch_preds.size(1)).type(tensor)
         dists_1D = 1.0 / torch.log2(batch_std_ranks + 2.0)  # discount co-efficients
 
-        # assuming that batch_labels is pre-sorted, i.e., presort=True for efficiency
-        batch_idcgs = torch_dcg_at_k(batch_sorted_labels=batch_labels)
+        # ideal dcg values based on optimal order
+        batch_idcgs = torch_dcg_at_k(batch_sorted_labels=target_batch_stds)
 
         if self.multi_level_rele:
             batch_gains = torch.pow(2.0, batch_stds_sorted_via_preds) - 1.0
@@ -103,7 +109,7 @@ class LambdaLoss(NeuralRanker):
         log_weighted_probas = torch.log2(weighted_probas)
 
         # mask for truncation based on cutoff k
-        trunc_mask = torch.zeros((batch_preds.shape[1], batch_preds.shape[1]), dtype=torch.bool, device=device)
+        trunc_mask = torch.zeros((target_batch_preds.shape[1], target_batch_preds.shape[1]), dtype=torch.bool, device=device)
         trunc_mask[:self.k, :self.k] = 1
 
         if self.loss_type in ['NDCG_Loss2', 'NDCG_Loss2++']:

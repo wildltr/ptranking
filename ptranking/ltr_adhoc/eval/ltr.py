@@ -16,7 +16,7 @@ import torch
 from ptranking.eval.parameter import ModelParameter, DataSetting, EvalSetting, ScoringFunctionParameter
 from ptranking.utils.bigdata.BigPickle import pickle_save
 from ptranking.metric.metric_utils import metric_results_to_string
-from ptranking.data.data_utils import get_data_meta
+from ptranking.data.data_utils import get_data_meta, SPLIT_TYPE
 from ptranking.ltr_adhoc.eval.eval_utils import ndcg_at_ks, ndcg_at_k
 from ptranking.data.data_utils import LTRDataset, YAHOO_LTR, ISTELLA_LTR, MSLETOR_SEMI
 
@@ -65,12 +65,9 @@ class LTREvaluator():
         :param sf_para_dict:
         :return:
         """
-        if data_dict['sample_rankings_per_q']>1: assert sf_para_dict['one_fits_all']['BN'] == False
+        if data_dict['train_batch_size']>1: assert sf_para_dict['one_fits_all']['BN'] == False
 
         if data_dict['data_id'] == 'Istella': assert eval_dict['do_validation'] is not True # since there is no validation data
-
-        if data_dict['data_id'] in MSLETOR_SEMI: # given semi-supervised dataset
-            assert data_dict['unknown_as_zero'] # since the in-built ltr_hoc methods are also supervised models
 
         if data_dict['binary_rele'] and data_dict['data_id'] in MSLETOR_SEMI:
             assert data_dict['unknown_as_zero'] # for unsupervised dataset, it is required for binarization due to '-1' labels
@@ -112,37 +109,19 @@ class LTREvaluator():
         """
         file_train, file_vali, file_test = self.determine_files(data_dict, fold_k=fold_k)
 
-        sample_rankings_per_q = data_dict['sample_rankings_per_q']
+        train_batch_size, train_presort = data_dict['train_batch_size'], data_dict['train_presort']
+        input_eval_dict = eval_dict if eval_dict['mask_label'] else None # required when enabling masking data
+        train_data = LTRDataset(file=file_train, split_type=SPLIT_TYPE.Train, batch_size=train_batch_size,
+                                shuffle=True, presort=train_presort, data_dict=data_dict, eval_dict=input_eval_dict)
 
-        if eval_dict['mask_label']: # enabling masking data as required
-            train_data = LTRDataset(train=True, file=file_train, sample_rankings_per_q=sample_rankings_per_q,
-                                    shuffle=True, data_dict=data_dict, eval_dict=eval_dict)
+        test_data = LTRDataset(file=file_test, split_type=SPLIT_TYPE.Test, shuffle=False, data_dict=data_dict,
+                               batch_size=data_dict['test_batch_size'])
+
+        if eval_dict['do_validation'] or eval_dict['do_summary']: # vali_data is required
+            vali_data = LTRDataset(file=file_vali, split_type=SPLIT_TYPE.Validation, shuffle=False,
+                                   batch_size=data_dict['validation_batch_size'], data_dict=data_dict)
         else:
-            train_data = LTRDataset(train=True, file=file_train, sample_rankings_per_q=sample_rankings_per_q,
-                                    shuffle=True, data_dict=data_dict)
-
-        if data_dict['data_id'] in MSLETOR_SEMI or eval_dict['mask_label']:
-            tmp_data_dict = copy.deepcopy(data_dict)
-            tmp_data_dict.update(dict(unknown_as_zero=False))
-            data_dict = tmp_data_dict
-
-        vali_data = None
-        if data_dict['scale_data'] and 'DATASET' == data_dict['scaler_level']:
-            train_scaler = train_data.get_scaler()
-
-            test_data = LTRDataset(train=False, file=file_test, sample_rankings_per_q=sample_rankings_per_q,
-                                   shuffle=False, data_dict=data_dict, given_scaler=train_scaler)
-
-            if eval_dict['do_validation'] or eval_dict['do_summary']:
-                vali_data = LTRDataset(train=False, file=file_vali, sample_rankings_per_q=sample_rankings_per_q,
-                                       shuffle=False, data_dict=data_dict, given_scaler=train_scaler)
-        else:
-            test_data  = LTRDataset(train=False, file=file_test, sample_rankings_per_q=sample_rankings_per_q,
-                                    shuffle=False, data_dict=data_dict)
-
-            if eval_dict['do_validation'] or eval_dict['do_summary']:
-                vali_data = LTRDataset(train=False, file=file_vali, sample_rankings_per_q=sample_rankings_per_q,
-                                       shuffle=False, data_dict=data_dict)
+            vali_data = None
 
         return train_data, test_data, vali_data
 
@@ -256,26 +235,21 @@ class LTREvaluator():
         epoch_loss = tensor([0.0])
 
         if 'em_label' in model_para_dict and model_para_dict['em_label']:
-            for qid, batch_rankings, batch_stds, torch_batch_stds_hot, batch_cnts in train_data.iter_hot():  # _, [batch, ranking_size, num_features], [batch, ranking_size]
-                if gpu: batch_rankings, batch_stds, torch_batch_stds_hot, batch_cnts = batch_rankings.to(device), batch_stds.to(device), torch_batch_stds_hot.to(device), batch_cnts.to(device)
-
-                batch_loss, stop_training = ranker.train(batch_rankings, batch_stds, qid=qid, torch_batch_stds_hot=torch_batch_stds_hot, batch_cnts=batch_cnts, epoch_k=epoch_k)
-
-                if stop_training:
-                    break
-                else:
-                    epoch_loss += batch_loss.item()
-
+            raise NotImplementedError
         else:
+            presort = train_data.presort
             for qid, batch_rankings, batch_stds in train_data: # _, [batch, ranking_size, num_features], [batch, ranking_size]
                 if gpu: batch_rankings, batch_stds = batch_rankings.to(device), batch_stds.to(device)
 
                 if reranking:
-                    # in case the standard labels of the initial retrieval are all zeros providing no optimization information. Meanwhile, some models (e.g., lambdaRank) may fail to train
                     if torch.nonzero(batch_stds).size(0) <= 0:
+                        '''
+                        In case the standard labels of the initial retrieval are all zeros providing no optimization
+                        information. Meanwhile, some models (e.g., lambdaRank) may fail to train
+                        '''
                         continue
 
-                batch_loss, stop_training = ranker.train(batch_rankings, batch_stds, qid=qid, epoch_k=epoch_k)
+                batch_loss, stop_training = ranker.train(batch_rankings, batch_stds, qid=qid, epoch_k=epoch_k, presort=presort)
 
                 if stop_training:
                     break

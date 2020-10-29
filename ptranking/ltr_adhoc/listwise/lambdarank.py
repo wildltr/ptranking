@@ -165,9 +165,14 @@ class LambdaRank(NeuralRanker):
         :param batch_stds:  [batch, ranking_size] each row represents the standard relevance grades for documents within a ltr_adhoc
         :return:
         '''
+        if 'presort' in kwargs and kwargs['presort']:
+            target_batch_preds, target_batch_stds = batch_preds, batch_stds
+        else:
+            target_batch_stds, batch_sorted_inds = torch.sort(batch_stds, dim=1, descending=True)
+            target_batch_preds = torch.gather(batch_preds, dim=1, index=batch_sorted_inds)
 
         if 'FullSoft' == self.loss_version: # ''' softplus version '''
-            batch_loss = lambdaRank_loss_full_soft(batch_preds, batch_stds, sigma=self.sigma)
+            batch_loss = lambdaRank_loss_full_soft(target_batch_preds, target_batch_stds, sigma=self.sigma)
 
         elif 'Full' == self.loss_version:
             '''
@@ -175,15 +180,15 @@ class LambdaRank(NeuralRanker):
             Thus lambdaRank_loss_full is used as the default.
             Elapsed time: 0:04:04.392835 LambdaRank 2-fold cross validation scores: nDCG@1:0.4855, nDCG@3:0.4911, nDCG@5:0.5028, nDCG@10:0.5330, nDCG@20:0.5987, nDCG@50:0.0158
             '''
-            batch_loss = lambdaRank_loss_full(batch_preds, batch_stds, sigma=self.sigma,
+            batch_loss = lambdaRank_loss_full(target_batch_preds, target_batch_stds, sigma=self.sigma,
                                               multi_level_rele=self.multi_level_rele)
 
         elif 'Diag' == self.loss_version:
             # Elapsed time: 0:06:19.067998 LambdaRank 2-fold cross validation scores: nDCG@1:0.4849, nDCG@3:0.4909, nDCG@5:0.5028, nDCG@10:0.5328, nDCG@20:0.5985, nDCG@50:0.0158
-            batch_loss = lambdaRank_loss_diagonal(batch_preds, batch_stds, sigma=self.sigma)
+            batch_loss = lambdaRank_loss_diagonal(target_batch_preds, target_batch_stds, sigma=self.sigma)
 
         elif 'OP' == self.loss_version:
-            batch_loss = apply_LambdaRank_OP(batch_preds, batch_stds, self.sigma, self.pair, self.focal)
+            batch_loss = apply_LambdaRank_OP(target_batch_preds, target_batch_stds, self.sigma, self.pair, self.focal)
 
         else:
             raise NotImplementedError

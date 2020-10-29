@@ -18,6 +18,7 @@ def ndcg_at_k(ranker=None, test_data=None, k=10, multi_level_rele=True):
     '''
     sum_ndcg_at_k = torch.zeros(1)
     cnt = torch.zeros(1)
+    already_sorted = True if test_data.presort else False
     for qid, batch_ranking, batch_labels in test_data: # _, [batch, ranking_size, num_features], [batch, ranking_size]
         if batch_labels.size(1) < k: continue # skip the query if the number of associated documents is smaller than k
 
@@ -28,7 +29,10 @@ def ndcg_at_k(ranker=None, test_data=None, k=10, multi_level_rele=True):
         _, batch_sorted_inds = torch.sort(batch_rele_preds, dim=1, descending=True)
 
         batch_sys_sorted_labels = torch.gather(batch_labels, dim=1, index=batch_sorted_inds)
-        batch_ideal_sorted_labels, _ = torch.sort(batch_labels, dim=1, descending=True)
+        if already_sorted:
+            batch_ideal_sorted_labels = batch_labels
+        else:
+            batch_ideal_sorted_labels, _ = torch.sort(batch_labels, dim=1, descending=True)
 
         batch_ndcg_at_k = torch_nDCG_at_k(batch_sys_sorted_labels=batch_sys_sorted_labels,
                                           batch_ideal_sorted_labels=batch_ideal_sorted_labels,
@@ -40,7 +44,6 @@ def ndcg_at_k(ranker=None, test_data=None, k=10, multi_level_rele=True):
     avg_ndcg_at_k = sum_ndcg_at_k/cnt
     return  avg_ndcg_at_k
 
-
 def ndcg_at_ks(ranker=None, test_data=None, ks=[1, 5, 10], multi_level_rele=True):
     '''
     There is no check based on the assumption (say light_filtering() is called)
@@ -49,6 +52,7 @@ def ndcg_at_ks(ranker=None, test_data=None, ks=[1, 5, 10], multi_level_rele=True
     '''
     sum_ndcg_at_ks = torch.zeros(len(ks))
     cnt = torch.zeros(1)
+    already_sorted = True if test_data.presort else False
     for qid, batch_ranking, batch_labels in test_data: # _, [batch, ranking_size, num_features], [batch, ranking_size]
         if gpu: batch_ranking = batch_ranking.to(device)
         batch_rele_preds = ranker.predict(batch_ranking)
@@ -57,7 +61,10 @@ def ndcg_at_ks(ranker=None, test_data=None, ks=[1, 5, 10], multi_level_rele=True
         _, batch_sorted_inds = torch.sort(batch_rele_preds, dim=1, descending=True)
 
         batch_sys_sorted_labels = torch.gather(batch_labels, dim=1, index=batch_sorted_inds)
-        batch_ideal_sorted_labels, _ = torch.sort(batch_labels, dim=1, descending=True)
+        if already_sorted:
+            batch_ideal_sorted_labels = batch_labels
+        else:
+            batch_ideal_sorted_labels, _ = torch.sort(batch_labels, dim=1, descending=True)
 
         batch_ndcg_at_ks = torch_nDCG_at_ks(batch_sys_sorted_labels=batch_sys_sorted_labels,
                                             batch_ideal_sorted_labels=batch_ideal_sorted_labels,

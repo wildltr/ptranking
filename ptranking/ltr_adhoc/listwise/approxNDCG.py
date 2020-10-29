@@ -46,9 +46,7 @@ def approxNDCG(batch_preds=None, batch_stds=None, alpha=10):
 def approxNDCG_loss(batch_preds=None, batch_stds=None, alpha=10, multi_level_rele=True):
     batch_hat_pis = get_approx_ranks(batch_preds, alpha=alpha)
 
-    ''' since the input standard labels are sorted in advance, thus directly used '''
-    # sorted_labels, _ = torch.sort(batch_stds, dim=1, descending=True)  # for optimal ltr_adhoc based on standard labels
-    # ideal dcg given standard labels
+    # ideal dcg given optimally ordered labels
     batch_idcgs = torch_dcg_at_k(batch_sorted_labels=batch_stds, cutoff=None, multi_level_rele=multi_level_rele)
 
     if multi_level_rele:
@@ -83,7 +81,14 @@ class ApproxNDCG(NeuralRanker):
         :param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ltr_adhoc
         :return:
         '''
-        batch_loss = approxNDCG_loss(batch_preds, batch_stds, self.alpha, multi_level_rele=self.multi_level_rele)
+        if 'presort' in kwargs and kwargs['presort']:
+            target_batch_preds, target_batch_stds = batch_preds, batch_stds
+        else:
+            target_batch_stds, batch_sorted_inds = torch.sort(batch_stds, dim=1, descending=True)
+            target_batch_preds = torch.gather(batch_preds, dim=1, index=batch_sorted_inds)
+
+        batch_loss = approxNDCG_loss(target_batch_preds, target_batch_stds, self.alpha,
+                                     multi_level_rele=self.multi_level_rele)
 
         self.optimizer.zero_grad()
         batch_loss.backward()
