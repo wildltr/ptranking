@@ -105,6 +105,19 @@ def torch_rankwise_err(batch_sorted_labels, max_label=None, k=10, point=True):
 		batch_rankwise_err = torch.cumsum(batch_expt_satis_ranks, dim=1)
 		return batch_rankwise_err
 
+def torch_nerr_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, multi_level_rele=True):
+	valid_max_cutoff = batch_sys_sorted_labels.size(1)
+	cutoff = max(valid_max_cutoff, k)
+
+	if multi_level_rele:
+		max_label = torch.max(batch_ideal_sorted_labels)
+		batch_sys_err_at_k = torch_rankwise_err(batch_sys_sorted_labels, max_label=max_label, k=cutoff, point=True)
+		batch_ideal_err_at_k = torch_rankwise_err(batch_ideal_sorted_labels, max_label=max_label, k=cutoff, point=True)
+		batch_nerr_at_k = batch_sys_err_at_k / batch_ideal_err_at_k
+		return batch_nerr_at_k
+	else:
+		raise NotImplementedError
+
 def torch_nerr_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, multi_level_rele=True):
 	'''
 	:param sys_sorted_labels: [batch_size, ranking_size] the standard labels sorted in descending order according to predicted relevance scores
