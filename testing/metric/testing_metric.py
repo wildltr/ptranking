@@ -18,25 +18,25 @@ def test_ap():
     # here we assume that there five relevant documents, but the system just retrieves three of them
     sys_sorted_labels = torch.Tensor([1.0, 0.0, 1.0, 0.0, 1.0])
     std_sorted_labels = torch.Tensor([1.0, 1.0, 1.0, 1.0, 1.0])
-    ap_at_ks = torch_ap_at_ks(sys_sorted_labels, std_sorted_labels, ks=[1, 3, 5])
+    ap_at_ks = torch_ap_at_ks(sys_sorted_labels.view(1, -1), std_sorted_labels.view(1, -1), ks=[1, 3, 5])
     print(ap_at_ks) # tensor([1.0000, 0.5556, 0.4533])
 
     sys_sorted_labels = torch.Tensor([1.0, 0.0, 1.0, 0.0, 1.0])
     std_sorted_labels = torch.Tensor([1.0, 1.0, 1.0, 0.0, 0.0])
-    ap_at_ks = torch_ap_at_ks(sys_sorted_labels, std_sorted_labels, ks=[1, 3, 5])
+    ap_at_ks = torch_ap_at_ks(sys_sorted_labels.view(1, -1), std_sorted_labels.view(1, -1), ks=[1, 3, 5])
     print(ap_at_ks)  # tensor([1.0000, 0.5556, 0.7556])
 
     # here we assume that there four relevant documents, the system just retrieves four of them
     sys_sorted_labels = torch.Tensor([1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0])
     std_sorted_labels = torch.Tensor([1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
-    ap_at_ks = torch_ap_at_ks(sys_sorted_labels, std_sorted_labels, ks=[1, 2, 3, 5, 7])
+    ap_at_ks = torch_ap_at_ks(sys_sorted_labels.view(1, -1), std_sorted_labels.view(1, -1), ks=[1, 2, 3, 5, 7])
     print(ap_at_ks) # tensor([1.0000, 1.0000, 0.6667, 0.6875, 0.8304])
 
 
 def test_ndcg():
     sys_sorted_labels = torch.Tensor([1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0])
     std_sorted_labels = torch.Tensor([1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
-    ndcg_at_ks = torch_nDCG_at_ks(sys_sorted_labels, std_sorted_labels, ks=[1, 2, 3, 4, 5, 6, 7])
+    ndcg_at_ks = torch_nDCG_at_ks(sys_sorted_labels.view(1, -1), std_sorted_labels.view(1, -1), ks=[1, 2, 3, 4, 5, 6, 7])
     print(ndcg_at_ks) # tensor([1.0000, 1.0000, 0.7654, 0.8048, 0.8048, 0.8048, 0.9349])
 
 
@@ -44,9 +44,9 @@ def test_ndcg():
 def test_nerr():
     sys_sorted_labels = torch.Tensor([3.0, 2.0, 4.0])
     std_sorted_labels = torch.Tensor([4.0, 3.0, 2.0])
-    nerr_at_ks = torch_nerr_at_ks(sys_sorted_labels, std_sorted_labels, ks=[1, 2, 3])
-    print(nerr_at_ks)  # tensor([0.4667, 0.5154, 0.6640])
-
+    # convert to batch mode
+    batch_nerr_at_ks = torch_nerr_at_ks(sys_sorted_labels.view(1, -1), std_sorted_labels.view(1, -1), ks=[1, 2, 3])
+    print(batch_nerr_at_ks)  # tensor([0.4667, 0.5154, 0.6640])
 
 
 def test_kendall_tau():
@@ -88,14 +88,13 @@ def test_kendall_tau():
 if __name__ == '__main__':
 
     #1
-    #test_ap()
+    test_ap()
 
     #2
     test_nerr()
 
     #3
-    #test_kendall_tau()
-
+    test_ndcg()
 
 
 

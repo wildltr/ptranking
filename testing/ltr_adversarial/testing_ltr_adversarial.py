@@ -52,9 +52,9 @@ if __name__ == '__main__':
     config_with_json = True  # specify configuration with json files or not
 
     models_to_run = [
-        #'IRGAN_Point',
+        'IRGAN_Point',
         #'IRGAN_Pair',
-        'IRGAN_List'
+        #'IRGAN_List'
     ]
 
     evaluator = AdLTREvaluator()

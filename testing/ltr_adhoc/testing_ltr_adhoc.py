@@ -44,15 +44,15 @@ if __name__ == '__main__':
 
 	debug = True            # in a debug mode, we just check whether the model can operate
 
-	config_with_json = True # specify configuration with json files or not
+	config_with_json = False # specify configuration with json files or not
 
 	models_to_run = [
-		# 'RankMSE',
-		#'ApproxNDCG',
+		#'RankMSE',
+		#'LambdaRank',
 		# 'ListNet',
 		#'ListNet', 'ListMLE', 'ApproxNDCG', 'WassRank'
-		# 'ApproxNDCG',
-		 'WassRank',
+		#'ApproxNDCG',
+		'WassRank',
 		# 'STListNet', 'LambdaLoss'
 	]
 

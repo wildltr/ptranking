@@ -12,7 +12,7 @@ from ptranking.utils.bigdata.BigPickle import pickle_save
 from ptranking.data.data_utils import YAHOO_LTR, ISTELLA_LTR, MSLETOR, MSLRWEB
 from ptranking.ltr_tree.eval.tree_parameter import TreeDataSetting, TreeEvalSetting
 from ptranking.ltr_tree.lambdamart.lightgbm_lambdaMART import LightGBMLambdaMART, LightGBMLambdaMARTParameter
-from ptranking.metric.adhoc_metric import torch_nDCG_at_ks, torch_nerr_at_ks, torch_ap_at_ks, torch_p_at_ks
+from ptranking.metric.adhoc_metric import torch_nDCG_at_ks, torch_nerr_at_ks, torch_ap_at_ks, torch_precision_at_ks
 from ptranking.ltr_adhoc.eval.ltr import LTREvaluator
 
 LTR_TREE_MODEL = ['LightGBMLambdaMART']
@@ -115,16 +115,20 @@ class TreeLTREvaluator(LTREvaluator):
             sys_sorted_labels = tor_per_query_std_labels[tor_sorted_inds]
             ideal_sorted_labels, _ = torch.sort(tor_per_query_std_labels, descending=True)
 
-            ndcg_at_ks = torch_nDCG_at_ks(sys_sorted_labels=sys_sorted_labels, ideal_sorted_labels=ideal_sorted_labels, ks=ks, multi_level_rele=True)
+            ndcg_at_ks = torch_nDCG_at_ks(batch_sys_sorted_labels=sys_sorted_labels.view(1, -1), batch_ideal_sorted_labels=ideal_sorted_labels.view(1, -1), ks=ks, multi_level_rele=True)
+            ndcg_at_ks = torch.squeeze(ndcg_at_ks, dim=0)
             list_ndcg_at_ks_per_q.append(ndcg_at_ks.numpy())
 
-            nerr_at_ks = torch_nerr_at_ks(sys_sorted_labels=sys_sorted_labels, ideal_sorted_labels=ideal_sorted_labels, ks=ks, multi_level_rele=True)
+            nerr_at_ks = torch_nerr_at_ks(batch_sys_sorted_labels=sys_sorted_labels.view(1, -1), batch_ideal_sorted_labels=ideal_sorted_labels.view(1, -1), ks=ks, multi_level_rele=True)
+            nerr_at_ks = torch.squeeze(nerr_at_ks, dim=0)
             list_err_at_ks_per_q.append(nerr_at_ks.numpy())
 
-            ap_at_ks = torch_ap_at_ks(sys_sorted_labels=sys_sorted_labels, ideal_sorted_labels=ideal_sorted_labels, ks=ks)
+            ap_at_ks = torch_ap_at_ks(batch_sys_sorted_labels=sys_sorted_labels.view(1, -1), batch_ideal_sorted_labels=ideal_sorted_labels.view(1, -1), ks=ks)
+            ap_at_ks = torch.squeeze(ap_at_ks, dim=0)
             list_ap_at_ks_per_q.append(ap_at_ks.numpy())
 
-            p_at_ks = torch_p_at_ks(sys_sorted_labels=sys_sorted_labels, ks=ks)
+            p_at_ks = torch_precision_at_ks(batch_sys_sorted_labels=sys_sorted_labels.view(1, -1), ks=ks)
+            p_at_ks = torch.squeeze(p_at_ks, dim=0)
             list_p_at_ks_per_q.append(p_at_ks.numpy())
 
             sum_ndcg_at_ks = torch.add(sum_ndcg_at_ks, ndcg_at_ks)
@@ -225,6 +229,7 @@ class TreeLTREvaluator(LTREvaluator):
             performance_list = [model_id] if data_id in YAHOO_LTR or data_id in ISTELLA_LTR else [model_id + ' Fold-' + str(fold_k)]
 
             for i, co in enumerate(cutoffs):
+                print(fold_avg_ndcg_at_ks)
                 performance_list.append('\nnDCG@{}:{:.4f}'.format(co, fold_avg_ndcg_at_ks[i]))
             for i, co in enumerate(cutoffs):
                 performance_list.append('\nnERR@{}:{:.4f}'.format(co, fold_avg_nerr_at_ks[i]))

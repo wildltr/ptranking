@@ -1,294 +1,202 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 """Description
-
+The commonly used IR evaluation metrics, such as AP (average precision), nDCG and ERR
 """
-
-import numpy as np
 
 import torch
-
+import numpy as np
 from ptranking.ltr_global import global_gpu as gpu, global_device as device, tensor
 
-"""
-The commonly used IR evaluation metrics
-"""
-
-def rele_gain(rele_level, gain_base=2.0):
-	gain = np.power(gain_base, rele_level) - 1.0
-	return gain
-
-def torch_ideal_dcg(batch_sorted_labels, gpu=False, multi_level_rele=True):
-	'''
-	:param sorted_labels: [batch, ranking_size]
-	:return: [batch, 1]
-	'''
-	if multi_level_rele:
-		batch_gains = torch.pow(2.0, batch_sorted_labels) - 1.0
-	else:
-		batch_gains = batch_sorted_labels
-
-	batch_ranks = torch.arange(batch_sorted_labels.size(1))
-
-	batch_discounts = torch.log2(2.0 + batch_ranks.type(torch.cuda.FloatTensor)) if gpu else torch.log2(2.0 + batch_ranks.type(torch.FloatTensor))
-	batch_ideal_dcg = torch.sum(batch_gains / batch_discounts, dim=1, keepdim=True)
-
-	return batch_ideal_dcg
+# todo string_key for multi_level_rele: 1> more clear and be able to extend;
 
 """ Precision """
-def torch_p_at_ks(sys_sorted_labels, ks=None):
+
+def torch_precision_at_ks(batch_sys_sorted_labels, ks=None):
 	'''	Precision at ks
-	:param sys_sorted_labels: system's predicted ltr_adhoc of labels in a descending order
-	:param ks:
-	:return:
+	:param sys_sorted_labels: [batch_size, ranking_size] system's predicted ltr_adhoc of labels in a descending order
+	:param ks: cutoff values
+	:return: [batch_size, len(ks)]
 	'''
-	valid_max = sys_sorted_labels.size(0)
-	used_ks = [k for k in ks if k <= valid_max] if valid_max < max(ks) else ks
+	valid_max_cutoff = batch_sys_sorted_labels.size(1)
+	need_padding = True if valid_max_cutoff < max(ks) else False
+	used_ks = [k for k in ks if k <= valid_max_cutoff] if need_padding else ks
 
 	max_cutoff = max(used_ks)
 	inds = torch.from_numpy(np.asarray(used_ks) - 1)
 
-	ranks = (torch.arange(max_cutoff) + 1.0)
+	batch_sys_sorted_labels = batch_sys_sorted_labels[:, 0:max_cutoff]
+	batch_bi_sys_sorted_labels = torch.clamp(batch_sys_sorted_labels, min=0, max=1) # binary
+	batch_sys_cumsum_reles = torch.cumsum(batch_bi_sys_sorted_labels, dim=1)
 
-	sys_sorted_labels = sys_sorted_labels[0:max_cutoff]
-	bi_sys_sorted_labels = torch.clamp(sys_sorted_labels, min=0, max=1) # binary
-	sys_cumsum_reles = torch.cumsum(bi_sys_sorted_labels, dim=0)
+	batch_ranks = (torch.arange(max_cutoff).type(tensor).expand_as(batch_sys_cumsum_reles) + 1.0)
 
-	sys_rankwise_precision = sys_cumsum_reles / ranks
-	sys_p_at_ks = sys_rankwise_precision[inds]
-	if valid_max < max(ks):
-		padded_p_at_ks = torch.zeros(len(ks))
-		padded_p_at_ks[0:len(used_ks)] = sys_p_at_ks
+	batch_sys_rankwise_precision = batch_sys_cumsum_reles / batch_ranks
+	batch_sys_p_at_ks = batch_sys_rankwise_precision[:, inds]
+	if need_padding:
+		padded_p_at_ks = torch.zeros(batch_sys_sorted_labels.size(0), len(ks))
+		padded_p_at_ks[:, 0:len(used_ks)] = batch_sys_p_at_ks
 		return padded_p_at_ks
 	else:
-		return sys_p_at_ks
+		return batch_sys_p_at_ks
 
 """ Average Precision """
-def torch_ap_at_ks(sys_sorted_labels, ideal_sorted_labels, ks=None):
+
+def torch_ap_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None):
 	'''
 	AP(average precision) at ks (i.e., different cutoff values)
-	:param ideal_sorted_labels: the ideal ltr_adhoc of labels
-	:param sys_sorted_labels: system's predicted ltr_adhoc of labels in a descending order
+	:param ideal_sorted_labels: [batch_size, ranking_size] the ideal ltr_adhoc of labels
+	:param sys_sorted_labels: [batch_size, ranking_size] system's predicted ltr_adhoc of labels in a descending order
 	:param ks:
-	:return:
+	:return: [batch_size, len(ks)]
 	'''
-
-	valid_max = sys_sorted_labels.size(0)
-	used_ks = [k for k in ks if k <= valid_max] if valid_max < max(ks) else ks
+	valid_max_cutoff = batch_sys_sorted_labels.size(1)
+	need_padding = True if valid_max_cutoff < max(ks) else False
+	used_ks = [k for k in ks if k <= valid_max_cutoff] if need_padding else ks
 	max_cutoff = max(used_ks)
 	inds = torch.from_numpy(np.asarray(used_ks) - 1)
 
-	ranks = (torch.arange(max_cutoff) + 1.0)
+	batch_sys_sorted_labels = batch_sys_sorted_labels[:, 0:max_cutoff]
+	batch_bi_sys_sorted_labels = torch.clamp(batch_sys_sorted_labels, min=0, max=1) # binary
+	batch_sys_cumsum_reles = torch.cumsum(batch_bi_sys_sorted_labels, dim=1)
 
-	sys_sorted_labels = sys_sorted_labels[0:max_cutoff]
-	bi_sys_sorted_labels = torch.clamp(sys_sorted_labels, min=0, max=1) # binary
-	sys_cumsum_reles = torch.cumsum(bi_sys_sorted_labels, dim=0)
+	batch_ranks = (torch.arange(max_cutoff).type(tensor).expand_as(batch_sys_cumsum_reles) + 1.0)
 
-	sys_rankwise_precision = sys_cumsum_reles / ranks # rank-wise precision
-	sys_cumsum_precision = torch.cumsum(sys_rankwise_precision * bi_sys_sorted_labels, dim=0) # exclude precisions of which the corresponding documents are not relevant
+	batch_sys_rankwise_precision = batch_sys_cumsum_reles / batch_ranks # rank-wise precision
+	batch_sys_cumsum_precision = torch.cumsum(batch_sys_rankwise_precision * batch_bi_sys_sorted_labels, dim=1) # exclude precisions of which the corresponding documents are not relevant
 
-	std_cumsum_reles = torch.cumsum(ideal_sorted_labels, dim=0)
-	sys_poswise_ap = sys_cumsum_precision / std_cumsum_reles[0:max_cutoff]
-	sys_ap_at_ks = sys_poswise_ap[inds]
+	batch_std_cumsum_reles = torch.cumsum(batch_ideal_sorted_labels, dim=1)
+	batch_sys_rankwise_ap = batch_sys_cumsum_precision / batch_std_cumsum_reles[:, 0:max_cutoff]
+	batch_sys_ap_at_ks = batch_sys_rankwise_ap[:, inds]
 
-	if valid_max < max(ks):
-		padded_ap_at_ks = torch.zeros(len(ks))
-		padded_ap_at_ks[0:len(used_ks)] = sys_ap_at_ks
+	if need_padding:
+		padded_ap_at_ks = torch.zeros(batch_sys_sorted_labels.size(0), len(ks))
+		padded_ap_at_ks[:, 0:len(used_ks)] = batch_sys_ap_at_ks
 		return padded_ap_at_ks
 	else:
-		return sys_ap_at_ks
+		return batch_sys_ap_at_ks
 
 
 """ NERR """
 
-def torch_ideal_err(sorted_labels, k=10, point=True, gpu=False):
-	assert sorted_labels.size(0) >= k
-
-	max_label = torch.max(sorted_labels)
-
-	labels = sorted_labels[0:k]
-	satis_pros = (torch.pow(2.0, labels) - 1.0) / torch.pow(2.0, max_label)
-
-	unsatis_pros = torch.ones_like(labels) - satis_pros
-	cum_unsatis_pros = torch.cumprod(unsatis_pros, dim=0)
-
-	if gpu:
-		ranks = torch.arange(k).type(tensor) + 1.0
-		expt_ranks = 1.0 / ranks
-	else:
-		ranks = torch.arange(k) + 1.0
-		expt_ranks = 1.0 / ranks
-
-	cascad_unsatis_pros = ranks
-	cascad_unsatis_pros[1:k] = cum_unsatis_pros[0:k-1]
-
-	expt_satis_ranks = expt_ranks * satis_pros * cascad_unsatis_pros  # w.r.t. all rank positions
-
-	if point: # a specific position
-		ideal_err = torch.sum(expt_satis_ranks, dim=0)
-		return ideal_err
-
-	else:
-		ideal_err_at_ks = torch.cumsum(expt_satis_ranks, dim=0)
-		return ideal_err_at_ks
-
-
-def torch_batch_ideal_err(batch_sorted_labels, k=10, gpu=False, point=True):
-	assert batch_sorted_labels.size(1) > k
-
-	batch_max = torch.max(batch_sorted_labels, dim=1)
+def torch_rankwise_err(batch_sorted_labels, max_label=None, k=10, point=True):
+	assert batch_sorted_labels.size(1) >= k
+	assert max_label is not None # it is either query-level or corpus-level
 
 	batch_labels = batch_sorted_labels[:, 0:k]
-	batch_satis_pros = (torch.pow(2.0, batch_labels) - 1.0) / torch.pow(2.0, batch_max)
+	batch_satis_probs = (torch.pow(2.0, batch_labels) - 1.0) / torch.pow(2.0, max_label)
 
-	batch_unsatis_pros = torch.ones(batch_labels) - batch_satis_pros
-	batch_cum_unsatis_pros = torch.cumprod(batch_unsatis_pros, dim=1)
+	batch_unsatis_probs = torch.ones_like(batch_labels) - batch_satis_probs
+	batch_cum_unsatis_probs = torch.cumprod(batch_unsatis_probs, dim=1)
 
-	positions = torch.arange(k) + 1.0
-	positions = positions.view(1, -1)
-	positions = torch.repeat_interleave(positions, batch_sorted_labels.size(0), dim=0)
+	batch_ranks = torch.arange(k).type(tensor).expand_as(batch_labels) + 1.0
+	batch_expt_ranks = 1.0 / batch_ranks
 
-	batch_expt_ranks = 1.0 / positions
+	batch_cascad_unsatis_probs = torch.ones_like(batch_expt_ranks)
+	batch_cascad_unsatis_probs[:, 1:k] = batch_cum_unsatis_probs[:, 0:k-1]
 
-	cascad_unsatis_pros = positions
-	cascad_unsatis_pros[:, 1:k] = batch_cum_unsatis_pros[:, 0:k-1]
+	batch_expt_satis_ranks = batch_expt_ranks * batch_satis_probs * batch_cascad_unsatis_probs  # w.r.t. all rank positions
 
-	expt_satis_ranks = batch_expt_ranks * batch_satis_pros * cascad_unsatis_pros  # w.r.t. all rank positions
-
-	if point:
-		batch_errs = torch.sum(expt_satis_ranks, dim=1)
-		return batch_errs
+	if point: # a specific position
+		batch_err_at_k = torch.sum(batch_expt_satis_ranks, dim=1)
+		return batch_err_at_k
 	else:
-		batch_err_at_ks = torch.cumsum(expt_satis_ranks, dim=1)
-		return batch_err_at_ks
+		batch_rankwise_err = torch.cumsum(batch_expt_satis_ranks, dim=1)
+		return batch_rankwise_err
 
-
-def torch_nerr_at_ks(sys_sorted_labels, ideal_sorted_labels, ks=None, multi_level_rele=True):
+def torch_nerr_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, multi_level_rele=True):
 	'''
-	:param sys_sorted_labels: the standard labels sorted in descending order according to predicted relevance scores
+	:param sys_sorted_labels: [batch_size, ranking_size] the standard labels sorted in descending order according to predicted relevance scores
 	:param ks:
 	:param multi_level_rele:
-	:return:
+	:return: [batch_size, len(ks)]
 	'''
-	valid_max = sys_sorted_labels.size(0)
-	used_ks = [k for k in ks if k <= valid_max] if valid_max < max(ks) else ks
+	valid_max_cutoff = batch_sys_sorted_labels.size(1)
+	need_padding = True if valid_max_cutoff < max(ks) else False
+	used_ks = [k for k in ks if k <= valid_max_cutoff] if need_padding else ks
 
+	max_label = torch.max(batch_ideal_sorted_labels)
 	max_cutoff = max(used_ks)
 	inds = torch.from_numpy(np.asarray(used_ks) - 1)
+
 	if multi_level_rele:
-		positions = torch.arange(max_cutoff) + 1.0
-		expt_ranks = 1.0 / positions    # expected stop positions
-
-		tor_max_rele = torch.max(sys_sorted_labels)
-		satis_pros = (torch.pow(2.0, sys_sorted_labels[0:max_cutoff]) - 1.0)/torch.pow(2.0, tor_max_rele)
-		non_satis_pros = torch.ones(max_cutoff) - satis_pros
-		cum_non_satis_pros = torch.cumprod(non_satis_pros, dim=0)
-
-		cascad_non_satis_pros = positions
-		cascad_non_satis_pros[1:max_cutoff] = cum_non_satis_pros[0:max_cutoff-1]
-		expt_satis_ranks = expt_ranks * satis_pros * cascad_non_satis_pros  # w.r.t. all rank positions
-
-		err_at_ks = torch.cumsum(expt_satis_ranks, dim=0)
-		#print(err_at_ks)
-
-		ideal_err_at_ks = torch_ideal_err(ideal_sorted_labels, k=max_cutoff, point=False)
-		tmp_nerr_at_ks = err_at_ks/ideal_err_at_ks
-
-		nerr_at_ks = tmp_nerr_at_ks[inds]
-		if valid_max < max(ks):
-			padded_nerr_at_ks = torch.zeros(len(ks))
-			padded_nerr_at_ks[0:len(used_ks)] = nerr_at_ks
+		batch_sys_rankwise_err = torch_rankwise_err(batch_sys_sorted_labels, max_label=max_label, k=max_cutoff, point=False)
+		batch_ideal_rankwise_err = torch_rankwise_err(batch_ideal_sorted_labels, max_label=max_label, k=max_cutoff, point=False)
+		batch_rankwise_nerr = batch_sys_rankwise_err/batch_ideal_rankwise_err
+		batch_nerr_at_ks = batch_rankwise_nerr[:, inds]
+		if need_padding:
+			padded_nerr_at_ks = torch.zeros(batch_sys_sorted_labels.size(0), len(ks))
+			padded_nerr_at_ks[:, 0:len(used_ks)] = batch_nerr_at_ks
 			return padded_nerr_at_ks
 		else:
-			return nerr_at_ks
+			return batch_nerr_at_ks
 	else:
 		raise NotImplementedError
 
 
-
 """ nDCG """
 
-def idcg_std(sorted_labels, multi_level_rele=True):
-	'''
-	nums = np.power(2, sorted_labels) - 1.0
-	denoms = np.log2(np.arange(len(sorted_labels)) + 2)
-	idcgs = np.sum(nums/denoms, axis=1)
-	return idcgs
-	'''
-	if multi_level_rele:
-		nums = torch.pow(2.0, sorted_labels) - 1.0
-	else:
-		nums = sorted_labels
-
-	a_range = torch.arange(sorted_labels.size(1), dtype=torch.float).to(device) if gpu else torch.arange(sorted_labels.size(1), dtype=torch.float)
-	denoms = torch.log2(2.0 + a_range)
-	idcgs = torch.sum(nums / denoms, dim=1)
-
-	return idcgs
-
-def torch_discounted_cumu_gain_at_k(sorted_labels, cutoff, multi_level_rele=True):
+def torch_dcg_at_k(batch_sorted_labels, cutoff=None, multi_level_rele=True):
 	'''
 	ICML-nDCG, which places stronger emphasis on retrieving relevant documents
-	:param sorted_labels: ranked labels (either standard or predicted by a system) in the form of np array
-	:param max_cutoff: the maximum rank position to be considered
-	:param multi_lavel_rele: either the case of multi-level relevance or the case of listwise int-value, e.g., MQ2007-list
-	:return: cumulative gains for each rank position
+	:param batch_sorted_labels: [batch_size, ranking_size] a batch of ranked labels (either standard or predicted by a system)
+	:param cutoff: the cutoff position
+	:param multi_level_rele: either the case of multi-level relevance or the case of listwise int-value, e.g., MQ2007-list
+	:return: [batch_size, 1] cumulative gains for each rank position
 	'''
-	if multi_level_rele:    #the common case with multi-level labels
-		nums = torch.pow(2.0, sorted_labels[0:cutoff]) - 1.0
-	else:
-		nums = sorted_labels[0:cutoff]  #the case like listwise ltr_adhoc, where the relevance is labeled as (n-rank_position)
-
-	denoms = torch.log2(torch.arange(cutoff).type(torch.FloatTensor) + 2.0)   #discounting factor
-	dited_cumu_gain = torch.sum(nums/denoms)   # discounted cumulative gain value
-
-	return dited_cumu_gain
-
-def torch_discounted_cumu_gain_at_ks(sorted_labels, max_cutoff, multi_level_rele=True):
-	'''
-	ICML-nDCG, which places stronger emphasis on retrieving relevant documents
-	:param sorted_labels: ranked labels (either standard or predicted by a system) in the form of np array
-	:param max_cutoff: the maximum rank position to be considered
-	:param multi_lavel_rele: either the case of multi-level relevance or the case of listwise int-value, e.g., MQ2007-list
-	:return: cumulative gains for each rank position
-	'''
+	if cutoff is None: # using whole list
+		cutoff = batch_sorted_labels.size(1)
 
 	if multi_level_rele:    #the common case with multi-level labels
-		nums = torch.pow(2.0, sorted_labels[0:max_cutoff]) - 1.0
-	else:
-		nums = sorted_labels[0:max_cutoff]  #the case like listwise ltr_adhoc, where the relevance is labeled as (n-rank_position)
+		batch_numerators = torch.pow(2.0, batch_sorted_labels[:, 0:cutoff]) - 1.0
+	else: # the case like listwise ltr_adhoc, where the relevance is labeled as (n-rank_position)
+		batch_numerators = batch_sorted_labels[:, 0:cutoff]
 
-	denoms = torch.log2(torch.arange(max_cutoff).type(torch.FloatTensor) + 2.0)   #discounting factor
-	dited_cumu_gains = torch.cumsum(nums/denoms, dim=0)   # discounted cumulative gain value w.r.t. each position
+	batch_discounts = torch.log2(torch.arange(cutoff).type(tensor).expand_as(batch_numerators) + 2.0)
+	batch_dcg_at_k = torch.sum(batch_numerators/batch_discounts, dim=1, keepdim=True)
+	return batch_dcg_at_k
 
-	return dited_cumu_gains
+def torch_dcg_at_ks(batch_sorted_labels, max_cutoff, multi_level_rele=True):
+	'''
+	:param batch_sorted_labels: [batch_size, ranking_size] ranked labels (either standard or predicted by a system)
+	:param max_cutoff: the maximum cutoff value
+	:param multi_level_rele: either the case of multi-level relevance or the case of listwise int-value, e.g., MQ2007-list
+	:return: [batch_size, max_cutoff] cumulative gains for each rank position
+	'''
+	if multi_level_rele:    #the common case with multi-level labels
+		batch_numerators = torch.pow(2.0, batch_sorted_labels[:, 0:max_cutoff]) - 1.0
+	else: # the case like listwise ltr_adhoc, where the relevance is labeled as (n-rank_position)
+		batch_numerators = batch_sorted_labels[:, 0:max_cutoff]
 
-def torch_nDCG_at_k(sys_sorted_labels, ideal_sorted_labels, k=None, multi_level_rele=True):
-	sys_dited_cg_at_k = torch_discounted_cumu_gain_at_k(sys_sorted_labels, cutoff=k, multi_level_rele=multi_level_rele)  # only using the cumulative gain at the final rank position
-	ideal_dited_cg_at_k = torch_discounted_cumu_gain_at_k(ideal_sorted_labels, cutoff=k, multi_level_rele=multi_level_rele)
-	ndcg_at_k = sys_dited_cg_at_k / ideal_dited_cg_at_k
-	return ndcg_at_k
+	batch_discounts = torch.log2(torch.arange(max_cutoff).type(tensor).expand_as(batch_numerators) + 2.0)
+	batch_dcg_at_ks = torch.cumsum(batch_numerators/batch_discounts, dim=1)   # dcg w.r.t. each position
+	return batch_dcg_at_ks
 
-def torch_nDCG_at_ks(sys_sorted_labels, ideal_sorted_labels, ks=None, multi_level_rele=True):
-	valid_max = sys_sorted_labels.size(0)
-	used_ks = [k for k in ks if k<=valid_max] if valid_max < max(ks) else ks
+def torch_nDCG_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, multi_level_rele=True):
+	batch_sys_dcg_at_k = torch_dcg_at_k(batch_sys_sorted_labels, cutoff=k, multi_level_rele=multi_level_rele)  # only using the cumulative gain at the final rank position
+	batch_ideal_dcg_at_k = torch_dcg_at_k(batch_ideal_sorted_labels, cutoff=k, multi_level_rele=multi_level_rele)
+	batch_ndcg_at_k = batch_sys_dcg_at_k / batch_ideal_dcg_at_k
+	return batch_ndcg_at_k
+
+def torch_nDCG_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, multi_level_rele=True):
+	valid_max_cutoff = batch_sys_sorted_labels.size(1)
+	used_ks = [k for k in ks if k<=valid_max_cutoff] if valid_max_cutoff < max(ks) else ks
 
 	inds = torch.from_numpy(np.asarray(used_ks) - 1)
-	sys_dited_cgs = torch_discounted_cumu_gain_at_ks(sys_sorted_labels, max_cutoff=max(used_ks), multi_level_rele=multi_level_rele)
-	sys_dited_cg_at_ks = sys_dited_cgs[inds]  # get cumulative gains at specified rank positions
-	ideal_dited_cgs = torch_discounted_cumu_gain_at_ks(ideal_sorted_labels, max_cutoff=max(used_ks), multi_level_rele=multi_level_rele)
-	ideal_dited_cg_at_ks = ideal_dited_cgs[inds]
+	batch_sys_dcgs = torch_dcg_at_ks(batch_sys_sorted_labels, max_cutoff=max(used_ks), multi_level_rele=multi_level_rele)
+	batch_sys_dcg_at_ks = batch_sys_dcgs[:, inds]  # get cumulative gains at specified rank positions
+	batch_ideal_dcgs = torch_dcg_at_ks(batch_ideal_sorted_labels, max_cutoff=max(used_ks), multi_level_rele=multi_level_rele)
+	batch_ideal_dcg_at_ks = batch_ideal_dcgs[:, inds]
 
-	ndcg_at_ks = sys_dited_cg_at_ks / ideal_dited_cg_at_ks
+	batch_ndcg_at_ks = batch_sys_dcg_at_ks / batch_ideal_dcg_at_ks
 
-	if valid_max < max(ks):
-		padded_ndcg_at_ks = torch.zeros(len(ks))
-		padded_ndcg_at_ks[0:len(used_ks)] = ndcg_at_ks
+	if valid_max_cutoff < max(ks):
+		padded_ndcg_at_ks = torch.zeros(batch_sys_sorted_labels.size(0), len(ks))
+		padded_ndcg_at_ks[:, 0:len(used_ks)] = batch_ndcg_at_ks
 		return padded_ndcg_at_ks
 	else:
-		return ndcg_at_ks
+		return batch_ndcg_at_ks
 
 
 
@@ -323,6 +231,9 @@ def torch_kendall_tau(sys_ranking, natural_ascending_as_reference = True):
 
 	return tau
 
+def rele_gain(rele_level, gain_base=2.0):
+	gain = np.power(gain_base, rele_level) - 1.0
+	return gain
 
 def np_metric_at_ks(ranker=None, test_Qs=None, ks=[1, 5, 10], multi_level_rele=True, max_rele_level=None):
 	'''
@@ -369,7 +280,7 @@ def np_metric_at_ks(ranker=None, test_Qs=None, ks=[1, 5, 10], multi_level_rele=T
 		sum_ap_at_ks = torch.add(sum_ap_at_ks, ap_at_ks_per_query)
 		list_ap_at_ks_per_q.append(ap_at_ks_per_query.numpy())
 
-		p_at_ks_per_query = torch_p_at_ks(sys_sorted_labels=sys_sorted_labels, ks=ks)
+		p_at_ks_per_query = torch_precision_at_ks(sys_sorted_labels=sys_sorted_labels, ks=ks)
 		sum_p_at_ks = torch.add(sum_p_at_ks, p_at_ks_per_query)
 		list_p_at_ks_per_q.append(p_at_ks_per_query.numpy())
 

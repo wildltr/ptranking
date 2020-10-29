@@ -19,7 +19,7 @@ from itertools import product
 
 from ptranking.base.ranker import NeuralRanker
 from ptranking.eval.parameter import ModelParameter
-from ptranking.metric.adhoc_metric import torch_ideal_dcg
+from ptranking.metric.adhoc_metric import torch_dcg_at_k
 from ptranking.ltr_global import global_gpu as gpu, global_device as device, tensor, epsilon
 
 
@@ -80,7 +80,7 @@ class LambdaLoss(NeuralRanker):
         dists_1D = 1.0 / torch.log2(batch_std_ranks + 2.0)  # discount co-efficients
 
         # assuming that batch_labels is pre-sorted, i.e., presort=True for efficiency
-        batch_idcgs = torch_ideal_dcg(batch_sorted_labels=batch_labels, gpu=gpu)
+        batch_idcgs = torch_dcg_at_k(batch_sorted_labels=batch_labels)
 
         if self.multi_level_rele:
             batch_gains = torch.pow(2.0, batch_stds_sorted_via_preds) - 1.0

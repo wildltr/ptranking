@@ -11,7 +11,7 @@ import torch
 
 from ptranking.base.ranker import NeuralRanker
 from ptranking.eval.parameter import ModelParameter
-from ptranking.metric.adhoc_metric import torch_ideal_dcg
+from ptranking.metric.adhoc_metric import torch_dcg_at_k
 from ptranking.base.neural_utils import robust_sigmoid
 
 from ptranking.ltr_global import global_gpu as gpu
@@ -33,7 +33,7 @@ def approxNDCG(batch_preds=None, batch_stds=None, alpha=10):
 
     ''' since the input standard labels are sorted in advance, thus directly used '''
     # sorted_labels, _ = torch.sort(batch_stds, dim=1, descending=True)  # for optimal ltr_adhoc based on standard labels
-    batch_idcgs = torch_ideal_dcg(batch_sorted_labels=batch_stds, gpu=gpu)  # ideal dcg given standard labels
+    batch_idcgs = torch_dcg_at_k(batch_sorted_labels=batch_stds, cutoff=None)  # ideal dcg given standard labels
 
     batch_gains = torch.pow(2.0, batch_stds) - 1.0
 
@@ -49,7 +49,7 @@ def approxNDCG_loss(batch_preds=None, batch_stds=None, alpha=10, multi_level_rel
     ''' since the input standard labels are sorted in advance, thus directly used '''
     # sorted_labels, _ = torch.sort(batch_stds, dim=1, descending=True)  # for optimal ltr_adhoc based on standard labels
     # ideal dcg given standard labels
-    batch_idcgs = torch_ideal_dcg(batch_sorted_labels=batch_stds, gpu=gpu, multi_level_rele=multi_level_rele)
+    batch_idcgs = torch_dcg_at_k(batch_sorted_labels=batch_stds, cutoff=None, multi_level_rele=multi_level_rele)
 
     if multi_level_rele:
         batch_gains = torch.pow(2.0, batch_stds) - 1.0

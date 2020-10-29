@@ -8,7 +8,7 @@
 
 import torch
 
-from ptranking.metric.adhoc_metric import torch_ideal_dcg
+from ptranking.metric.adhoc_metric import torch_dcg_at_k
 from ptranking.ltr_global import global_gpu as gpu, tensor
 
 #######
@@ -23,7 +23,7 @@ def get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds, multi_level_rele=Tru
     :return:
     '''
     # ideal discount cumulative gains
-    batch_idcgs = torch_ideal_dcg(batch_sorted_labels=batch_stds, gpu=gpu, multi_level_rele=multi_level_rele)
+    batch_idcgs = torch_dcg_at_k(batch_sorted_labels=batch_stds, multi_level_rele=multi_level_rele)
 
     if multi_level_rele:
         batch_gains = torch.pow(2.0, batch_stds_sorted_via_preds) - 1.0
@@ -51,7 +51,7 @@ def get_sharp_swap_deltas(batch_stds, batch_stds_sorted_via_preds, pos_swap_cons
     :param batch_stds_sorted_via_preds: the standard labels sorted based on the corresponding predictions
     :return:
     '''
-    batch_idcgs = torch_ideal_dcg(batch_sorted_labels=batch_stds, gpu=gpu)                      # ideal discount cumulative gains
+    batch_idcgs = torch_dcg_at_k(batch_sorted_labels=batch_stds)                      # ideal discount cumulative gains
 
     batch_gains = torch.pow(2.0, batch_stds_sorted_via_preds) - 1.0
     batch_n_gains = batch_gains / batch_idcgs               # normalised gains

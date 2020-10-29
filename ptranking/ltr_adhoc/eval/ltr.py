@@ -329,7 +329,8 @@ class LTREvaluator():
 
                 if (do_summary or do_vali) and (epoch_k % log_step == 0 or epoch_k == 1):  # stepwise check
                     if do_vali:     # per-step validation score
-                        vali_eval_tmp = ndcg_at_k(ranker=ranker, test_data=vali_data, k=vali_k, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+                        vali_eval_tmp = ndcg_at_k(ranker=ranker, test_data=vali_data, k=vali_k,
+                                                  multi_level_rele=self.data_setting.data_dict['multi_level_rele'])
                         vali_eval_v = vali_eval_tmp.data.numpy()
                         if epoch_k > 1:  # further validation comparison
                             curr_vali_ndcg = vali_eval_v
@@ -344,12 +345,12 @@ class LTREvaluator():
 
                     if do_summary:  # summarize per-step performance w.r.t. train, test
                         fold_k_epoch_k_train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs,
-                                                                           multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+                                                                  multi_level_rele=self.data_setting.data_dict['multi_level_rele'])
                         np_fold_k_epoch_k_train_ndcg_ks = fold_k_epoch_k_train_ndcg_ks.cpu().numpy() if gpu else fold_k_epoch_k_train_ndcg_ks.data.numpy()
                         list_fold_k_train_eval_track.append(np_fold_k_epoch_k_train_ndcg_ks)
 
                         fold_k_epoch_k_test_ndcg_ks  = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs,
-                                                                           multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+                                                                  multi_level_rele=self.data_setting.data_dict['multi_level_rele'])
                         np_fold_k_epoch_k_test_ndcg_ks  = fold_k_epoch_k_test_ndcg_ks.cpu().numpy() if gpu else fold_k_epoch_k_test_ndcg_ks.data.numpy()
                         list_fold_k_test_eval_track.append(np_fold_k_epoch_k_test_ndcg_ks)
 
@@ -393,7 +394,7 @@ class LTREvaluator():
                 fold_optimal_ranker = ranker
 
             torch_fold_ndcg_ks = ndcg_at_ks(ranker=fold_optimal_ranker, test_data=test_data, ks=cutoffs,
-                                                     multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+                                            multi_level_rele=self.data_setting.data_dict['multi_level_rele'])
             fold_ndcg_ks = torch_fold_ndcg_ks.data.numpy()
 
             performance_list = [model_id + ' Fold-' + str(fold_k)]      # fold-wise performance
