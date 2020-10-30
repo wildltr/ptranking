@@ -12,11 +12,12 @@ import torch.nn.functional as F
 
 from ptranking.ltr_global import torch_zero
 from ptranking.base.ranker import NeuralRanker
-from ptranking.eval.parameter import ModelParameter
+from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.metric.metric_utils import get_delta_ndcg
 from ptranking.ltr_adhoc.util.gather_utils import torch_triu_indice
+from ptranking.data.data_utils import LABEL_TYPE
 
-def lambdaRank_loss_diagonal(batch_preds=None, batch_stds=None, sigma=None):
+def lambdaRank_loss_diagonal(batch_preds=None, batch_stds=None, sigma=None, label_type=None):
     '''
     This method will impose explicit bias to highly ranked documents that are essentially ties
     :param batch_preds:
@@ -37,7 +38,7 @@ def lambdaRank_loss_diagonal(batch_preds=None, batch_stds=None, sigma=None):
     batch_pred_diffs = torch.unsqueeze(batch_preds_sorted, dim=2) - torch.unsqueeze(batch_preds_sorted, dim=1)  # computing pairwise differences, i.e., s_i - s_j
     batch_pred_s_ij = batch_pred_diffs[:, pair_row_inds, pair_col_inds] # unique pairwise comparisons according to a ltr_adhoc of documents
 
-    batch_delta_ndcg = get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds)
+    batch_delta_ndcg = get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds, label_type=label_type)
     batch_delta_ndcg = batch_delta_ndcg[:, pair_row_inds, pair_col_inds]
 
     batch_loss_1st = 0.5 * sigma * batch_pred_s_ij * (1.0 - batch_std_Sij) # cf. the 1st equation in page-3
@@ -48,7 +49,7 @@ def lambdaRank_loss_diagonal(batch_preds=None, batch_stds=None, sigma=None):
     return batch_loss
 
 
-def lambdaRank_loss_full(batch_preds=None, batch_stds=None, sigma=None, multi_level_rele=None):
+def lambdaRank_loss_full(batch_preds=None, batch_stds=None, sigma=None, label_type=None):
     '''
     Instead of strictly getting the uppper diagonal entries, here we compute the lambdaloss by fully making use of the properties as follows:
     (1) using the full pairwise difference matrix is twice the loss of using merely the uppper diagonal entries
@@ -62,7 +63,7 @@ def lambdaRank_loss_full(batch_preds=None, batch_stds=None, sigma=None, multi_le
 
     batch_pred_s_ij = torch.unsqueeze(batch_preds_sorted, dim=2) - torch.unsqueeze(batch_preds_sorted, dim=1)  # computing pairwise differences, i.e., s_i - s_j
 
-    batch_delta_ndcg = get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds, multi_level_rele=multi_level_rele)
+    batch_delta_ndcg = get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds, label_type=label_type)
 
     batch_loss_1st = 0.5 * sigma * batch_pred_s_ij * (1.0 - batch_std_Sij) # cf. the 1st equation in page-3
     batch_loss_2nd = torch.log(torch.exp(-sigma * batch_pred_s_ij) + 1.0)  # cf. the 1st equation in page-3
@@ -73,7 +74,7 @@ def lambdaRank_loss_full(batch_preds=None, batch_stds=None, sigma=None, multi_le
     return batch_loss
 
 
-def lambdaRank_loss_full_soft(batch_preds=None, batch_stds=None, sigma=None):
+def lambdaRank_loss_full_soft(batch_preds=None, batch_stds=None, sigma=None, label_type=None):
     '''
     Instead of strictly getting the uppper diagonal entries, here we compute the lambdaloss by fully making use of the properties as follows:
     (1) using the full pairwise difference matrix is twice the loss of using merely the uppper diagonal entries
@@ -88,7 +89,7 @@ def lambdaRank_loss_full_soft(batch_preds=None, batch_stds=None, sigma=None):
 
     batch_pred_s_ij = torch.unsqueeze(batch_preds_sorted, dim=2) - torch.unsqueeze(batch_preds_sorted, dim=1)  # computing pairwise differences, i.e., s_i - s_j
 
-    batch_delta_ndcg = get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds)
+    batch_delta_ndcg = get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds, label_type=label_type)
 
     batch_loss = torch.sum(sigma * (F.softplus(batch_pred_s_ij, beta=sigma) - batch_std_Sij * batch_pred_s_ij) * batch_delta_ndcg)
 
@@ -156,8 +157,6 @@ class LambdaRank(NeuralRanker):
         super(LambdaRank, self).__init__(id='LambdaRank', sf_para_dict=sf_para_dict)
         self.sigma = model_para_dict['sigma']
         self.loss_version = model_para_dict['loss_version']
-        # todo revise all loss functions correspondingly [now only full is done]
-        self.multi_level_rele = False if model_para_dict['std_rele_is_permutation'] else True
 
     def inner_train(self, batch_preds, batch_stds, **kwargs):
         '''
@@ -165,6 +164,9 @@ class LambdaRank(NeuralRanker):
         :param batch_stds:  [batch, ranking_size] each row represents the standard relevance grades for documents within a ltr_adhoc
         :return:
         '''
+        label_type = kwargs['label_type']
+        assert LABEL_TYPE.MultiLabel == label_type
+
         if 'presort' in kwargs and kwargs['presort']:
             target_batch_preds, target_batch_stds = batch_preds, batch_stds
         else:
@@ -172,24 +174,23 @@ class LambdaRank(NeuralRanker):
             target_batch_preds = torch.gather(batch_preds, dim=1, index=batch_sorted_inds)
 
         if 'FullSoft' == self.loss_version: # ''' softplus version '''
-            batch_loss = lambdaRank_loss_full_soft(target_batch_preds, target_batch_stds, sigma=self.sigma)
-
+            batch_loss = lambdaRank_loss_full_soft(target_batch_preds, target_batch_stds,
+                                                   sigma=self.sigma, label_type=label_type)
         elif 'Full' == self.loss_version:
             '''
             The following comparison between full and diagonal shows that: (1) the performance is almost the same; (2) explicit extracting indices in diagonal implementation is quite time-comsuming.
             Thus lambdaRank_loss_full is used as the default.
             Elapsed time: 0:04:04.392835 LambdaRank 2-fold cross validation scores: nDCG@1:0.4855, nDCG@3:0.4911, nDCG@5:0.5028, nDCG@10:0.5330, nDCG@20:0.5987, nDCG@50:0.0158
             '''
-            batch_loss = lambdaRank_loss_full(target_batch_preds, target_batch_stds, sigma=self.sigma,
-                                              multi_level_rele=self.multi_level_rele)
+            batch_loss = lambdaRank_loss_full(target_batch_preds, target_batch_stds,
+                                              sigma=self.sigma, label_type=label_type)
 
         elif 'Diag' == self.loss_version:
             # Elapsed time: 0:06:19.067998 LambdaRank 2-fold cross validation scores: nDCG@1:0.4849, nDCG@3:0.4909, nDCG@5:0.5028, nDCG@10:0.5328, nDCG@20:0.5985, nDCG@50:0.0158
-            batch_loss = lambdaRank_loss_diagonal(target_batch_preds, target_batch_stds, sigma=self.sigma)
-
+            batch_loss = lambdaRank_loss_diagonal(target_batch_preds, target_batch_stds,
+                                                  sigma=self.sigma, label_type=label_type)
         elif 'OP' == self.loss_version:
             batch_loss = apply_LambdaRank_OP(target_batch_preds, target_batch_stds, self.sigma, self.pair, self.focal)
-
         else:
             raise NotImplementedError
 
@@ -204,10 +205,9 @@ class LambdaRank(NeuralRanker):
 
 class LambdaRankParameter(ModelParameter):
     ''' Parameter class for LambdaRank '''
-    def __init__(self, debug=False, std_rele_is_permutation=False, para_json=None):
+    def __init__(self, debug=False, para_json=None):
         super(LambdaRankParameter, self).__init__(model_id='LambdaRank')
         self.debug = debug
-        self.std_rele_is_permutation = std_rele_is_permutation
         self.para_json = para_json
 
     def default_para_dict(self):
@@ -215,8 +215,7 @@ class LambdaRankParameter(ModelParameter):
         Default parameter setting for LambdaRank
         :return:
         """
-        self.lambda_para_dict = dict(model_id=self.model_id, sigma=1.0, loss_version='Full',
-                                     std_rele_is_permutation=self.std_rele_is_permutation)
+        self.lambda_para_dict = dict(model_id=self.model_id, sigma=1.0, loss_version='Full')
         return self.lambda_para_dict
 
     def to_para_string(self, log=False, given_para_dict=None):
@@ -246,6 +245,5 @@ class LambdaRankParameter(ModelParameter):
             choice_sigma = [5.0, 1.0] if self.debug else [1.0]  # 1.0, 10.0, 50.0, 100.0
 
         for sigma in choice_sigma:
-            self.lambda_para_dict = dict(model_id=self.model_id, sigma=sigma, loss_version='Full',
-                                         std_rele_is_permutation=self.std_rele_is_permutation)
+            self.lambda_para_dict = dict(model_id=self.model_id, sigma=sigma, loss_version='Full')
             yield self.lambda_para_dict

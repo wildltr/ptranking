@@ -17,10 +17,11 @@ pages = {1313–1322},
 import torch
 from itertools import product
 
+from ptranking.data.data_utils import LABEL_TYPE
 from ptranking.base.ranker import NeuralRanker
-from ptranking.eval.parameter import ModelParameter
+from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.metric.adhoc_metric import torch_dcg_at_k
-from ptranking.ltr_global import global_gpu as gpu, global_device as device, tensor, epsilon
+from ptranking.ltr_global import global_device as device, tensor, epsilon
 
 
 LAMBDALOSS_TYPE = ['NDCG_Loss1', 'NDCG_Loss2', 'NDCG_Loss2++'] # todo add 'ARP_Loss1', 'ARP_Loss2',
@@ -62,7 +63,6 @@ class LambdaLoss(NeuralRanker):
     def __init__(self, sf_para_dict=None, model_para_dict=None):
         super(LambdaLoss, self).__init__(id='LambdaLoss', sf_para_dict=sf_para_dict)
         self.lambdaloss_dict = model_para_dict
-        self.multi_level_rele = False if model_para_dict['std_rele_is_permutation'] else True
         self.k, self.sigma, self.loss_type = model_para_dict['k'], model_para_dict['sigma'], model_para_dict['loss_type']
         if 'NDCG_Loss2++' == self.loss_type: self.mu = model_para_dict['mu']
 
@@ -73,6 +73,9 @@ class LambdaLoss(NeuralRanker):
         :param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ltr_adhoc
         :return:
         '''
+        label_type = kwargs['label_type']
+        assert label_type == LABEL_TYPE.MultiLabel
+
         if 'presort' in kwargs and kwargs['presort']:
             target_batch_preds, target_batch_stds = batch_preds, batch_stds
         else:
@@ -88,10 +91,12 @@ class LambdaLoss(NeuralRanker):
         # ideal dcg values based on optimal order
         batch_idcgs = torch_dcg_at_k(batch_sorted_labels=target_batch_stds)
 
-        if self.multi_level_rele:
+        if label_type == LABEL_TYPE.MultiLabel:
             batch_gains = torch.pow(2.0, batch_stds_sorted_via_preds) - 1.0
-        else:
+        elif label_type == LABEL_TYPE.Permutation:
             batch_gains = batch_stds_sorted_via_preds
+        else:
+            raise NotImplementedError
 
         batch_n_gains = batch_gains / batch_idcgs  # normalised gains
 

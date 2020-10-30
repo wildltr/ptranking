@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ptranking.eval.parameter import ModelParameter
+from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.ltr_adversarial.base.ad_player import AdversarialPlayer
 from ptranking.ltr_adversarial.base.ad_machine import AdversarialMachine
 

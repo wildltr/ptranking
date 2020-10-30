@@ -8,8 +8,8 @@ from sklearn.datasets import load_svmlight_file
 import lightgbm as lgbm
 from lightgbm import Dataset
 
-from ptranking.eval.parameter import ModelParameter
-from ptranking.data.data_utils import load_letor_data_as_libsvm_data, YAHOO_LTR
+from ptranking.ltr_adhoc.eval.parameter import ModelParameter
+from ptranking.data.data_utils import load_letor_data_as_libsvm_data, YAHOO_LTR, SPLIT_TYPE
 
 from ptranking.ltr_tree.util.lightgbm_util import \
     lightgbm_custom_obj_lambdarank, lightgbm_custom_obj_ranknet, lightgbm_custom_obj_listnet,\
@@ -61,22 +61,25 @@ class LightGBMLambdaMART():
         """
         data_id, do_validation = data_dict['data_id'], eval_dict['do_validation']
 
+        train_presort, validation_presort, test_presort = data_dict['train_presort'], data_dict['validation_presort'],\
+                                                          data_dict['test_presort']
+
         # prepare training & testing datasets
-        file_train_data, file_train_group = \
-            load_letor_data_as_libsvm_data(file_train, train=True, data_dict=data_dict, eval_dict=eval_dict)
+        file_train_data, file_train_group = load_letor_data_as_libsvm_data(file_train, split_type=SPLIT_TYPE.Train,
+                                                       data_dict=data_dict, eval_dict=eval_dict, presort=train_presort)
         x_train, y_train = load_svmlight_file(file_train_data)
         group_train = np.loadtxt(file_train_group)
         train_set = Dataset(data=x_train, label=y_train, group=group_train)
 
-        file_test_data, file_test_group = \
-            load_letor_data_as_libsvm_data(file_test, data_dict=data_dict, eval_dict=eval_dict)
+        file_test_data, file_test_group = load_letor_data_as_libsvm_data(file_test, split_type=SPLIT_TYPE.Test,
+                                                     data_dict=data_dict, eval_dict=eval_dict, presort=test_presort)
         x_test, y_test = load_svmlight_file(file_test_data)
         group_test = np.loadtxt(file_test_group)
         # test_set = Dataset(data=x_test, label=y_test, group=group_test)
 
         if do_validation: # prepare validation dataset if needed
-            file_vali_data, file_vali_group = \
-                load_letor_data_as_libsvm_data(file_vali, data_dict=data_dict, eval_dict=eval_dict)
+            file_vali_data, file_vali_group=load_letor_data_as_libsvm_data(file_vali, split_type=SPLIT_TYPE.Validation,
+                                                data_dict=data_dict, eval_dict=eval_dict, presort=validation_presort)
             x_valid, y_valid = load_svmlight_file(file_vali_data)
             group_valid = np.loadtxt(file_vali_group)
             valid_set = Dataset(data=x_valid, label=y_valid, group=group_valid)

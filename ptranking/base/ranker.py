@@ -6,6 +6,7 @@
 """
 
 import os
+from enum import Enum, unique, auto
 
 import torch
 import torch.nn as nn
@@ -17,6 +18,13 @@ from torch.nn.init import xavier_normal_ as nr_init
 
 from ptranking.base.neural_utils import get_AF, ResidualBlock_FFNNs
 from ptranking.ltr_global import global_gpu as gpu, global_device as device
+
+@unique
+class LTRFRAME_TYPE(Enum):
+    """ Learning-to-rank frame type """
+    GBDT = auto()
+    Adhoc = auto()
+    Adversarial = auto()
 
 '''
 1. reset parameters optimizer for cross validataion

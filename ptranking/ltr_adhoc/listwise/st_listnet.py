@@ -11,7 +11,7 @@ import torch
 import torch.nn.functional as F
 
 from ptranking.base.ranker import NeuralRanker
-from ptranking.eval.parameter import ModelParameter
+from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 
 from ptranking.ltr_global import global_gpu as gpu, global_device as device
 

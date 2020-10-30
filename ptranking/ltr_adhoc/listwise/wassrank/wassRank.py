@@ -13,11 +13,11 @@ from itertools import product
 import torch
 
 from ptranking.base.ranker import NeuralRanker
-from ptranking.eval.parameter import ModelParameter
+from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.ltr_adhoc.listwise.wassrank.wasserstein_loss_layer import Y_WassersteinLossStab, EntropicOTLoss
 from ptranking.ltr_adhoc.listwise.wassrank.wasserstein_cost_mat import get_explicit_cost_mat, get_normalized_histograms
 
-from ptranking.ltr_global import global_gpu as gpu, global_device as device, tensor
+from ptranking.ltr_global import global_gpu as gpu, tensor
 
 wasserstein_distance = Y_WassersteinLossStab.apply
 

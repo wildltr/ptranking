@@ -8,12 +8,14 @@ import numpy as np
 
 import torch
 
+from ptranking.base.ranker import LTRFRAME_TYPE
 from ptranking.utils.bigdata.BigPickle import pickle_save
 from ptranking.data.data_utils import YAHOO_LTR, ISTELLA_LTR, MSLETOR, MSLRWEB
 from ptranking.ltr_tree.eval.tree_parameter import TreeDataSetting, TreeEvalSetting
 from ptranking.ltr_tree.lambdamart.lightgbm_lambdaMART import LightGBMLambdaMART, LightGBMLambdaMARTParameter
 from ptranking.metric.adhoc_metric import torch_nDCG_at_ks, torch_nerr_at_ks, torch_ap_at_ks, torch_precision_at_ks
 from ptranking.ltr_adhoc.eval.ltr import LTREvaluator
+from ptranking.data.data_utils import MSLETOR_SEMI, MSLETOR_LIST
 
 LTR_TREE_MODEL = ['LightGBMLambdaMART']
 
@@ -22,16 +24,48 @@ class TreeLTREvaluator(LTREvaluator):
     """
     The class for evaluating different tree-based learning to rank methods.
     """
-    def __init__(self, id='TreeLTR'):
-        super(TreeLTREvaluator, self).__init__(id=id)
+    def __init__(self, frame_id=LTRFRAME_TYPE.GBDT):
+        super(TreeLTREvaluator, self).__init__(frame_id=frame_id)
 
     def display_information(self, data_dict):
         """
         Display some information.
-        :param data_dict:
-        :return:
         """
         print(' '.join(['\nStart {} on {} >>>'.format(self.model_parameter.model_id, data_dict['data_id'])]))
+
+    def check_consistency(self, data_dict, eval_dict):
+        """
+        Check whether the settings are reasonable in the context of gbdt learning-to-rank
+        """
+        ''' Part-1: data loading '''
+
+        if data_dict['data_id'] == 'Istella':
+            assert eval_dict['do_validation'] is not True  # since there is no validation data
+
+        if data_dict['data_id'] in MSLETOR_SEMI:
+            assert data_dict['train_presort'] is not True  # due to the non-labeled documents
+            if data_dict['binary_rele']:  # for unsupervised dataset, it is required for binarization due to '-1' labels
+                assert data_dict['unknown_as_zero']
+        else:
+            assert data_dict['unknown_as_zero'] is not True  # since there is no non-labeled documents
+
+        if data_dict['data_id'] in MSLETOR_LIST:  # for which the standard ltr_adhoc of each query is unique
+            assert 1 == data_dict['train_batch_size']
+
+        if data_dict['scale_data']:
+            scaler_level = data_dict['scaler_level'] if 'scaler_level' in data_dict else None
+            assert not scaler_level == 'DATASET'  # not supported setting
+
+        assert data_dict['validation_presort']  # Rule of thumb setting for adhoc learning-to-rank
+        assert data_dict['test_presort']  # Rule of thumb setting for adhoc learning-to-rank
+        assert 1 == data_dict['validation_batch_size']  # Rule of thumb setting for adhoc learning-to-rank
+        assert 1 == data_dict['test_batch_size']  # Rule of thumb setting for adhoc learning-to-rank
+
+        ''' Part-2: evaluation setting '''
+
+        if eval_dict['mask_label']:  # True is aimed to use supervised data to mimic semi-supervised data by masking
+            assert not data_dict['data_id'] in MSLETOR_SEMI
+
 
     def setup_output(self, data_dict=None, eval_dict=None):
         """
@@ -78,7 +112,7 @@ class TreeLTREvaluator(LTREvaluator):
             list_str.append('{}@{}:{:.4f}'.format(metric_str, list_cutoffs[i], list_scores[i]))
         return split_str.join(list_str)
 
-    def cal_metric_at_ks(self, model_id, all_std_labels=None, all_preds=None, group=None, ks=[1, 3, 5, 10]):
+    def cal_metric_at_ks(self, model_id, all_std_labels=None, all_preds=None, group=None, ks=[1, 3, 5, 10], label_type=None):
         """
         Compute metric values with different cutoff values
         :param model:
@@ -115,15 +149,18 @@ class TreeLTREvaluator(LTREvaluator):
             sys_sorted_labels = tor_per_query_std_labels[tor_sorted_inds]
             ideal_sorted_labels, _ = torch.sort(tor_per_query_std_labels, descending=True)
 
-            ndcg_at_ks = torch_nDCG_at_ks(batch_sys_sorted_labels=sys_sorted_labels.view(1, -1), batch_ideal_sorted_labels=ideal_sorted_labels.view(1, -1), ks=ks, multi_level_rele=True)
+            ndcg_at_ks = torch_nDCG_at_ks(batch_sys_sorted_labels=sys_sorted_labels.view(1, -1),
+                                          batch_ideal_sorted_labels=ideal_sorted_labels.view(1, -1), ks=ks, label_type=label_type)
             ndcg_at_ks = torch.squeeze(ndcg_at_ks, dim=0)
             list_ndcg_at_ks_per_q.append(ndcg_at_ks.numpy())
 
-            nerr_at_ks = torch_nerr_at_ks(batch_sys_sorted_labels=sys_sorted_labels.view(1, -1), batch_ideal_sorted_labels=ideal_sorted_labels.view(1, -1), ks=ks, multi_level_rele=True)
+            nerr_at_ks = torch_nerr_at_ks(batch_sys_sorted_labels=sys_sorted_labels.view(1, -1),
+                                          batch_ideal_sorted_labels=ideal_sorted_labels.view(1, -1), ks=ks, label_type=label_type)
             nerr_at_ks = torch.squeeze(nerr_at_ks, dim=0)
             list_err_at_ks_per_q.append(nerr_at_ks.numpy())
 
-            ap_at_ks = torch_ap_at_ks(batch_sys_sorted_labels=sys_sorted_labels.view(1, -1), batch_ideal_sorted_labels=ideal_sorted_labels.view(1, -1), ks=ks)
+            ap_at_ks = torch_ap_at_ks(batch_sys_sorted_labels=sys_sorted_labels.view(1, -1),
+                                      batch_ideal_sorted_labels=ideal_sorted_labels.view(1, -1), ks=ks)
             ap_at_ks = torch.squeeze(ap_at_ks, dim=0)
             list_ap_at_ks_per_q.append(ap_at_ks.numpy())
 
@@ -224,7 +261,7 @@ class TreeLTREvaluator(LTREvaluator):
             fold_avg_ndcg_at_ks, fold_avg_nerr_at_ks, fold_avg_ap_at_ks, fold_avg_p_at_ks,\
             list_ndcg_at_ks_per_q, list_err_at_ks_per_q, list_ap_at_ks_per_q, list_p_at_ks_per_q = \
                                     self.cal_metric_at_ks(model_id=model_id, all_std_labels=y_test, all_preds=y_pred,
-                                                          group=group_test, ks=cutoffs)
+                                                          group=group_test, ks=cutoffs, label_type=data_dict['label_type'])
 
             performance_list = [model_id] if data_id in YAHOO_LTR or data_id in ISTELLA_LTR else [model_id + ' Fold-' + str(fold_k)]
 

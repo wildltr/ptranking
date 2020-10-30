@@ -4,9 +4,9 @@
 
   "min_docs":[10],
   "min_rele":[1],
-  "sample_rankings_per_q":[1],
+  "train_batch_size":[1],
 
   "binary_rele":[false],
   "unknown_as_zero":[false],
-  "presort":[false]
+  "train_presort":[false]
 }

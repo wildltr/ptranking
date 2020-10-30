@@ -7,11 +7,12 @@
 
 import torch
 
+from ptranking.data.data_utils import LABEL_TYPE
 from ptranking.metric.adhoc_metric import torch_nDCG_at_k, torch_nDCG_at_ks
 from ptranking.ltr_global import global_gpu as gpu, global_device as device
 
 
-def ndcg_at_k(ranker=None, test_data=None, k=10, multi_level_rele=True):
+def ndcg_at_k(ranker=None, test_data=None, k=10, label_type=LABEL_TYPE.MultiLabel):
     '''
     There is no check based on the assumption (say light_filtering() is called) that each test instance Q includes at least k documents,
     and at least one relevant document. Or there will be errors.
@@ -36,7 +37,7 @@ def ndcg_at_k(ranker=None, test_data=None, k=10, multi_level_rele=True):
 
         batch_ndcg_at_k = torch_nDCG_at_k(batch_sys_sorted_labels=batch_sys_sorted_labels,
                                           batch_ideal_sorted_labels=batch_ideal_sorted_labels,
-                                          k = k, multi_level_rele=multi_level_rele)
+                                          k = k, label_type=label_type)
 
         sum_ndcg_at_k += torch.squeeze(batch_ndcg_at_k) # default batch_size=1 due to testing data
         cnt += 1
@@ -44,7 +45,7 @@ def ndcg_at_k(ranker=None, test_data=None, k=10, multi_level_rele=True):
     avg_ndcg_at_k = sum_ndcg_at_k/cnt
     return  avg_ndcg_at_k
 
-def ndcg_at_ks(ranker=None, test_data=None, ks=[1, 5, 10], multi_level_rele=True):
+def ndcg_at_ks(ranker=None, test_data=None, ks=[1, 5, 10], label_type=LABEL_TYPE.MultiLabel):
     '''
     There is no check based on the assumption (say light_filtering() is called)
     that each test instance Q includes at least k(k=max(ks)) documents, and at least one relevant document.
@@ -68,7 +69,7 @@ def ndcg_at_ks(ranker=None, test_data=None, ks=[1, 5, 10], multi_level_rele=True
 
         batch_ndcg_at_ks = torch_nDCG_at_ks(batch_sys_sorted_labels=batch_sys_sorted_labels,
                                             batch_ideal_sorted_labels=batch_ideal_sorted_labels,
-                                            ks=ks, multi_level_rele=multi_level_rele)
+                                            ks=ks, label_type=label_type)
 
         # default batch_size=1 due to testing data
         sum_ndcg_at_ks = torch.add(sum_ndcg_at_ks, torch.squeeze(batch_ndcg_at_ks, dim=0))

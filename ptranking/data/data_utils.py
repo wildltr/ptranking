@@ -77,79 +77,75 @@ For GLTR_LETOR, it is defined as follows, where features with zero values are st
 SCALER_LEVEL = ['QUERY', 'DATASET']
 SCALER_ID    = ['MinMaxScaler', 'RobustScaler', 'StandardScaler']
 
-## supported ways of masking labels ##
-MASK_TYPE = ['rand_mask_all', 'rand_mask_rele']
-
 @unique
-class MASK_TYPE_(Enum):
+class MASK_TYPE(Enum):
+    """ Supported ways of masking labels """
     rand_mask_all = auto()
     rand_mask_rele = auto()
 
 
 @unique
 class LABEL_TYPE(Enum):
+    """ The types of labels of supported datasets """
     MultiLabel = auto()
     Permutation = auto()
 
 
 @unique
 class SPLIT_TYPE(Enum):
+    """ The split-part of a dataset """
     Train = auto()
     Test = auto()
     Validation = auto()
 
 
 def get_data_meta(data_id=None):
-    '''
-    :param data_id:
-    :return: get the meta-information corresponding to the specified dataset
-    '''
-
+    """ Get the meta-information corresponding to the specified dataset """
     if data_id in MSLRWEB:
         max_rele_level = 4
-        multi_level_rele = True
+        label_type = LABEL_TYPE.MultiLabel
         num_features = 136
         has_comment = False
         fold_num = 5
 
     elif data_id in MSLETOR_SUPER:
         max_rele_level = 2
-        multi_level_rele = True
+        label_type = LABEL_TYPE.MultiLabel
         num_features = 46
         has_comment = True
         fold_num = 5
 
     elif data_id in MSLETOR_SEMI:
         max_rele_level = 2
-        multi_level_rele = True
+        label_type = LABEL_TYPE.MultiLabel
         num_features = 46
         has_comment = True
         fold_num = 5
 
     elif data_id in MSLETOR_LIST:
         max_rele_level = None
-        multi_level_rele = False
+        label_type = LABEL_TYPE.Permutation
         num_features = 46
         has_comment = True
         fold_num = 5
 
     elif data_id in YAHOO_LTR:
         max_rele_level = 4
-        multi_level_rele = True
+        label_type = LABEL_TYPE.MultiLabel
         num_features = 700 # libsvm format, rather than uniform number
         has_comment = False
         fold_num = 1
 
     elif data_id in YAHOO_LTR_5Fold:
         max_rele_level = 4
-        multi_level_rele = True
+        label_type = LABEL_TYPE.MultiLabel
         num_features = 700  # libsvm format, rather than uniform number
         has_comment = False
         fold_num = 5
 
     elif data_id in ISTELLA_LTR:
         max_rele_level = 4
-        multi_level_rele = True
+        label_type = LABEL_TYPE.MultiLabel
         num_features = 220  # libsvm format, rather than uniform number
         fold_num = 1
         if data_id in ['Istella_S', 'Istella']:
@@ -159,11 +155,12 @@ def get_data_meta(data_id=None):
     else:
         raise NotImplementedError
 
-    data_meta = dict(num_features=num_features, has_comment=has_comment, multi_level_rele=multi_level_rele, max_rele_level=max_rele_level, fold_num=fold_num)
+    data_meta = dict(num_features=num_features, has_comment=has_comment, label_type=label_type,
+                     max_rele_level=max_rele_level, fold_num=fold_num)
     return data_meta
 
 def get_scaler(scaler_id):
-    ''' Initialize the scaler-object correspondingly '''
+    """ Initialize the scaler-object correspondingly """
     assert scaler_id in SCALER_ID
     if scaler_id == 'MinMaxScaler':
         scaler = MinMaxScaler()
@@ -212,7 +209,7 @@ def get_default_scaler_setting(data_id, grid_search=False):
         return scale_data, scaler_id, scaler_level
 
 def get_buffer_file_name(data_id, file, data_dict, presort=None):
-    ''' Generate the file name '''
+    """ Generate the file name """
     min_rele  = data_dict['min_rele']
     if min_rele is not None and min_rele > 0:
         fi_suffix = '_'.join(['MiR', str(min_rele)])
@@ -383,19 +380,23 @@ def parse_letor(source, has_targets=True, one_indexed=True, missing=0.0, has_com
 
 def clip_query_data(qid, list_docids=None, feature_mat=None, std_label_vec=None, binary_rele=False,
                     unknown_as_zero=False, clip_query=None, min_docs=None, min_rele=1, presort=None):
-    ''' clip the data associated with the same query '''
-
-    if binary_rele: std_label_vec = np.clip(std_label_vec, a_min=-10, a_max=1)
-    if unknown_as_zero: std_label_vec = np.clip(std_label_vec, a_min=0, a_max=10)
+    """ Clip the data associated with the same query if required """
+    if binary_rele: std_label_vec = np.clip(std_label_vec, a_min=-10, a_max=1) # to binary labels
+    if unknown_as_zero: std_label_vec = np.clip(std_label_vec, a_min=0, a_max=10) # convert unknown as zero
 
     if clip_query:
-        if feature_mat.shape[0] < min_docs:           # skip queries with documents that are fewer the pre-specified min_docs
+        if feature_mat.shape[0] < min_docs: # skip queries with documents that are fewer the pre-specified min_docs
             return None
-        if (std_label_vec > 0).sum() < min_rele:      # skip queries with no standard relevant documents, since there is no meaning for both training and testing.
+        if (std_label_vec > 0).sum() < min_rele:
+            # skip queries with no standard relevant documents, since there is no meaning for both training and testing.
             return None
 
     assert presort is not None
     if presort:
+        '''
+        Possible advantages: 1> saving time for evaluation; 
+        2> saving time for some models, say the ones need optimal ranking
+        '''
         des_inds = np_arg_shuffle_ties(std_label_vec, descending=True)  # sampling by shuffling ties
         feature_mat, std_label_vec = feature_mat[des_inds], std_label_vec[des_inds]
         '''
@@ -537,15 +538,20 @@ def iter_queries(in_file, presort=None, data_dict=None, scale_data=None, scaler_
 ## ---------------------------------------------------- ##
 
 class LTRDataset(data.Dataset):
-    '''
-    Loading the specified dataset as data.Dataset, a pytorch format
-    '''
+    """
+    Loading the specified dataset as data.Dataset, a pytorch format.
+    We assume that checking the meaningfulness of given loading-setting is conducted beforehand.
+    """
     def __init__(self, split_type, file, data_id=None, data_dict=None, eval_dict=None, batch_size=1, presort=False,
                  shuffle=False, hot=False, buffer=True):
         assert data_id is not None or data_dict is not None
         if data_dict is None: data_dict = self.get_default_data_dict(data_id=data_id)
 
         self.hot = hot
+
+        ''' data property '''
+        self.label_type = data_dict['label_type']
+
         ''' split-specific settings '''
         self.split_type = split_type
         self.presort = presort
@@ -557,8 +563,6 @@ class LTRDataset(data.Dataset):
                 or data_dict['data_id'] in YAHOO_LTR or data_dict['data_id'] in YAHOO_LTR_5Fold \
                 or data_dict['data_id'] in ISTELLA_LTR \
                 or data_dict['data_id'] == 'IRGAN_MQ2008_Semi': # supported datasets
-
-            self.check_load_setting(data_dict, eval_dict)
 
             perquery_file = get_buffer_file_name(data_id=data_id, file=file, data_dict=data_dict, presort=self.presort)
 
@@ -575,7 +579,6 @@ class LTRDataset(data.Dataset):
 
             if eval_dict is not None:
                 mask_label, mask_ratio, mask_type = eval_dict['mask_label'], eval_dict['mask_ratio'], eval_dict['mask_type']
-                print(eval_dict)
                 if mask_label:
                     mask_label_str = '_'.join([mask_type, 'Ratio', '{:,g}'.format(mask_ratio)])
                     torch_perquery_file = torch_perquery_file.replace('.torch', '_'+mask_label_str+'.torch')
@@ -620,12 +623,12 @@ class LTRDataset(data.Dataset):
                         torch_batch_std_labels = torch.unsqueeze(torch_batch_std_labels, dim=0)
 
                         if mask_label: # masking
-                            if mask_type == 'rand_mask_rele':
+                            if MASK_TYPE[mask_type] == MASK_TYPE.rand_mask_rele:
                                 torch_batch_rankings, torch_batch_std_labels = random_mask_rele_labels(
                                     batch_ranking=torch_batch_rankings, batch_label=torch_batch_std_labels,
                                     mask_ratio=mask_ratio, mask_value=0, presort=self.presort)
 
-                            elif mask_type == 'rand_mask_all':
+                            elif MASK_TYPE[mask_type] == MASK_TYPE.rand_mask_all:
                                 masked_res = random_mask_all_labels(batch_ranking=torch_batch_rankings,
                                     batch_label=torch_batch_std_labels, mask_ratio=mask_ratio, mask_value=0,
                                                                     presort=self.presort)
@@ -659,7 +662,7 @@ class LTRDataset(data.Dataset):
     def get_default_data_dict(self, data_id):
         ''' a default setting for loading a dataset '''
         min_docs = 1
-        min_rele = 1 # if <=0, we note that it includes dumb queries that has no relevant documents
+        min_rele = -1 # with -1, it means that we don't care with dumb queries that has no relevant documents. Say, for checking the statistics of an original dataset
         scale_data, scaler_id, scaler_level = get_default_scaler_setting(data_id=data_id)
 
         train_presort = False if data_id in MSLETOR_SEMI else True
@@ -673,33 +676,6 @@ class LTRDataset(data.Dataset):
         data_dict.update(data_meta)
 
         return data_dict
-
-    def check_load_setting(self, data_dict=None, eval_dict=None):
-        ''' check whether there are non-sense settings for loading a dataset '''
-        if data_dict['data_id'] in MSLETOR_SEMI:
-            assert data_dict['train_presort'] is not True # due to the non-labeled documents
-        else:
-            assert data_dict['unknown_as_zero'] is not True # since there is no non-labeled documents
-
-        '''
-        since both validation data and test data are commonly used for computing metric score,
-        thus presort is needed, the batch_size is one.
-        '''
-        assert data_dict['validation_presort']
-        assert data_dict['test_presort']
-        assert 1 == data_dict['validation_batch_size']
-        assert 1 == data_dict['test_batch_size']
-
-        # the dataset, for which the standard ltr_adhoc of each query is unique
-        if data_dict['data_id'] in MSLETOR_LIST: assert 1 == data_dict['train_batch_size']
-
-        if data_dict['scale_data']:
-            scaler_level = data_dict['scaler_level'] if 'scaler_level' in data_dict else None
-            assert not scaler_level== 'DATASET' # not supported setting
-
-        if eval_dict is not None:
-            if eval_dict['mask_label']: # True: use supervised data to mimic semi-supervised data by masking
-                assert not data_dict['data_id'] in MSLETOR_SEMI
 
     def __len__(self):
         return len(self.list_torch_Qs)
@@ -761,7 +737,7 @@ def letor_to_libsvm(doc_reprs=None, doc_labels=None, output_feature=None, output
 
 
 def load_letor_data_as_libsvm_data(in_file, split_type=None, data_id=None, min_docs=None, min_rele=None,
-                                   data_dict=None, eval_dict=None, need_group=True):
+                                   data_dict=None, eval_dict=None, need_group=True, presort=None):
     """
     Load data by firstly converting letor data as libsvm data
     :param in_file:
@@ -800,18 +776,18 @@ def load_letor_data_as_libsvm_data(in_file, split_type=None, data_id=None, min_d
         output_feature = open(file_buffered_data, "w")
         if need_group: output_group = open(file_buffered_group, "w")
 
-        perquery_file = get_buffer_file_name(data_id=data_id, file=in_file, data_dict=data_dict)
+        perquery_file = get_buffer_file_name(data_id=data_id, file=in_file, data_dict=data_dict, presort=presort)
         list_Qs = iter_queries(in_file=in_file, data_dict=data_dict, scale_data=data_dict['scale_data'],
-                               scaler_id=data_dict['scaler_id'], perquery_file=perquery_file, buffer=True)
+                               scaler_id=data_dict['scaler_id'], perquery_file=perquery_file, buffer=True, presort=presort)
 
         if eval_dict is not None and eval_dict['mask_label'] and split_type==SPLIT_TYPE.Train:
-            if 'rand_mask_rele' == eval_dict['mask_type']:
+            if MASK_TYPE.rand_mask_rele == MASK_TYPE[eval_dict['mask_type']]:
                 for qid, doc_reprs, doc_labels in list_Qs:
                     doc_labels = np_random_mask_rele_labels(batch_label=doc_labels, mask_ratio=eval_dict['mask_ratio'], mask_value=0)
                     if doc_labels is not None:
                         letor_to_libsvm(doc_reprs=doc_reprs.astype(np.float32), doc_labels=doc_labels.astype(np.int),
                                         output_feature=output_feature, output_group=output_group, need_group=need_group)
-            elif 'rand_mask_all' == eval_dict['mask_type']:
+            elif MASK_TYPE.rand_mask_all == MASK_TYPE[eval_dict['mask_type']]:
                 for qid, doc_reprs, doc_labels in list_Qs:
                     doc_labels = np_random_mask_all_labels(batch_label=doc_labels, mask_ratio=eval_dict['mask_ratio'], mask_value=0)
                     if doc_labels is not None:

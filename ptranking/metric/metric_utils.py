@@ -8,6 +8,7 @@
 
 import torch
 
+from ptranking.data.data_utils import LABEL_TYPE
 from ptranking.metric.adhoc_metric import torch_dcg_at_k
 from ptranking.ltr_global import global_gpu as gpu, tensor
 
@@ -15,7 +16,7 @@ from ptranking.ltr_global import global_gpu as gpu, tensor
 # For Delta Metrics
 #######
 
-def get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds, multi_level_rele=True):
+def get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds, label_type=LABEL_TYPE.MultiLabel):
     '''
     Delta-nDCG w.r.t. pairwise swapping of the currently predicted ltr_adhoc
     :param batch_stds: the standard labels sorted in a descending order
@@ -23,12 +24,14 @@ def get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds, multi_level_rele=Tru
     :return:
     '''
     # ideal discount cumulative gains
-    batch_idcgs = torch_dcg_at_k(batch_sorted_labels=batch_stds, multi_level_rele=multi_level_rele)
+    batch_idcgs = torch_dcg_at_k(batch_sorted_labels=batch_stds, label_type=label_type)
 
-    if multi_level_rele:
+    if LABEL_TYPE.MultiLabel == label_type:
         batch_gains = torch.pow(2.0, batch_stds_sorted_via_preds) - 1.0
-    else:
+    elif LABEL_TYPE.Permutation == label_type:
         batch_gains = batch_stds_sorted_via_preds
+    else:
+        raise NotImplementedError
 
     batch_n_gains = batch_gains / batch_idcgs               # normalised gains
     batch_ng_diffs = torch.unsqueeze(batch_n_gains, dim=2) - torch.unsqueeze(batch_n_gains, dim=1)

@@ -77,7 +77,7 @@ class ScoringFunctionParameter(ModelParameter):
         FBN = False if self.data_dict['scale_data'] else True # for feature normalization
 
         # feed-forward neural networks
-        ffnns_para_dict = dict(num_layers=5, HD_AF='R', HN_AF='R', TL_AF='CE', apply_tl_af=True, BN=True, RD=False, FBN=FBN)
+        ffnns_para_dict = dict(num_layers=5, HD_AF='R', HN_AF='R', TL_AF='S', apply_tl_af=True, BN=True, RD=False, FBN=FBN)
 
         sf_para_dict = dict()
         sf_para_dict['id'] = self.model_id
@@ -153,9 +153,9 @@ class EvalSetting():
     """
     def __init__(self, debug=False, dir_output=None, eval_json=None):
         self.debug = debug
+        self.eval_json = eval_json
 
         if eval_json is not None:
-            self.eval_json = eval_json
             with open(self.eval_json) as json_file:
                 self.json_dict = json.load(json_file)
         else:
@@ -257,8 +257,8 @@ class DataSetting():
     Class object for data settings w.r.t. data loading and pre-process.
     """
     def __init__(self, debug=False, data_id=None, dir_data=None, data_json=None):
+        self.data_json = data_json
         if data_json is not None:
-            self.data_json = data_json
             with open(self.data_json) as json_file:
                 self.json_dict = json.load(json_file)
             self.data_id = self.json_dict["data_id"]
@@ -270,18 +270,23 @@ class DataSetting():
     def to_data_setting_string(self, log=False):
         """
         String identifier of data-setting
-        :param log:
-        :return:
         """
         data_dict = self.data_dict
         s1, s2 = (':', '\n') if log else ('_', '_')
 
         data_id, binary_rele = data_dict['data_id'], data_dict['binary_rele']
-        min_docs, min_rele, train_batch_size = data_dict['min_docs'], data_dict['min_rele'], data_dict['train_batch_size']
+        min_docs, min_rele, train_batch_size, train_presort = data_dict['min_docs'], data_dict['min_rele'],\
+                                                              data_dict['train_batch_size'], data_dict['train_presort']
 
-        setting_string = s2.join([s1.join(['data_id', data_id]), s1.join(['min_docs', str(min_docs)]),
-                            s1.join(['min_rele', str(min_rele)]), s1.join(['TrBat', str(train_batch_size)])]) if log \
-                    else s1.join([data_id, 'MiD', str(min_docs), 'MiR', str(min_rele), 'TrBat', str(train_batch_size)])
+        setting_string = s2.join([s1.join(['data_id', data_id]),
+                                  s1.join(['min_docs', str(min_docs)]),
+                                  s1.join(['min_rele', str(min_rele)]),
+                                  s1.join(['TrBat', str(train_batch_size)])]) if log \
+                         else s1.join([data_id, 'MiD', str(min_docs), 'MiR', str(min_rele), 'TrBat', str(train_batch_size)])
+
+        if train_presort:
+            tr_presort_str = s1.join(['train_presort', str(train_presort)]) if log else 'TrPresort'
+            setting_string = s2.join([setting_string, tr_presort_str])
 
         if binary_rele:
             bi_str = s1.join(['binary_rele', str(binary_rele)]) if log else 'BiRele'
@@ -327,7 +332,7 @@ class DataSetting():
             choice_min_docs = [10]
             choice_min_rele = [1]
             choice_binary_rele = [False]
-            choice_unknown_as_zero = [True]
+            choice_unknown_as_zero = [False]
             choice_train_presort = [True]
             choice_train_batch_size = [1] # number of sample rankings per query
 

@@ -7,9 +7,8 @@ The commonly used IR evaluation metrics, such as AP (average precision), nDCG an
 
 import torch
 import numpy as np
+from ptranking.data.data_utils import LABEL_TYPE
 from ptranking.ltr_global import global_gpu as gpu, global_device as device, tensor
-
-# todo string_key for multi_level_rele: 1> more clear and be able to extend;
 
 """ Precision """
 
@@ -105,11 +104,11 @@ def torch_rankwise_err(batch_sorted_labels, max_label=None, k=10, point=True):
 		batch_rankwise_err = torch.cumsum(batch_expt_satis_ranks, dim=1)
 		return batch_rankwise_err
 
-def torch_nerr_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, multi_level_rele=True):
+def torch_nerr_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, label_type=LABEL_TYPE.MultiLabel):
 	valid_max_cutoff = batch_sys_sorted_labels.size(1)
 	cutoff = max(valid_max_cutoff, k)
 
-	if multi_level_rele:
+	if LABEL_TYPE.MultiLabel == label_type:
 		max_label = torch.max(batch_ideal_sorted_labels)
 		batch_sys_err_at_k = torch_rankwise_err(batch_sys_sorted_labels, max_label=max_label, k=cutoff, point=True)
 		batch_ideal_err_at_k = torch_rankwise_err(batch_ideal_sorted_labels, max_label=max_label, k=cutoff, point=True)
@@ -118,11 +117,10 @@ def torch_nerr_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, 
 	else:
 		raise NotImplementedError
 
-def torch_nerr_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, multi_level_rele=True):
+def torch_nerr_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, label_type=LABEL_TYPE.MultiLabel):
 	'''
 	:param sys_sorted_labels: [batch_size, ranking_size] the standard labels sorted in descending order according to predicted relevance scores
 	:param ks:
-	:param multi_level_rele:
 	:return: [batch_size, len(ks)]
 	'''
 	valid_max_cutoff = batch_sys_sorted_labels.size(1)
@@ -133,7 +131,7 @@ def torch_nerr_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None
 	max_cutoff = max(used_ks)
 	inds = torch.from_numpy(np.asarray(used_ks) - 1)
 
-	if multi_level_rele:
+	if LABEL_TYPE.MultiLabel == label_type:
 		batch_sys_rankwise_err = torch_rankwise_err(batch_sys_sorted_labels, max_label=max_label, k=max_cutoff, point=False)
 		batch_ideal_rankwise_err = torch_rankwise_err(batch_ideal_sorted_labels, max_label=max_label, k=max_cutoff, point=False)
 		batch_rankwise_nerr = batch_sys_rankwise_err/batch_ideal_rankwise_err
@@ -150,56 +148,60 @@ def torch_nerr_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None
 
 """ nDCG """
 
-def torch_dcg_at_k(batch_sorted_labels, cutoff=None, multi_level_rele=True):
+def torch_dcg_at_k(batch_sorted_labels, cutoff=None, label_type=LABEL_TYPE.MultiLabel):
 	'''
 	ICML-nDCG, which places stronger emphasis on retrieving relevant documents
 	:param batch_sorted_labels: [batch_size, ranking_size] a batch of ranked labels (either standard or predicted by a system)
 	:param cutoff: the cutoff position
-	:param multi_level_rele: either the case of multi-level relevance or the case of listwise int-value, e.g., MQ2007-list
+	:param label_type: either the case of multi-level relevance or the case of listwise int-value, e.g., MQ2007-list
 	:return: [batch_size, 1] cumulative gains for each rank position
 	'''
 	if cutoff is None: # using whole list
 		cutoff = batch_sorted_labels.size(1)
 
-	if multi_level_rele:    #the common case with multi-level labels
+	if LABEL_TYPE.MultiLabel == label_type:    #the common case with multi-level labels
 		batch_numerators = torch.pow(2.0, batch_sorted_labels[:, 0:cutoff]) - 1.0
-	else: # the case like listwise ltr_adhoc, where the relevance is labeled as (n-rank_position)
+	elif LABEL_TYPE.Permutation == label_type: # the case like listwise ltr_adhoc, where the relevance is labeled as (n-rank_position)
 		batch_numerators = batch_sorted_labels[:, 0:cutoff]
+	else:
+		raise NotImplementedError
 
 	batch_discounts = torch.log2(torch.arange(cutoff).type(tensor).expand_as(batch_numerators) + 2.0)
 	batch_dcg_at_k = torch.sum(batch_numerators/batch_discounts, dim=1, keepdim=True)
 	return batch_dcg_at_k
 
-def torch_dcg_at_ks(batch_sorted_labels, max_cutoff, multi_level_rele=True):
+def torch_dcg_at_ks(batch_sorted_labels, max_cutoff, label_type=LABEL_TYPE.MultiLabel):
 	'''
 	:param batch_sorted_labels: [batch_size, ranking_size] ranked labels (either standard or predicted by a system)
 	:param max_cutoff: the maximum cutoff value
-	:param multi_level_rele: either the case of multi-level relevance or the case of listwise int-value, e.g., MQ2007-list
+	:param label_type: either the case of multi-level relevance or the case of listwise int-value, e.g., MQ2007-list
 	:return: [batch_size, max_cutoff] cumulative gains for each rank position
 	'''
-	if multi_level_rele:    #the common case with multi-level labels
+	if LABEL_TYPE.MultiLabel == label_type: # the common case with multi-level labels
 		batch_numerators = torch.pow(2.0, batch_sorted_labels[:, 0:max_cutoff]) - 1.0
-	else: # the case like listwise ltr_adhoc, where the relevance is labeled as (n-rank_position)
+	elif LABEL_TYPE.Permutation == label_type: # the case like listwise ltr_adhoc, where the relevance is labeled as (n-rank_position)
 		batch_numerators = batch_sorted_labels[:, 0:max_cutoff]
+	else:
+		raise NotImplementedError
 
 	batch_discounts = torch.log2(torch.arange(max_cutoff).type(tensor).expand_as(batch_numerators) + 2.0)
 	batch_dcg_at_ks = torch.cumsum(batch_numerators/batch_discounts, dim=1)   # dcg w.r.t. each position
 	return batch_dcg_at_ks
 
-def torch_nDCG_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, multi_level_rele=True):
-	batch_sys_dcg_at_k = torch_dcg_at_k(batch_sys_sorted_labels, cutoff=k, multi_level_rele=multi_level_rele)  # only using the cumulative gain at the final rank position
-	batch_ideal_dcg_at_k = torch_dcg_at_k(batch_ideal_sorted_labels, cutoff=k, multi_level_rele=multi_level_rele)
+def torch_nDCG_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, label_type=LABEL_TYPE.MultiLabel):
+	batch_sys_dcg_at_k = torch_dcg_at_k(batch_sys_sorted_labels, cutoff=k, label_type=label_type) # only using the cumulative gain at the final rank position
+	batch_ideal_dcg_at_k = torch_dcg_at_k(batch_ideal_sorted_labels, cutoff=k, label_type=label_type)
 	batch_ndcg_at_k = batch_sys_dcg_at_k / batch_ideal_dcg_at_k
 	return batch_ndcg_at_k
 
-def torch_nDCG_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, multi_level_rele=True):
+def torch_nDCG_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, label_type=LABEL_TYPE.MultiLabel):
 	valid_max_cutoff = batch_sys_sorted_labels.size(1)
 	used_ks = [k for k in ks if k<=valid_max_cutoff] if valid_max_cutoff < max(ks) else ks
 
 	inds = torch.from_numpy(np.asarray(used_ks) - 1)
-	batch_sys_dcgs = torch_dcg_at_ks(batch_sys_sorted_labels, max_cutoff=max(used_ks), multi_level_rele=multi_level_rele)
+	batch_sys_dcgs = torch_dcg_at_ks(batch_sys_sorted_labels, max_cutoff=max(used_ks), label_type=label_type)
 	batch_sys_dcg_at_ks = batch_sys_dcgs[:, inds]  # get cumulative gains at specified rank positions
-	batch_ideal_dcgs = torch_dcg_at_ks(batch_ideal_sorted_labels, max_cutoff=max(used_ks), multi_level_rele=multi_level_rele)
+	batch_ideal_dcgs = torch_dcg_at_ks(batch_ideal_sorted_labels, max_cutoff=max(used_ks), label_type=label_type)
 	batch_ideal_dcg_at_ks = batch_ideal_dcgs[:, inds]
 
 	batch_ndcg_at_ks = batch_sys_dcg_at_ks / batch_ideal_dcg_at_ks
@@ -248,7 +250,7 @@ def rele_gain(rele_level, gain_base=2.0):
 	gain = np.power(gain_base, rele_level) - 1.0
 	return gain
 
-def np_metric_at_ks(ranker=None, test_Qs=None, ks=[1, 5, 10], multi_level_rele=True, max_rele_level=None):
+def np_metric_at_ks(ranker=None, test_Qs=None, ks=[1, 5, 10], label_type=LABEL_TYPE.MultiLabel, max_rele_level=None):
 	'''
 	There is no check based on the assumption (say light_filtering() is called)
 	that each test instance Q includes at least k(k=max(ks)) documents, and at least one relevant document.
@@ -281,11 +283,11 @@ def np_metric_at_ks(ranker=None, test_Qs=None, ks=[1, 5, 10], multi_level_rele=T
 		sys_sorted_labels = tor_test_std_label_vec[tor_sorted_inds]
 		ideal_sorted_labels, _ = torch.sort(tor_test_std_label_vec, descending=True)
 
-		ndcg_at_ks_per_query = torch_nDCG_at_ks(sys_sorted_labels=sys_sorted_labels, ideal_sorted_labels=ideal_sorted_labels, ks=ks, multi_level_rele=multi_level_rele)
+		ndcg_at_ks_per_query = torch_nDCG_at_ks(sys_sorted_labels=sys_sorted_labels, ideal_sorted_labels=ideal_sorted_labels, ks=ks, label_type=label_type)
 		sum_ndcg_at_ks = torch.add(sum_ndcg_at_ks, ndcg_at_ks_per_query)
 		list_ndcg_at_ks_per_q.append(ndcg_at_ks_per_query.numpy())
 
-		err_at_ks_per_query = torch_nerr_at_ks(sys_sorted_labels, ideal_sorted_labels=ideal_sorted_labels, ks=ks, multi_level_rele=multi_level_rele)
+		err_at_ks_per_query = torch_nerr_at_ks(sys_sorted_labels, ideal_sorted_labels=ideal_sorted_labels, ks=ks, label_type=label_type)
 		sum_err_at_ks = torch.add(sum_err_at_ks, err_at_ks_per_query)
 		list_err_at_ks_per_q.append(err_at_ks_per_query.numpy())
 

@@ -10,7 +10,7 @@ from itertools import product
 
 import torch
 
-from ptranking.eval.parameter import ModelParameter
+from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.ltr_adversarial.base.ad_machine import AdversarialMachine
 from ptranking.ltr_adversarial.listwise.list_generator import List_Generator
 from ptranking.ltr_adversarial.listwise.list_discriminator import List_Discriminator

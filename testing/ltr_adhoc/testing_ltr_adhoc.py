@@ -41,6 +41,7 @@ if __name__ == '__main__':
     -----------------------------------------------------------------------------------------
 
     """
+	#todo 1> json file / grid, etc for adhoc, adv, tree w.r.t. presort, batch_size
 
 	debug = True            # in a debug mode, we just check whether the model can operate
 
@@ -49,10 +50,10 @@ if __name__ == '__main__':
 	models_to_run = [
 		#'RankMSE',
 		#'LambdaRank',
-		'ListMLE',
+		#'ListMLE',
 		#'ListNet', 'ListMLE', 'ApproxNDCG', 'WassRank'
 		#'ApproxNDCG',
-		#'WassRank',
+		'WassRank',
 		# 'STListNet', 'LambdaLoss'
 	]
 
@@ -61,6 +62,7 @@ if __name__ == '__main__':
 	if config_with_json: # specify configuration with json files
 		# the directory of json files
 		dir_json = '/Users/dryuhaitao/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/'
+		#dir_json = '/Users/solar/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/'
 		for model_id in models_to_run:
 			evaluator.run(debug=debug, model_id=model_id, config_with_json=config_with_json, dir_json=dir_json)
 
@@ -87,7 +89,7 @@ if __name__ == '__main__':
 		#dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
 		#dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
 
-		grid_search = False # with grid_search, we can explore the effects of different hyper-parameters of a model
+		grid_search = True # with grid_search, we can explore the effects of different hyper-parameters of a model
 
 		for model_id in models_to_run:
 			evaluator.run(debug=debug, grid_search=grid_search,

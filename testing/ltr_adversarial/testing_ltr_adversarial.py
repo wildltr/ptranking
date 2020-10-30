@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
     debug = True  # in a debug mode, we just check whether the model can operate
 
-    config_with_json = True  # specify configuration with json files or not
+    config_with_json = False  # specify configuration with json files or not
 
     models_to_run = [
         'IRGAN_Point',
@@ -78,7 +78,7 @@ if __name__ == '__main__':
         #dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
         #dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
 
-        grid_search = False # with grid_search, we can explore the effects of different hyper-parameters of a model
+        grid_search = True # with grid_search, we can explore the effects of different hyper-parameters of a model
 
         for model_id in models_to_run:
             evaluator.run(debug=debug, model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output, grid_search=grid_search)

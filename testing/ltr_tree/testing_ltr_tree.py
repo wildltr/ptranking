@@ -50,13 +50,13 @@ if __name__ == '__main__':
         evaluator.run(debug=debug, model_id='LightGBMLambdaMART', config_with_json=config_with_json, dir_json=dir_json)
 
     else:
-        #data_id = 'MQ2008_Super'
-        data_id = 'MSLRWEB30K'
+        data_id = 'MQ2008_Super'
+        #data_id = 'MSLRWEB30K'
 
         #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
         #dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
-        #dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
-        dir_data = '/Users/dryuhaitao/WorkBench/Corpus/Learning2Rank/MSLR-WEB30K/'
+        dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
+        #dir_data = '/Users/dryuhaitao/WorkBench/Corpus/Learning2Rank/MSLR-WEB30K/'
 
         #data_id  = 'Istella_S'
         #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/'

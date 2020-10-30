@@ -4,7 +4,7 @@
 import json
 from itertools import product
 
-from ptranking.eval.parameter import DataSetting, EvalSetting
+from ptranking.ltr_adhoc.eval.parameter import DataSetting, EvalSetting
 from ptranking.data.data_utils import get_default_scaler_setting, MSLETOR_SEMI, get_data_meta
 
 
@@ -21,14 +21,17 @@ class TreeDataSetting(DataSetting):
         """
         unknown_as_zero = True if self.data_id in MSLETOR_SEMI else False # since lambdaMART is a supervised method
         binary_rele = False  # using the original values
-        presort = True  # this setting leads to no difference for lambdaMART, but it can be altered to reused buffered data
+        train_presort, validation_presort, test_presort = False, False, False
+        train_batch_size, validation_batch_size, test_batch_size = 1, 1, 1
 
         scale_data, scaler_id, scaler_level = get_default_scaler_setting(data_id=self.data_id)
 
         # more data settings that are rarely changed
         self.data_dict = dict(data_id=self.data_id, dir_data=self.dir_data, min_docs=10, min_rele=1,
-                         sample_rankings_per_q=1, unknown_as_zero=unknown_as_zero, binary_rele=binary_rele,
-                         presort=presort, scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
+                unknown_as_zero=unknown_as_zero, binary_rele=binary_rele, train_presort=train_presort,
+                validation_presort=validation_presort, test_presort=test_presort, train_batch_size=train_batch_size,
+                validation_batch_size=validation_batch_size, test_batch_size=test_batch_size,
+                              scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
 
         data_meta = get_data_meta(data_id=self.data_id)  # add meta-information
         self.data_dict.update(data_meta)
