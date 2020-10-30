@@ -50,11 +50,10 @@ if __name__ == '__main__':
 	models_to_run = [
 		#'RankMSE',
 		#'LambdaRank',
-		#'ListMLE',
-		#'ListNet', 'ListMLE', 'ApproxNDCG', 'WassRank'
-		#'ApproxNDCG',
+		#'ListNet', 'ListMLE',
+		'ApproxNDCG',
 		'WassRank',
-		# 'STListNet', 'LambdaLoss'
+		'STListNet', 'LambdaLoss'
 	]
 
 	evaluator = LTREvaluator()
@@ -71,8 +70,8 @@ if __name__ == '__main__':
 		data_id = 'MQ2008_Super'
 
 		''' location of the adopted data '''
-		dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
-		#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
+		#dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
+		dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
 		#dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
 
 		#data_id = 'Istella_X'
@@ -85,11 +84,11 @@ if __name__ == '__main__':
 		#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella_S/'
 
 		''' output directory '''
-		dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/'
-		#dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
+		#dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/'
+		dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
 		#dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
 
-		grid_search = True # with grid_search, we can explore the effects of different hyper-parameters of a model
+		grid_search = False # with grid_search, we can explore the effects of different hyper-parameters of a model
 
 		for model_id in models_to_run:
 			evaluator.run(debug=debug, grid_search=grid_search,

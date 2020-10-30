@@ -21,7 +21,7 @@ from ptranking.data.data_utils import LABEL_TYPE
 from ptranking.base.ranker import NeuralRanker
 from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.metric.adhoc_metric import torch_dcg_at_k
-from ptranking.ltr_global import global_device as device, tensor, epsilon
+from ptranking.ltr_global import global_device as device, global_gpu as gpu, tensor, epsilon
 
 
 LAMBDALOSS_TYPE = ['NDCG_Loss1', 'NDCG_Loss2', 'NDCG_Loss2++'] # todo add 'ARP_Loss1', 'ARP_Loss2',
@@ -89,7 +89,7 @@ class LambdaLoss(NeuralRanker):
         dists_1D = 1.0 / torch.log2(batch_std_ranks + 2.0)  # discount co-efficients
 
         # ideal dcg values based on optimal order
-        batch_idcgs = torch_dcg_at_k(batch_sorted_labels=target_batch_stds)
+        batch_idcgs = torch_dcg_at_k(batch_sorted_labels=target_batch_stds, gpu=gpu)
 
         if label_type == LABEL_TYPE.MultiLabel:
             batch_gains = torch.pow(2.0, batch_stds_sorted_via_preds) - 1.0

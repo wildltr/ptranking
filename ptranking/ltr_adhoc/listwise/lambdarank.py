@@ -17,6 +17,8 @@ from ptranking.metric.metric_utils import get_delta_ndcg
 from ptranking.ltr_adhoc.util.gather_utils import torch_triu_indice
 from ptranking.data.data_utils import LABEL_TYPE
 
+from ptranking.ltr_global import global_gpu as gpu
+
 def lambdaRank_loss_diagonal(batch_preds=None, batch_stds=None, sigma=None, label_type=None):
     '''
     This method will impose explicit bias to highly ranked documents that are essentially ties
@@ -63,7 +65,7 @@ def lambdaRank_loss_full(batch_preds=None, batch_stds=None, sigma=None, label_ty
 
     batch_pred_s_ij = torch.unsqueeze(batch_preds_sorted, dim=2) - torch.unsqueeze(batch_preds_sorted, dim=1)  # computing pairwise differences, i.e., s_i - s_j
 
-    batch_delta_ndcg = get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds, label_type=label_type)
+    batch_delta_ndcg = get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds, label_type=label_type, gpu=gpu)
 
     batch_loss_1st = 0.5 * sigma * batch_pred_s_ij * (1.0 - batch_std_Sij) # cf. the 1st equation in page-3
     batch_loss_2nd = torch.log(torch.exp(-sigma * batch_pred_s_ij) + 1.0)  # cf. the 1st equation in page-3

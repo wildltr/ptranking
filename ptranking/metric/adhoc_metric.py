@@ -2,17 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """Description
-The commonly used IR evaluation metrics, such as AP (average precision), nDCG and ERR
+The widely used IR evaluation metrics, such as AP (average precision), nDCG and ERR
+Note: commonly the metric-computation is not conducted on gpu
 """
 
 import torch
 import numpy as np
+
 from ptranking.data.data_utils import LABEL_TYPE
-from ptranking.ltr_global import global_gpu as gpu, global_device as device, tensor
+from ptranking.ltr_global import tensor as global_tensor, global_device
 
 """ Precision """
 
-def torch_precision_at_ks(batch_sys_sorted_labels, ks=None):
+def torch_precision_at_ks(batch_sys_sorted_labels, ks=None, gpu=False):
 	'''	Precision at ks
 	:param sys_sorted_labels: [batch_size, ranking_size] system's predicted ltr_adhoc of labels in a descending order
 	:param ks: cutoff values
@@ -29,7 +31,8 @@ def torch_precision_at_ks(batch_sys_sorted_labels, ks=None):
 	batch_bi_sys_sorted_labels = torch.clamp(batch_sys_sorted_labels, min=0, max=1) # binary
 	batch_sys_cumsum_reles = torch.cumsum(batch_bi_sys_sorted_labels, dim=1)
 
-	batch_ranks = (torch.arange(max_cutoff).type(tensor).expand_as(batch_sys_cumsum_reles) + 1.0)
+	batch_ranks = (torch.arange(max_cutoff).type(global_tensor).expand_as(batch_sys_cumsum_reles) + 1.0) if gpu \
+											else (torch.arange(max_cutoff).expand_as(batch_sys_cumsum_reles) + 1.0)
 
 	batch_sys_rankwise_precision = batch_sys_cumsum_reles / batch_ranks
 	batch_sys_p_at_ks = batch_sys_rankwise_precision[:, inds]
@@ -42,7 +45,7 @@ def torch_precision_at_ks(batch_sys_sorted_labels, ks=None):
 
 """ Average Precision """
 
-def torch_ap_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None):
+def torch_ap_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, gpu=False):
 	'''
 	AP(average precision) at ks (i.e., different cutoff values)
 	:param ideal_sorted_labels: [batch_size, ranking_size] the ideal ltr_adhoc of labels
@@ -60,7 +63,8 @@ def torch_ap_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None):
 	batch_bi_sys_sorted_labels = torch.clamp(batch_sys_sorted_labels, min=0, max=1) # binary
 	batch_sys_cumsum_reles = torch.cumsum(batch_bi_sys_sorted_labels, dim=1)
 
-	batch_ranks = (torch.arange(max_cutoff).type(tensor).expand_as(batch_sys_cumsum_reles) + 1.0)
+	batch_ranks = (torch.arange(max_cutoff).type(global_tensor).expand_as(batch_sys_cumsum_reles) + 1.0) if gpu \
+											else (torch.arange(max_cutoff).expand_as(batch_sys_cumsum_reles) + 1.0)
 
 	batch_sys_rankwise_precision = batch_sys_cumsum_reles / batch_ranks # rank-wise precision
 	batch_sys_cumsum_precision = torch.cumsum(batch_sys_rankwise_precision * batch_bi_sys_sorted_labels, dim=1) # exclude precisions of which the corresponding documents are not relevant
@@ -79,7 +83,7 @@ def torch_ap_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None):
 
 """ NERR """
 
-def torch_rankwise_err(batch_sorted_labels, max_label=None, k=10, point=True):
+def torch_rankwise_err(batch_sorted_labels, max_label=None, k=10, point=True, gpu=False):
 	assert batch_sorted_labels.size(1) >= k
 	assert max_label is not None # it is either query-level or corpus-level
 
@@ -89,7 +93,8 @@ def torch_rankwise_err(batch_sorted_labels, max_label=None, k=10, point=True):
 	batch_unsatis_probs = torch.ones_like(batch_labels) - batch_satis_probs
 	batch_cum_unsatis_probs = torch.cumprod(batch_unsatis_probs, dim=1)
 
-	batch_ranks = torch.arange(k).type(tensor).expand_as(batch_labels) + 1.0
+	batch_ranks = torch.arange(k).type(global_tensor).expand_as(batch_labels) + 1.0 if gpu \
+															else torch.arange(k).expand_as(batch_labels) + 1.0
 	batch_expt_ranks = 1.0 / batch_ranks
 
 	batch_cascad_unsatis_probs = torch.ones_like(batch_expt_ranks)
@@ -148,7 +153,7 @@ def torch_nerr_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None
 
 """ nDCG """
 
-def torch_dcg_at_k(batch_sorted_labels, cutoff=None, label_type=LABEL_TYPE.MultiLabel):
+def torch_dcg_at_k(batch_sorted_labels, cutoff=None, label_type=LABEL_TYPE.MultiLabel, gpu=False):
 	'''
 	ICML-nDCG, which places stronger emphasis on retrieving relevant documents
 	:param batch_sorted_labels: [batch_size, ranking_size] a batch of ranked labels (either standard or predicted by a system)
@@ -166,11 +171,12 @@ def torch_dcg_at_k(batch_sorted_labels, cutoff=None, label_type=LABEL_TYPE.Multi
 	else:
 		raise NotImplementedError
 
-	batch_discounts = torch.log2(torch.arange(cutoff).type(tensor).expand_as(batch_numerators) + 2.0)
+	batch_discounts = torch.log2(torch.arange(cutoff).type(global_tensor).expand_as(batch_numerators) + 2.0) if gpu \
+											else torch.log2(torch.arange(cutoff).expand_as(batch_numerators) + 2.0)
 	batch_dcg_at_k = torch.sum(batch_numerators/batch_discounts, dim=1, keepdim=True)
 	return batch_dcg_at_k
 
-def torch_dcg_at_ks(batch_sorted_labels, max_cutoff, label_type=LABEL_TYPE.MultiLabel):
+def torch_dcg_at_ks(batch_sorted_labels, max_cutoff, label_type=LABEL_TYPE.MultiLabel, gpu=False):
 	'''
 	:param batch_sorted_labels: [batch_size, ranking_size] ranked labels (either standard or predicted by a system)
 	:param max_cutoff: the maximum cutoff value
@@ -184,7 +190,8 @@ def torch_dcg_at_ks(batch_sorted_labels, max_cutoff, label_type=LABEL_TYPE.Multi
 	else:
 		raise NotImplementedError
 
-	batch_discounts = torch.log2(torch.arange(max_cutoff).type(tensor).expand_as(batch_numerators) + 2.0)
+	batch_discounts = torch.log2(torch.arange(max_cutoff).type(global_tensor).expand_as(batch_numerators) + 2.0) if gpu\
+										else torch.log2(torch.arange(max_cutoff).expand_as(batch_numerators) + 2.0)
 	batch_dcg_at_ks = torch.cumsum(batch_numerators/batch_discounts, dim=1)   # dcg w.r.t. each position
 	return batch_dcg_at_ks
 
@@ -250,7 +257,7 @@ def rele_gain(rele_level, gain_base=2.0):
 	gain = np.power(gain_base, rele_level) - 1.0
 	return gain
 
-def np_metric_at_ks(ranker=None, test_Qs=None, ks=[1, 5, 10], label_type=LABEL_TYPE.MultiLabel, max_rele_level=None):
+def np_metric_at_ks(ranker=None, test_Qs=None, ks=[1, 5, 10], label_type=LABEL_TYPE.MultiLabel, max_rele_level=None, gpu=False):
 	'''
 	There is no check based on the assumption (say light_filtering() is called)
 	that each test instance Q includes at least k(k=max(ks)) documents, and at least one relevant document.
@@ -271,7 +278,7 @@ def np_metric_at_ks(ranker=None, test_Qs=None, ks=[1, 5, 10], label_type=LABEL_T
 		tor_test_ranking, tor_test_std_label_vec = entry[1], torch.squeeze(entry[2], dim=0)  # remove the size 1 of dim=0 from loader itself
 
 		if gpu:
-			tor_rele_pred = ranker.predict(tor_test_ranking.to(device))
+			tor_rele_pred = ranker.predict(tor_test_ranking.to(global_device))
 			tor_rele_pred = torch.squeeze(tor_rele_pred)
 			tor_rele_pred = tor_rele_pred.cpu()
 		else:

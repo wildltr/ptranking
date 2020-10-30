@@ -15,6 +15,7 @@ from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.metric.adhoc_metric import torch_dcg_at_k
 from ptranking.base.neural_utils import robust_sigmoid
 
+from ptranking.ltr_global import global_gpu as gpu
 
 def get_approx_ranks(input, alpha=10):
     ''' get approximated rank positions: Equation-11 in the paper'''
@@ -46,7 +47,7 @@ def approxNDCG_loss(batch_preds=None, batch_stds=None, alpha=10, label_type=None
     batch_hat_pis = get_approx_ranks(batch_preds, alpha=alpha)
 
     # ideal dcg given optimally ordered labels
-    batch_idcgs = torch_dcg_at_k(batch_sorted_labels=batch_stds, cutoff=None, label_type=label_type)
+    batch_idcgs = torch_dcg_at_k(batch_sorted_labels=batch_stds, cutoff=None, label_type=label_type, gpu=gpu)
 
     if LABEL_TYPE.MultiLabel == label_type:
         batch_gains = torch.pow(2.0, batch_stds) - 1.0
