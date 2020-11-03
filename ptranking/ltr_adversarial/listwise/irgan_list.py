@@ -24,32 +24,18 @@ from ptranking.ltr_global import global_gpu as gpu, global_device as device
 
 
 class IRGAN_List(AdversarialMachine):
-    def __init__(self, eval_dict, data_dict, sf_para_dict=None, temperature=None, d_epoches=1, g_epoches=1, samples_per_query=5, top_k=5,
-                 ad_training_order='GD', shuffle_ties=True, PL=True, repTrick=True, dropLog=False, optimal_train=False):
+    def __init__(self, eval_dict, data_dict, sf_para_dict=None, ad_para_dict=None, optimal_train=False):
         '''
-        :param eval_dict:
-        :param data_dict:
-        :param sf_para_dict:
-        :param temperature:
-        :param d_epoches:
-        :param g_epoches:
-        :param samples_per_query:
-        :param top_k:
-        :param ad_training_order:
-        :param shuffle_ties: should be True, otherwise it is probable that the used stdandard ltr_adhoc is in fact not truth ltr_adhoc.
-        :param PL:
-        :param repTrick:
-        :param dropLog:
         :param optimal_train: training with supervised generator or discriminator
         '''
         super(IRGAN_List, self).__init__(eval_dict=eval_dict, data_dict=data_dict)
 
-        #sf_para_dict['ffnns']['apply_tl_af'] = True # todo to be compared
         g_sf_para_dict = sf_para_dict
 
+        # todo support all setting based Nan checking
         d_sf_para_dict = copy.deepcopy(g_sf_para_dict)
         d_sf_para_dict['ffnns']['apply_tl_af'] = True
-        d_sf_para_dict['ffnns']['TL_AF'] = 'S'  # as required by the IRGAN model
+        d_sf_para_dict['ffnns']['TL_AF'] = 'S'
 
         self.generator = List_Generator(sf_para_dict=g_sf_para_dict)
         self.discriminator = List_Discriminator(sf_para_dict=d_sf_para_dict)
@@ -57,17 +43,15 @@ class IRGAN_List(AdversarialMachine):
         self.super_generator = List_Generator(sf_para_dict=g_sf_para_dict)
         self.super_discriminator = List_Discriminator(sf_para_dict=d_sf_para_dict)
 
-        self.top_k = top_k
-        self.d_epoches = d_epoches
-        self.g_epoches = g_epoches
-        self.temperature = temperature
-        self.temperature_for_std_sampling = 0.01
-        self.shuffle_ties = shuffle_ties
-        self.ad_training_order = ad_training_order
-        self.samples_per_query = samples_per_query
-        self.PL_discriminator = PL
-        self.replace_trick_4_generator = repTrick
-        self.drop_discriminator_log_4_reward = dropLog
+        self.top_k = ad_para_dict['top_k']
+        self.d_epoches = ad_para_dict['d_epoches']
+        self.g_epoches = ad_para_dict['g_epoches']
+        self.temperature = ad_para_dict['temperature']
+        self.ad_training_order = ad_para_dict['ad_training_order']
+        self.samples_per_query = ad_para_dict['samples_per_query']
+        self.PL_discriminator = ad_para_dict['PL']
+        self.replace_trick_4_generator = ad_para_dict['repTrick']
+        self.drop_discriminator_log_4_reward = ad_para_dict['dropLog']
         self.optimal_train = optimal_train
 
         self.pre_check()
@@ -114,14 +98,16 @@ class IRGAN_List(AdversarialMachine):
                 d_loss.backward()
                 self.super_discriminator.optimizer.step()
 
+    def fill_global_buffer(self, train_data, dict_buffer=None):
+        """ for listwise, no particular global information is required """
+        pass
 
-    def mini_max_train(self, train_data=None, generator=None, discriminator=None, dict_buffer=None, per_query_ad_training=True):
+    def mini_max_train(self, train_data=None, generator=None, discriminator=None, global_buffer=None, per_query_ad_training=True):
         if per_query_ad_training:
             self.per_query_mini_max_train(train_data=train_data, generator=generator, discriminator=discriminator,
                                           ad_training_order=self.ad_training_order, top_k=self.top_k,
                                           samples_per_query=self.samples_per_query,
                                           per_query_g_epoch=self.g_epoches, per_query_d_epoch=self.d_epoches,
-                                          shuffle_ties=self.shuffle_ties,
                                           replace_trick_4_generator=self.replace_trick_4_generator,
                                           PL_discriminator=self.PL_discriminator,
                                           drop_discriminator_log_4_reward=self.drop_discriminator_log_4_reward,
@@ -136,7 +122,6 @@ class IRGAN_List(AdversarialMachine):
     def per_query_mini_max_train(self, train_data=None, generator=None, discriminator=None,
                                  ad_training_order='DG', samples_per_query=5, per_query_g_epoch=3, per_query_d_epoch=3,
                                  top_k=10, # todo does not work for reparameterization due to ltr_adhoc-size mismatch
-                                 shuffle_ties=False, # both can work
                                  replace_trick_4_generator=True,  # replace leads to better
                                  PL_discriminator=False, # both can work
                                  replace_trick_4_discriminator=False, # False is a must
@@ -156,13 +141,14 @@ class IRGAN_List(AdversarialMachine):
                         if self.optimal_train:
                             samples = self.per_query_generation(qid=qid, batch_ranking=batch_ranking,
                                 batch_label=batch_label, pos_and_neg=True, generator=self.super_generator, top_k=top_k,
-                                shuffle_ties=shuffle_ties, samples_per_query=samples_per_query, temperature=temperature)
+                                samples_per_query=samples_per_query, temperature=temperature)
                         else:
                             samples = self.per_query_generation(qid=qid, batch_ranking=batch_ranking,
                                 batch_label=batch_label, pos_and_neg=True, generator=generator, top_k=top_k,
-                                samples_per_query=samples_per_query, shuffle_ties=shuffle_ties, temperature=temperature)
+                                samples_per_query=samples_per_query, temperature=temperature)
 
-                    if samples is None: continue
+                    if samples is None:
+                        continue
                     else:
                         batch_std_sample_ranking, batch_gen_sample_ranking = samples
                         self.train_discriminator(discriminator=discriminator, PL_discriminator=PL_discriminator,
@@ -203,12 +189,12 @@ class IRGAN_List(AdversarialMachine):
                     if d_epoch % g_mod == 0:
                         if self.optimal_train:
                             samples = self.per_query_generation(qid=qid, batch_ranking=batch_ranking,
-                                batch_label=batch_label, pos_and_neg=True, generator=self.super_generator, temperature=temperature,
-                                top_k=top_k, samples_per_query=samples_per_query, shuffle_ties=shuffle_ties)
+                                batch_label=batch_label, pos_and_neg=True, generator=self.super_generator,
+                                temperature=temperature, top_k=top_k, samples_per_query=samples_per_query)
                         else:
                             samples = self.per_query_generation(qid=qid, batch_ranking=batch_ranking,
-                                batch_label=batch_label, pos_and_neg=True, generator=generator, temperature=temperature,
-                                samples_per_query=samples_per_query, shuffle_ties=shuffle_ties, top_k=top_k)
+                                batch_label=batch_label, pos_and_neg=True, generator=generator,
+                                temperature=temperature, samples_per_query=samples_per_query, top_k=top_k)
 
                     if samples is None: continue
                     else:
@@ -220,18 +206,9 @@ class IRGAN_List(AdversarialMachine):
 
 
     def per_query_generation(self, qid=None, batch_ranking=None, batch_label=None, pos_and_neg=None, generator=None,
-                             samples_per_query=None, shuffle_ties=None, top_k=None, temperature=None):
+                             samples_per_query=None, top_k=None, temperature=None):
         '''
-        :param qid:
-        :param batch_ranking:
-        :param batch_label:
         :param pos_and_neg: corresponding to discriminator optimization or generator optimization
-        :param generator:
-        :param samples_per_query:
-        :param shuffle_ties:
-        :param top_k:
-        :param temperature:
-        :return:
         '''
         g_batch_pred = generator.predict(batch_ranking)  # [batch, size_ranking]
         batch_gen_stochastic_prob = gumbel_softmax(g_batch_pred, samples_per_query=samples_per_query, temperature=temperature, cuda=gpu, cuda_device=device)
@@ -240,27 +217,16 @@ class IRGAN_List(AdversarialMachine):
         if pos_and_neg: # for training discriminator
             used_batch_label = batch_label
 
-            if shuffle_ties:
-                '''
-                There is not need to firstly filter out documents of '-1', due to the descending sorting and we only use the top ones
-                BTW, the only required condition is: the number of non-minus-one documents is larger than top_k, which builds upon the customized mask_data()
-                '''
-                per_query_label = torch.squeeze(used_batch_label)
-                list_std_sto_sorted_inds = []
-                for i in range(samples_per_query):
-                    shuffle_ties_inds = arg_shuffle_ties(per_query_label, descending=True)
-                    list_std_sto_sorted_inds.append(shuffle_ties_inds)
-
-                batch_std_sto_sorted_inds = torch.stack(list_std_sto_sorted_inds, dim=0)
-            else:
-                '''
-                # still using PL, with a small temperature!
-                if self.eval_dict['mask_label']:
-                    # can not use gumbel_softmax by directly using '-1'
-                    raise NotImplementedError
-                '''
-                batch_std_stochastic_prob = gumbel_softmax(used_batch_label, samples_per_query=samples_per_query, temperature=self.temperature_for_std_sampling)
-                _, batch_std_sto_sorted_inds = torch.sort(batch_std_stochastic_prob, dim=1, descending=True)  # sort documents according to the predicted relevance
+            ''' Generate truth-ranking based on shuffling ties
+            There is not need to firstly filter out documents of '-1', due to the descending sorting and we only use the top ones
+            BTW, the only required condition is: the number of non-minus-one documents is larger than top_k, which builds upon the customized mask_data()
+            '''
+            per_query_label = torch.squeeze(used_batch_label)
+            list_std_sto_sorted_inds = []
+            for i in range(samples_per_query):
+                shuffle_ties_inds = arg_shuffle_ties(per_query_label, descending=True)
+                list_std_sto_sorted_inds.append(shuffle_ties_inds)
+            batch_std_sto_sorted_inds = torch.stack(list_std_sto_sorted_inds, dim=0)
 
             list_pos_ranking, list_neg_ranking = [], []
             if top_k is None:  # using all documents
@@ -424,7 +390,7 @@ class IRGAN_List(AdversarialMachine):
 ###### Parameter of IRGAN_List ######
 
 class IRGAN_ListParameter(ModelParameter):
-    ''' Parameter class for List_IR_GAN '''
+    ''' Parameter class for IRGAN_List '''
     def __init__(self, debug=False, para_json=None):
         super(IRGAN_ListParameter, self).__init__(model_id='IRGAN_List')
         self.debug = debug
@@ -437,12 +403,11 @@ class IRGAN_ListParameter(ModelParameter):
         """
         temperature = 0.2
         d_epoches, g_epoches = 1, 1
-        ad_training_order = 'DG'
-        # ad_training_order = 'GD'
+        ad_training_order = 'DG' #
 
-        ad_para_dict = dict(model_id=self.model_id, d_epoches=d_epoches, g_epoches=g_epoches,
+        self.ad_para_dict = dict(model_id=self.model_id, d_epoches=d_epoches, g_epoches=g_epoches,
                             temperature=temperature, ad_training_order=ad_training_order, samples_per_query=10,
-                            top_k=2, shuffle_ties=False, PL=True, repTrick=False, dropLog=True)
+                            top_k=2, PL=True, repTrick=False, dropLog=True)
 
         return self.ad_para_dict
 
@@ -473,7 +438,6 @@ class IRGAN_ListParameter(ModelParameter):
 
         if repTrick: prefix += '_Rep'
         if dropLog:  prefix += '_DropLog'
-        if ad_para_dict['shuffle_ties']: prefix += '_STie'
 
         list_irgan_paras_str = prefix
         return list_irgan_paras_str
@@ -496,7 +460,6 @@ class IRGAN_ListParameter(ModelParameter):
                 choice_d_g_epoch.append((int(epoch_arr[0]), int(epoch_arr[1])))
 
             choice_top_k = json_dict['top_k']
-            choice_shuffle_ties = json_dict['shuffle_ties']
             choice_PL = json_dict['PL']
             choice_repTrick = json_dict['repTrick']
             choice_dropLog = json_dict['dropLog']
@@ -508,7 +471,6 @@ class IRGAN_ListParameter(ModelParameter):
 
             # settings that are specific to a listwise method#
             choice_top_k = [5]
-            choice_shuffle_ties = [False]  # todo should be True, otherwise it is probable that the used stdandard ltr_adhoc is in fact not truth ltr_adhoc.
             choice_PL = [True]  # discriminator formulation
             choice_repTrick = [False]  # for generator
             choice_dropLog = [True]  # drop log of discriminator when optimise generator
@@ -520,11 +482,9 @@ class IRGAN_ListParameter(ModelParameter):
                                      samples_per_query=samples_per_query, temperature=temperature,
                                      ad_training_order=ad_training_order)
 
-            for top_k, shuffle_ties, PL, repTrick, dropLog in product(choice_top_k, choice_shuffle_ties, choice_PL,
-                                                                      choice_repTrick, choice_dropLog):
+            for top_k, PL, repTrick, dropLog in product(choice_top_k, choice_PL, choice_repTrick, choice_dropLog):
                 ad_list_para_dict = dict()
                 ad_list_para_dict['top_k'] = top_k
-                ad_list_para_dict['shuffle_ties'] = shuffle_ties
                 ad_list_para_dict['PL'] = PL
                 ad_list_para_dict['repTrick'] = repTrick
                 ad_list_para_dict['dropLog'] = dropLog

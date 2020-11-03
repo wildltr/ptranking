@@ -37,7 +37,6 @@ class AdLTREvaluator(LTREvaluator):
         Check whether the settings are reasonable in the context of adversarial learning-to-rank
         """
         ''' Part-1: data loading '''
-        assert data_dict['train_presort'] is not True  # due to the non-labeled documents
         assert 1 == data_dict['train_batch_size']  # the required setting w.r.t. adversarial LTR
 
         if data_dict['data_id'] == 'Istella':
@@ -73,19 +72,9 @@ class AdLTREvaluator(LTREvaluator):
         :return:
         """
         model_id = ad_para_dict['model_id']
-        if model_id in ['IRGAN_Point', 'IRGAN_Pair']:
-            ad_machine = globals()[model_id](eval_dict=eval_dict, data_dict=data_dict, sf_para_dict=sf_para_dict,
-                                             temperature=ad_para_dict['temperature'],
-                                             d_epoches=ad_para_dict['d_epoches'], g_epoches=ad_para_dict['g_epoches'],
-                                             ad_training_order=ad_para_dict['ad_training_order'])
-        elif model_id == 'IRGAN_List':
-            ad_machine = IRGAN_List(eval_dict=eval_dict, data_dict=data_dict, sf_para_dict=sf_para_dict,
-                                     temperature=ad_para_dict['temperature'],
-                                     d_epoches=ad_para_dict['d_epoches'], g_epoches=ad_para_dict['g_epoches'],
-                                     samples_per_query=ad_para_dict['samples_per_query'], top_k=ad_para_dict['top_k'],
-                                     ad_training_order=ad_para_dict['ad_training_order'], PL=ad_para_dict['PL'],
-                                     shuffle_ties=ad_para_dict['shuffle_ties'], repTrick=ad_para_dict['repTrick'],
-                                     dropLog=ad_para_dict['dropLog'])
+        if model_id in ['IRGAN_Point', 'IRGAN_Pair', 'IRGAN_List']:
+            ad_machine = globals()[model_id](eval_dict=eval_dict, data_dict=data_dict,
+                                             sf_para_dict=sf_para_dict, ad_para_dict=ad_para_dict)
         else:
             raise NotImplementedError
 
@@ -121,13 +110,20 @@ class AdLTREvaluator(LTREvaluator):
         time_begin = datetime.datetime.now()  # timing
         g_l2r_cv_avg_scores, d_l2r_cv_avg_scores = np.zeros(len(cutoffs)), np.zeros(len(cutoffs))  # fold average
 
+        '''
+        Dataset-level buffering of frequently used information
+        1> e.g., number of positive documents per-query
+        '''
+        global_buffer = dict() # refresh for each model instance
+
         for fold_k in range(1, fold_num + 1):
-            dict_buffer = dict()  # for buffering frequently used objs
             ad_machine.reset_generator_discriminator()
 
             fold_optimal_checkpoint = '-'.join(['Fold', str(fold_k)])
-
             train_data, test_data, vali_data = self.load_data(eval_dict, data_dict, fold_k)
+
+            # update due to new train_data
+            ad_machine.fill_global_buffer(train_data, dict_buffer=global_buffer)
 
             if do_vali: g_fold_optimal_ndcgk, d_fold_optimal_ndcgk= 0.0, 0.0
             if do_summary:
@@ -138,18 +134,16 @@ class AdLTREvaluator(LTREvaluator):
             for _ in range(10):
                 ad_machine.burn_in(train_data=train_data)
 
-
             for epoch_k in range(1, epochs + 1):
-
                 if model_id == 'IR_GMAN_List':
                     stop_training = ad_machine.mini_max_train(train_data=train_data, generator=ad_machine.generator,
-                                              pool_discriminator=ad_machine.pool_discriminator, dict_buffer=dict_buffer)
+                                              pool_discriminator=ad_machine.pool_discriminator, global_buffer=global_buffer)
 
                     g_ranker = ad_machine.get_generator()
                     d_ranker = ad_machine.pool_discriminator[0]
                 else:
                     stop_training = ad_machine.mini_max_train(train_data=train_data, generator=ad_machine.generator,
-                                              discriminator=ad_machine.discriminator, dict_buffer=dict_buffer)
+                                              discriminator=ad_machine.discriminator, global_buffer=global_buffer)
 
                     g_ranker = ad_machine.get_generator()
                     d_ranker = ad_machine.get_discriminator()

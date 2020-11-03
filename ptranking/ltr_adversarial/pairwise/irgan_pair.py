@@ -2,12 +2,8 @@
 # -*- coding: utf-8 -*-
 
 
-"""Description
-
-"""
 import json
 import copy
-import numpy as np
 from itertools import product
 
 import torch
@@ -60,17 +56,10 @@ class IRGAN_Pair_Discriminator(AdversarialPlayer):
 
 class IRGAN_Pair(AdversarialMachine):
     ''''''
-    def __init__(self, eval_dict, data_dict, sf_para_dict=None, temperature=0.2, loss_type='svm', d_epoches=None, g_epoches=None, ad_training_order=None):
+    def __init__(self, eval_dict, data_dict, sf_para_dict=None, ad_para_dict=None):
         '''
-
-        :param eval_dict:
-        :param data_dict:
         :param sf_para_dict:
-        :param temperature:   according to the description around Eq-10, temperature is deployed, while it is not used within the provided code
-        :param loss_type:
-        :param d_epoches:
-        :param g_epoches:
-        :param ad_training_order:
+        :param temperature: according to the description around Eq-10, temperature is deployed, while it is not used within the provided code
         '''
         super(IRGAN_Pair, self).__init__(eval_dict=eval_dict, data_dict=data_dict)
 
@@ -82,100 +71,93 @@ class IRGAN_Pair(AdversarialMachine):
         d_sf_para_dict['ffnns']['apply_tl_af'] = False
         #d_sf_para_dict['ffnns']['TL_AF'] = 'S'  # as required by the IRGAN model
 
-        self.generator     = IRGAN_Pair_Generator(sf_para_dict=g_sf_para_dict, temperature=temperature)
+        self.generator     = IRGAN_Pair_Generator(sf_para_dict=g_sf_para_dict, temperature=ad_para_dict['temperature'])
         self.discriminator = IRGAN_Pair_Discriminator(sf_para_dict=d_sf_para_dict)
 
-        self.loss_type = loss_type
-        self.d_epoches = d_epoches
-        self.g_epoches = g_epoches
-        self.temperature = temperature
-        self.ad_training_order = ad_training_order
-        #self.samples_per_query = samples_per_query
+        self.loss_type = ad_para_dict['loss_type']
+        self.d_epoches = ad_para_dict['d_epoches']
+        self.g_epoches = ad_para_dict['g_epoches']
+        self.temperature = ad_para_dict['temperature']
+        self.ad_training_order = ad_para_dict['ad_training_order']
+        self.samples_per_query = ad_para_dict['samples_per_query']
+
+    def fill_global_buffer(self, train_data, dict_buffer=None):
+        ''' Buffer the number of positive documents, and the number of non-positive documents per query '''
+        assert train_data.presort is True  # this is required for efficient truth exampling
+
+        for entry in train_data:
+            qid, _, batch_label = entry[0], entry[1], entry[2]
+            if not qid in dict_buffer:
+                boolean_mat = torch.gt(batch_label, 0)
+                num_pos = torch.sum(boolean_mat)
+                ranking_size = batch_label.size(1)
+                num_neg_unk = ranking_size - num_pos
+                dict_buffer[qid] = (num_pos, num_neg_unk)
 
 
-    def mini_max_train(self, train_data=None, generator=None, discriminator=None, dict_buffer=None):
+    def mini_max_train(self, train_data=None, generator=None, discriminator=None, global_buffer=None):
         if self.ad_training_order == 'DG':
             for d_epoch in range(self.d_epoches):
                 if d_epoch % 10 == 0:
-                    generated_data = self.generate_data(train_data=train_data, generator=generator)
+                    generated_data = self.generate_data(train_data=train_data, generator=generator, global_buffer=global_buffer)
 
                 self.train_discriminator(train_data=train_data, generated_data=generated_data, discriminator=discriminator)  # train discriminator
 
             for g_epoch in range(self.g_epoches):
-                self.train_generator(train_data=train_data, generator=generator, discriminator=discriminator)  # train generator
+                self.train_generator(train_data=train_data, generator=generator, discriminator=discriminator,
+                                     global_buffer=global_buffer)  # train generator
 
         else:
             for g_epoch in range(self.g_epoches):
-                self.train_generator(train_data=train_data, generator=generator, discriminator=discriminator)  # train generator
+                self.train_generator(train_data=train_data, generator=generator, discriminator=discriminator,
+                                     global_buffer=global_buffer)  # train generator
 
             for d_epoch in range(self.d_epoches):
                 if d_epoch % 10 == 0:
-                    generated_data = self.generate_data(train_data=train_data, generator=generator)
-
+                    generated_data = self.generate_data(train_data=train_data, generator=generator,
+                                                        global_buffer=global_buffer)
                 self.train_discriminator(train_data=train_data, generated_data=generated_data, discriminator=discriminator)  # train discriminator
 
         stop_training = False
         return stop_training
 
 
-    def generate_data(self, train_data=None, generator=None, **kwargs):
+    def generate_data(self, train_data=None, generator=None, global_buffer=None):
         '''
-        negative sampling based on current generator for training discriminator
-        todo this is a re-implementation as the released irgan-tensorflow, but it seems that this part of irgan-tensorflow is not consistent with the discription of the paper (i.e., the description below Eq. 7)
+        Sampling for training discriminator
+        This is a re-implementation as the released irgan-tensorflow, but it seems that this part of irgan-tensorflow
+        is not consistent with the discription of the paper (i.e., the description below Eq. 7)
         '''
         generated_data = dict()
         for entry in train_data:
             qid, batch_ranking, batch_label = entry[0], entry[1], entry[2]
-
-            samples = self.per_query_generation(qid, batch_ranking, batch_label, generator)
-
+            samples = self.per_query_generation(qid=qid, batch_ranking=batch_ranking, generator=generator,
+                                                global_buffer=global_buffer)
             if samples is not None: generated_data[qid] = samples
 
         return generated_data
 
 
-    def per_query_generation(self, qid, batch_ranking, batch_label, generator):
+    def per_query_generation(self, qid, batch_ranking, generator, global_buffer):
+        num_pos, num_neg_unk = global_buffer[qid]
 
-        used_batch_label = batch_label
-
-        if gpu: batch_ranking = batch_ranking.to(device)
-
-        # [1, ranking_size] -> [ranking_size]
-        # [z, n] If input has n dimensions, then the resulting indices tensor out is of size (z×n), where z is the total number of non-zero elements in the input tensor.
-        pos_inds = torch.gt(torch.squeeze(used_batch_label), 0).nonzero()
-        num_pos = pos_inds.size()[0]
-
-        if num_pos < 1:
-            return None
-
-        if num_pos < used_batch_label.size(1):
+        if num_pos >= 1:
+            valid_num = min(num_pos, num_neg_unk, self.samples_per_query)
+            ranking_inds = torch.arange(batch_ranking.size(1))
             '''
-            sampling condition: pos_inds<|tor_batch_stds|
-            sample numbers: min(|pos_inds|, |total_neg_inds|)
+            intersection implementation (keeping consistent with the released irgan-tensorflow):
+            remove the positive part, then sample to form pairs
             '''
+            pos_inds = torch.randperm(num_pos)[0:valid_num]  # randomly select positive documents
+
             batch_pred = generator.predict(batch_ranking)  # [batch, size_ranking]
-            # batch_probs = torch.sigmoid(torch.squeeze(batch_preds))
-            batch_prob = F.softmax(torch.squeeze(batch_pred), dim=0)
+            pred_probs = F.softmax(torch.squeeze(batch_pred), dim=0)
+            neg_unk_probs = pred_probs[num_pos:]
+            # sample from negative / unlabelled documents
+            inner_neg_inds = torch.multinomial(neg_unk_probs, valid_num, replacement=False)
+            neg_inds = ranking_inds[num_pos:][inner_neg_inds]
 
-            # intersection implementation (keeping consistent with the released irgan-tensorflow): remove the positive part, then sample
-            reversed_batch_label = torch.where(used_batch_label > 0, cpu_torch_zero, cpu_torch_one)  # negative values
-            total_neg_inds = torch.nonzero(torch.squeeze(reversed_batch_label))
-
-            num_samples = min(num_pos, total_neg_inds.size()[0])
-
-            batch_neg_probs = batch_prob[total_neg_inds[:, 0]]
-            tmp_neg_inds = torch.multinomial(batch_neg_probs, num_samples, replacement=False)
-            sample_neg_inds = total_neg_inds[tmp_neg_inds]  # using the original indices within total_neg_inds rather than batch_neg_probs
-
-            if num_samples < num_pos:
-                tmp_pos_inds = torch.multinomial(torch.ones(num_pos), num_samples=num_samples, replacement=False)
-                sample_pos_inds = pos_inds[tmp_pos_inds]
-            else:
-                sample_pos_inds = pos_inds
-
-            # generated_data[qid] = (sample_pos_inds, sample_neg_inds)
-            # convert 2-d index matrix into 1-d index matrix
-            return (np.squeeze(sample_pos_inds, axis=1), np.squeeze(sample_neg_inds, axis=1))
+            return (pos_inds, neg_inds)
         else:
             return None
 
@@ -207,19 +189,24 @@ class IRGAN_Pair(AdversarialMachine):
                 discriminator.optimizer.step()
 
 
-    def train_generator(self, train_data=None, generated_data=None, generator=None, discriminator=None, **kwargs):
+    def train_generator(self, train_data=None, generated_data=None, generator=None, discriminator=None,
+                        global_buffer=None):
         for entry in train_data:
             qid, batch_ranking, batch_label = entry[0], entry[1], entry[2]
             if gpu: batch_ranking = batch_ranking.to(device)
 
-            pos_inds = torch.gt(torch.squeeze(batch_label), 0).nonzero()
+            num_pos, num_neg_unk = global_buffer[qid]
+            if num_pos < 1: continue
+
+            valid_num = min(num_pos, num_neg_unk, self.samples_per_query)
+
+            pos_inds = torch.randperm(num_pos)[0:valid_num]  # randomly select positive documents
 
             g_preds = generator.predict(batch_ranking, train=True)
             g_probs = torch.sigmoid(torch.squeeze(g_preds))
+            neg_inds = torch.multinomial(g_probs, valid_num, replacement=False)
 
-            neg_inds = torch.multinomial(g_probs, pos_inds.size(0), replacement=True)
-
-            pos_docs = batch_ranking[:, pos_inds[:, 0], :]
+            pos_docs = batch_ranking[:, pos_inds, :]
             neg_docs = batch_ranking[:, neg_inds, :]
 
             reward = discriminator.get_reward(pos_docs=pos_docs, neg_docs=neg_docs, loss_type=self.loss_type)
@@ -245,7 +232,7 @@ class IRGAN_Pair(AdversarialMachine):
 ###### Parameter of IRGAN_Pair ######
 
 class IRGAN_PairParameter(ModelParameter):
-    ''' Parameter class for Pair_IR_GAN '''
+    ''' Parameter class for IRGAN_Pair '''
     def __init__(self, debug=False, para_json=None):
         super(IRGAN_PairParameter, self).__init__(model_id='IRGAN_Pair')
         self.debug = debug
@@ -258,11 +245,12 @@ class IRGAN_PairParameter(ModelParameter):
         """
         temperature = 0.5
         d_epoches, g_epoches = 1, 1
-        ad_training_order = 'DG'
-        # ad_training_order = 'GD'
+        ad_training_order = 'DG' # 'GD'
+        samples_per_query = 5
 
-        self.ad_para_dict = dict(model_id=self.model_id, d_epoches=d_epoches, g_epoches=g_epoches,
-                                 temperature=temperature, ad_training_order=ad_training_order, loss_type='svm')
+        self.ad_para_dict = dict(model_id=self.model_id, loss_type='svm', d_epoches=d_epoches, g_epoches=g_epoches,
+                                 temperature=temperature, ad_training_order=ad_training_order,
+                                 samples_per_query=samples_per_query)
         return self.ad_para_dict
 
     def to_para_string(self, log=False, given_para_dict=None):
@@ -276,12 +264,12 @@ class IRGAN_PairParameter(ModelParameter):
         ad_para_dict = given_para_dict if given_para_dict is not None else self.ad_para_dict
 
         s1 = ':' if log else '_'
-        d_epoches, g_epoches, temperature, ad_training_order, loss_type = \
+        d_epoches, g_epoches, temperature, ad_training_order, loss_type, samples_per_query = \
             ad_para_dict['d_epoches'], ad_para_dict['g_epoches'], ad_para_dict['temperature'],\
-            ad_para_dict['ad_training_order'], ad_para_dict['loss_type']
+            ad_para_dict['ad_training_order'], ad_para_dict['loss_type'], ad_para_dict['samples_per_query']
 
         pair_irgan_paras_str = s1.join([str(d_epoches), str(g_epoches), '{:,g}'.format(temperature),
-                                        ad_training_order, loss_type])
+                                        ad_training_order, loss_type, str(samples_per_query)])
 
         return pair_irgan_paras_str
 

@@ -4,7 +4,6 @@
   "samples_per_query":[5],
   "ad_training_order":["DG"],
   "top_k":[5],
-  "shuffle_ties":[false],
   "PL":[true],
   "repTrick":[false],
   "dropLog":[true]

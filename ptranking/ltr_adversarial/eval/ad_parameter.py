@@ -216,7 +216,7 @@ class AdDataSetting():
 		"""
 		unknown_as_zero = False
 		binary_rele = False  # using the original values
-		train_presort, validation_presort, test_presort = False, True, True
+		train_presort, validation_presort, test_presort = True, True, True
 		train_batch_size, validation_batch_size, test_batch_size = 1, 1, 1
 
 		scale_data, scaler_id, scaler_level = get_default_scaler_setting(data_id=self.data_id)
@@ -251,7 +251,7 @@ class AdDataSetting():
 			choice_min_rele = [1]
 			choice_binary_rele = [False]
 			choice_unknown_as_zero = [False]
-			choice_train_presort = [False]
+			choice_train_presort = [True]
 			choice_train_batch_size = [1]  # number of sample rankings per query
 
 			base_data_dict = dict(data_id=self.data_id, dir_data=self.dir_data, test_presort=True,

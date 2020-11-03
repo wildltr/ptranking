@@ -12,6 +12,7 @@ class AdversarialMachine():
     '''
 
     def __init__(self, eval_dict=None, data_dict=None):
+        #todo double-check the necessity of these two arguments
         self.eval_dict = eval_dict
         self.data_dict = data_dict
 
@@ -21,7 +22,14 @@ class AdversarialMachine():
     def burn_in(self, train_data=None):
         pass
 
-    def mini_max_train(self, train_data=None, generator=None, discriminator=None, d_epoches=1, g_epoches=1, dict_buffer=None):
+    def mini_max_train(self, train_data=None, generator=None, discriminator=None, d_epoches=1, g_epoches=1, global_buffer=None):
+        pass
+
+    def fill_global_buffer(self):
+        '''
+        Buffer some global information for higher efficiency.
+        We note that global information may differ w.r.t. the model
+        '''
         pass
 
     def generate_data(self, train_data=None, generator=None, **kwargs):

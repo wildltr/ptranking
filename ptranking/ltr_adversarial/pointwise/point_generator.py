@@ -1,12 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
-"""Description
-
-"""
-
-
 from ptranking.ltr_adversarial.base.ad_player import AdversarialPlayer
 
 class Point_Generator(AdversarialPlayer):
