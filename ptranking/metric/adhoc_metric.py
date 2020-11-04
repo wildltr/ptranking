@@ -31,7 +31,7 @@ def torch_precision_at_k(batch_sys_sorted_labels, k=None, gpu=False):
 											else (torch.arange(used_cutoff).expand_as(batch_sys_cumsum_reles) + 1.0)
 
 	batch_sys_rankwise_precision = batch_sys_cumsum_reles / batch_ranks
-	batch_sys_p_at_k = batch_sys_rankwise_precision[:, used_cutoff-1]
+	batch_sys_p_at_k = batch_sys_rankwise_precision[:, used_cutoff-1:used_cutoff]
 	return batch_sys_p_at_k
 
 def torch_precision_at_ks(batch_sys_sorted_labels, ks=None, gpu=False):
@@ -88,7 +88,7 @@ def torch_ap_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, gp
 
 	batch_std_cumsum_reles = torch.cumsum(batch_ideal_sorted_labels, dim=1)
 	batch_sys_rankwise_ap = batch_sys_cumsum_precision / batch_std_cumsum_reles[:, 0:used_cutoff]
-	batch_sys_ap_at_k = batch_sys_rankwise_ap[:, used_cutoff-1]
+	batch_sys_ap_at_k = batch_sys_rankwise_ap[:, used_cutoff-1:used_cutoff]
 	return batch_sys_ap_at_k
 
 def torch_ap_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, gpu=False):
@@ -149,7 +149,7 @@ def torch_rankwise_err(batch_sorted_labels, max_label=None, k=10, point=True, gp
 	batch_expt_satis_ranks = batch_expt_ranks * batch_satis_probs * batch_cascad_unsatis_probs  # w.r.t. all rank positions
 
 	if point: # a specific position
-		batch_err_at_k = torch.sum(batch_expt_satis_ranks, dim=1)
+		batch_err_at_k = torch.sum(batch_expt_satis_ranks, dim=1, keepdim=True)
 		return batch_err_at_k
 	else:
 		batch_rankwise_err = torch.cumsum(batch_expt_satis_ranks, dim=1)
