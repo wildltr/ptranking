@@ -14,6 +14,26 @@ from ptranking.ltr_global import tensor as global_tensor, global_device
 
 """ Precision """
 
+def torch_precision_at_k(batch_sys_sorted_labels, k=None, gpu=False):
+	'''	Precision at k
+	:param sys_sorted_labels: [batch_size, ranking_size] system's predicted ltr_adhoc of labels in a descending order
+	:param ks: cutoff values
+	:return: [batch_size, len(ks)]
+	'''
+	max_cutoff = batch_sys_sorted_labels.size(1)
+	used_cutoff = min(max_cutoff, k)
+
+	batch_sys_sorted_labels = batch_sys_sorted_labels[:, 0:used_cutoff]
+	batch_bi_sys_sorted_labels = torch.clamp(batch_sys_sorted_labels, min=0, max=1) # binary
+	batch_sys_cumsum_reles = torch.cumsum(batch_bi_sys_sorted_labels, dim=1)
+
+	batch_ranks = (torch.arange(used_cutoff).type(global_tensor).expand_as(batch_sys_cumsum_reles) + 1.0) if gpu \
+											else (torch.arange(used_cutoff).expand_as(batch_sys_cumsum_reles) + 1.0)
+
+	batch_sys_rankwise_precision = batch_sys_cumsum_reles / batch_ranks
+	batch_sys_p_at_k = batch_sys_rankwise_precision[:, used_cutoff-1]
+	return batch_sys_p_at_k
+
 def torch_precision_at_ks(batch_sys_sorted_labels, ks=None, gpu=False):
 	'''	Precision at ks
 	:param sys_sorted_labels: [batch_size, ranking_size] system's predicted ltr_adhoc of labels in a descending order
@@ -44,6 +64,32 @@ def torch_precision_at_ks(batch_sys_sorted_labels, ks=None, gpu=False):
 		return batch_sys_p_at_ks
 
 """ Average Precision """
+
+def torch_ap_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, gpu=False):
+	'''
+	AP(average precision) at ks (i.e., different cutoff values)
+	:param ideal_sorted_labels: [batch_size, ranking_size] the ideal ltr_adhoc of labels
+	:param sys_sorted_labels: [batch_size, ranking_size] system's predicted ltr_adhoc of labels in a descending order
+	:param ks:
+	:return: [batch_size, len(ks)]
+	'''
+	max_cutoff = batch_sys_sorted_labels.size(1)
+	used_cutoff = min(max_cutoff, k)
+
+	batch_sys_sorted_labels = batch_sys_sorted_labels[:, 0:used_cutoff]
+	batch_bi_sys_sorted_labels = torch.clamp(batch_sys_sorted_labels, min=0, max=1) # binary
+	batch_sys_cumsum_reles = torch.cumsum(batch_bi_sys_sorted_labels, dim=1)
+
+	batch_ranks = (torch.arange(used_cutoff).type(global_tensor).expand_as(batch_sys_cumsum_reles) + 1.0) if gpu \
+											else (torch.arange(used_cutoff).expand_as(batch_sys_cumsum_reles) + 1.0)
+
+	batch_sys_rankwise_precision = batch_sys_cumsum_reles / batch_ranks # rank-wise precision
+	batch_sys_cumsum_precision = torch.cumsum(batch_sys_rankwise_precision * batch_bi_sys_sorted_labels, dim=1) # exclude precisions of which the corresponding documents are not relevant
+
+	batch_std_cumsum_reles = torch.cumsum(batch_ideal_sorted_labels, dim=1)
+	batch_sys_rankwise_ap = batch_sys_cumsum_precision / batch_std_cumsum_reles[:, 0:used_cutoff]
+	batch_sys_ap_at_k = batch_sys_rankwise_ap[:, used_cutoff-1]
+	return batch_sys_ap_at_k
 
 def torch_ap_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, gpu=False):
 	'''
@@ -111,7 +157,7 @@ def torch_rankwise_err(batch_sorted_labels, max_label=None, k=10, point=True, gp
 
 def torch_nerr_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, label_type=LABEL_TYPE.MultiLabel):
 	valid_max_cutoff = batch_sys_sorted_labels.size(1)
-	cutoff = max(valid_max_cutoff, k)
+	cutoff = min(valid_max_cutoff, k)
 
 	if LABEL_TYPE.MultiLabel == label_type:
 		max_label = torch.max(batch_ideal_sorted_labels)
