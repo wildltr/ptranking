@@ -142,7 +142,9 @@ class IRGAN_Point(AdversarialMachine):
             valid_num = min(num_pos, self.samples_per_query)
             pos_inds = torch.randperm(num_pos)[0:valid_num] # randomly select positive documents
 
-            batch_pred = generator.predict(batch_ranking)  # [batch, size_ranking]
+            if gpu: batch_ranking = batch_ranking.to(device) # [batch, size_ranking]
+
+            batch_pred = generator.predict(batch_ranking)
             pred_probs = F.softmax(torch.squeeze(batch_pred), dim=0)
 
             neg_inds = torch.multinomial(pred_probs, valid_num, replacement=True)

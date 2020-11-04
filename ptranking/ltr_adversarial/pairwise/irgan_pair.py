@@ -150,13 +150,14 @@ class IRGAN_Pair(AdversarialMachine):
             '''
             pos_inds = torch.randperm(num_pos)[0:valid_num]  # randomly select positive documents
 
+            if gpu: batch_ranking = batch_ranking.to(device) # [batch, size_ranking]
             batch_pred = generator.predict(batch_ranking)  # [batch, size_ranking]
             pred_probs = F.softmax(torch.squeeze(batch_pred), dim=0)
             neg_unk_probs = pred_probs[num_pos:]
             # sample from negative / unlabelled documents
             inner_neg_inds = torch.multinomial(neg_unk_probs, valid_num, replacement=False)
             neg_inds = ranking_inds[num_pos:][inner_neg_inds]
-
+            # todo with cuda, confirm the possible time issue on indices
             return (pos_inds, neg_inds)
         else:
             return None

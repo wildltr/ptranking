@@ -8,5 +8,5 @@
 
   "binary_rele":[false],
   "unknown_as_zero":[false],
-  "train_presort":[false]
+  "train_presort":[true]
 }

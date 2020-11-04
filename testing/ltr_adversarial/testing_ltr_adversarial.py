@@ -53,8 +53,8 @@ if __name__ == '__main__':
 
     models_to_run = [
         #'IRGAN_Point',
-        #'IRGAN_Pair',
-        'IRGAN_List'
+        'IRGAN_Pair',
+        #'IRGAN_List'
     ]
 
     evaluator = AdLTREvaluator()
@@ -62,6 +62,7 @@ if __name__ == '__main__':
     if config_with_json:  # specify configuration with json files
         # the directory of json files
         dir_json = '/Users/dryuhaitao/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adversarial/json/'
+        #dir_json = '/home/dl-box/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adversarial/json/'
         for model_id in models_to_run:
             evaluator.run(debug=debug, model_id=model_id, config_with_json=config_with_json, dir_json=dir_json)
 
@@ -70,13 +71,13 @@ if __name__ == '__main__':
 
         ''' location of the adopted data '''
         #dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
-        #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
-        dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
+        dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
+        #dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
 
         ''' output directory '''
         #dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/ALTR/'
-        #dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
-        dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
+        dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
+        #dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
 
         grid_search = False # with grid_search, we can explore the effects of different hyper-parameters of a model
 
