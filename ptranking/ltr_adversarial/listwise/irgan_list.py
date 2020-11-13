@@ -431,7 +431,7 @@ class IRGAN_ListParameter(ModelParameter):
 
         top_k_str = 'topAll' if top_k is None else 'top' + str(top_k)
         s_str = 'S' + str(ad_para_dict['samples_per_query'])
-        df_str = 'PL' if PL_D else 'BT'
+        df_str = 'PLD' if PL_D else 'BTD'
         prefix = s1.join([prefix, top_k_str, s_str, df_str])
 
         if repTrick: prefix += '_Rep'

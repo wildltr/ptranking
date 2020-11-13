@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 import json
 import copy
 from itertools import product
@@ -12,8 +11,6 @@ import torch.nn.functional as F
 from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.ltr_adversarial.base.ad_player import AdversarialPlayer
 from ptranking.ltr_adversarial.base.ad_machine import AdversarialMachine
-
-#from ptranking.ltr_global import global_gpu as gpu, global_device as device, torch_zero, torch_one, cpu_torch_one, cpu_torch_zero
 
 class IRGAN_Pair_Generator(AdversarialPlayer):
     def __init__(self, sf_para_dict=None, temperature=None, gpu=False, device=None):
@@ -146,8 +143,7 @@ class IRGAN_Pair(AdversarialMachine):
     def per_query_generation(self, qid, batch_ranking, generator, global_buffer):
         num_pos, num_neg_unk = global_buffer[qid]
         valid_num = min(num_pos, num_neg_unk, self.samples_per_query)
-
-        if num_pos >= 1 and valid_num>=1:
+        if num_pos >= 1 and valid_num >= 1:
             ranking_inds = torch.arange(batch_ranking.size(1))
             '''
             intersection implementation (keeping consistent with the released irgan-tensorflow):
@@ -202,9 +198,10 @@ class IRGAN_Pair(AdversarialMachine):
             if self.gpu: batch_ranking = batch_ranking.to(self.device)
 
             num_pos, num_neg_unk = global_buffer[qid]
-            if num_pos < 1: continue
-
             valid_num = min(num_pos, num_neg_unk, self.samples_per_query)
+
+            if num_pos < 1 or valid_num < 1:
+                continue
 
             pos_inds = torch.randperm(num_pos)[0:valid_num]  # randomly select positive documents
 
