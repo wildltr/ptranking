@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 """Description
-
+author = {Bruch, Sebastian and Han, Shuguang and Bendersky, Michael and Najork, Marc},
+title = {A Stochastic Treatment of Learning to Rank Scoring Functions},
+year = {2020},
+booktitle = {Proceedings of the 13th International Conference on Web Search and Data Mining},
+pages = {61–69}
 """
-
 
 import torch
 import torch.nn.functional as F
@@ -13,7 +15,6 @@ import torch.nn.functional as F
 from ptranking.base.ranker import NeuralRanker
 from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 
-from ptranking.ltr_global import global_gpu as gpu, global_device as device
 
 EPS = 1e-20
 
@@ -23,11 +24,10 @@ class STListNet(NeuralRanker):
     title = {A Stochastic Treatment of Learning to Rank Scoring Functions},
     year = {2020},
     booktitle = {Proceedings of the 13th International Conference on Web Search and Data Mining},
-    pages = {61–69},
+    pages = {61–69}
     '''
-
-    def __init__(self, sf_para_dict=None, model_para_dict=None):
-        super(STListNet, self).__init__(id='STListNet', sf_para_dict=sf_para_dict)
+    def __init__(self, sf_para_dict=None, model_para_dict=None, gpu=False, device=None):
+        super(STListNet, self).__init__(id='STListNet', sf_para_dict=sf_para_dict, gpu=gpu, device=device)
         self.temperature = model_para_dict['temperature']
 
     def inner_train(self, batch_preds, batch_stds, **kwargs):
@@ -39,7 +39,7 @@ class STListNet(NeuralRanker):
         '''
 
         unif = torch.rand(batch_preds.size())  # [num_samples_per_query, ranking_size]
-        if gpu: unif = unif.to(device)
+        if self.gpu: unif = unif.to(self.device)
 
         gumbel = -torch.log(-torch.log(unif + EPS) + EPS)  # Sample from gumbel distribution
 

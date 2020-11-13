@@ -2,13 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """Description
-
+The class of Parameter is designed as a wrapper of parameters of a model, a neural scoring function, etc.
+For data loading and evaluation-related setting, the corresponding classes are DataSetting and EvalSetting.
 """
+
 import json
 from itertools import product
 
 from ptranking.base.neural_utils import get_sf_str
-from ptranking.data.data_utils import get_default_scaler_setting, get_data_meta, MSLETOR_SEMI
+from ptranking.data.data_utils import get_default_scaler_setting, get_data_meta
 
 class Parameter(object):
     """
@@ -186,7 +188,7 @@ class EvalSetting():
         :return:
         """
         do_log = False if self.debug else True
-        do_validation, do_summary = False, False  # checking loss variation
+        do_validation, do_summary = True, False  # checking loss variation
         log_step = 2
         epochs = 20 if self.debug else 100
         vali_k = 5

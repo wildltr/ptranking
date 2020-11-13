@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """Description
-
+ListMLE: Fen Xia, Tie-Yan Liu, Jue Wang, Wensheng Zhang, and Hang Li. 2008. Listwise Approach to Learning to Rank: Theory and Algorithm.
+In Proceedings of the 25th ICML. 1192–1199.
 """
 
 import torch
@@ -65,8 +66,8 @@ class ListMLE(NeuralRanker):
 	ListMLE: Fen Xia, Tie-Yan Liu, Jue Wang, Wensheng Zhang, and Hang Li. 2008. Listwise Approach to Learning to Rank: Theory and Algorithm.
 	In Proceedings of the 25th ICML. 1192–1199.
 	'''
-	def __init__(self, sf_para_dict=None):
-		super(ListMLE, self).__init__(id='ListMLE', sf_para_dict=sf_para_dict)
+	def __init__(self, sf_para_dict=None, gpu=False, device=None):
+		super(ListMLE, self).__init__(id='ListMLE', sf_para_dict=sf_para_dict, gpu=gpu, device=device)
 
 	def inner_train(self, batch_preds, batch_stds, **kwargs):
 		if 'presort' in kwargs and kwargs['presort']:

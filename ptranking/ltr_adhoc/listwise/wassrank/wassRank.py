@@ -3,7 +3,8 @@
 
 
 """Description
-
+Hai-Tao Yu, Adam Jatowt, Hideo Joho, Joemon Jose, Xiao Yang and Long Chen. WassRank: Listwise Document Ranking Using Optimal Transport Theory.
+Proceedings of the 12th International Conference on Web Search and Data Mining (WSDM), 2019.2.
 """
 #import ot
 import json
@@ -17,8 +18,6 @@ from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.ltr_adhoc.listwise.wassrank.wasserstein_loss_layer import Y_WassersteinLossStab, EntropicOTLoss
 from ptranking.ltr_adhoc.listwise.wassrank.wasserstein_cost_mat import get_explicit_cost_mat, get_normalized_histograms
 
-from ptranking.ltr_global import global_gpu as gpu, tensor
-
 wasserstein_distance = Y_WassersteinLossStab.apply
 
 class WassRank(NeuralRanker):
@@ -27,8 +26,8 @@ class WassRank(NeuralRanker):
     Proceedings of the 12th International Conference on Web Search and Data Mining (WSDM), 2019.2.
     '''
 
-    def __init__(self, sf_para_dict, wass_para_dict=None, dict_cost_mats=None, dict_std_dists=None):
-        super(WassRank, self).__init__(id='WassRank', sf_para_dict=sf_para_dict)
+    def __init__(self, sf_para_dict, wass_para_dict=None, dict_cost_mats=None, dict_std_dists=None, gpu=False, device=None):
+        super(WassRank, self).__init__(id='WassRank', sf_para_dict=sf_para_dict, gpu=gpu, device=device)
 
         self.TL_AF = self.get_tl_af()
         self.wass_para_dict = wass_para_dict
@@ -47,7 +46,7 @@ class WassRank(NeuralRanker):
         if qid in self.dict_cost_mats:
             batch_cost_mats = self.dict_cost_mats[qid]  # using buffered cost matrices to avoid re-computation
         else:
-            batch_cost_mats = get_explicit_cost_mat(batch_stds, wass_para_dict=self.wass_para_dict)
+            batch_cost_mats = get_explicit_cost_mat(batch_stds, wass_para_dict=self.wass_para_dict, gpu=self.gpu)
             self.dict_cost_mats[qid] = batch_cost_mats
 
         batch_std_hists, batch_pred_hists = get_normalized_histograms(batch_std_labels=batch_stds, batch_preds=batch_preds,
@@ -58,11 +57,11 @@ class WassRank(NeuralRanker):
         wass_mode = self.wass_para_dict['mode']
         if wass_mode == 'WassLossSta':
             sh_itr, lam = self.wass_para_dict['sh_itr'], self.wass_para_dict['lam']
-            if gpu: batch_std_hists = batch_std_hists.type(tensor)
+            if self.gpu: batch_std_hists = batch_std_hists.type(torch.cuda.FloatTensor)
             batch_loss, = wasserstein_distance(batch_pred_hists, batch_std_hists, torch.squeeze(batch_cost_mats, dim=0), lam, sh_itr)
 
         elif wass_mode == 'EOTLossSta':
-            if gpu: batch_std_hists = batch_std_hists.type(tensor)
+            if self.gpu: batch_std_hists = batch_std_hists.type(torch.cuda.FloatTensor)
             batch_loss, self.pi = self.entropic_ot_loss(batch_pred_hists, batch_std_hists, batch_cost_mats)
 
         else:

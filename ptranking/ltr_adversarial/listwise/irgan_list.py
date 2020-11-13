@@ -20,15 +20,13 @@ from ptranking.ltr_adversarial.util.list_probability import log_ranking_prob_Bra
 from ptranking.utils.pytorch.pt_extensions import arg_shuffle_ties
 from ptranking.ltr_adversarial.util.list_sampling import gumbel_softmax
 
-from ptranking.ltr_global import global_gpu as gpu, global_device as device
-
 
 class IRGAN_List(AdversarialMachine):
-    def __init__(self, eval_dict, data_dict, sf_para_dict=None, ad_para_dict=None, optimal_train=False):
+    def __init__(self, eval_dict, data_dict, sf_para_dict=None, ad_para_dict=None, optimal_train=False, gpu=False, device=None):
         '''
         :param optimal_train: training with supervised generator or discriminator
         '''
-        super(IRGAN_List, self).__init__(eval_dict=eval_dict, data_dict=data_dict)
+        super(IRGAN_List, self).__init__(eval_dict=eval_dict, data_dict=data_dict, gpu=gpu, device=device)
 
         g_sf_para_dict = sf_para_dict
 
@@ -67,7 +65,7 @@ class IRGAN_List(AdversarialMachine):
         if self.optimal_train:
             for entry in train_data:
                 qid, batch_ranking = entry[0], entry[1]
-                if gpu: batch_ranking = batch_ranking.to(device)
+                if self.gpu: batch_ranking = batch_ranking.to(self.device)
 
                 g_batch_pred = self.super_generator.predict(batch_ranking, train=True)
                 g_batch_log_ranking = log_ranking_prob_Plackett_Luce(g_batch_pred)
@@ -132,7 +130,7 @@ class IRGAN_List(AdversarialMachine):
 
         for entry in train_data:
             qid, batch_ranking, batch_label = entry[0], entry[1], entry[2]
-            if gpu: batch_ranking = batch_ranking.to(device)
+            if self.gpu: batch_ranking = batch_ranking.to(self.device)
 
             if ad_training_order == 'DG':
                 # optimising discriminator
@@ -211,7 +209,7 @@ class IRGAN_List(AdversarialMachine):
         :param pos_and_neg: corresponding to discriminator optimization or generator optimization
         '''
         g_batch_pred = generator.predict(batch_ranking)  # [batch, size_ranking]
-        batch_gen_stochastic_prob = gumbel_softmax(g_batch_pred, samples_per_query=samples_per_query, temperature=temperature, cuda=gpu, cuda_device=device)
+        batch_gen_stochastic_prob = gumbel_softmax(g_batch_pred, samples_per_query=samples_per_query, temperature=temperature, cuda=self.gpu, cuda_device=self.device)
         sorted_batch_gen_stochastic_probs, batch_gen_sto_sorted_inds = torch.sort(batch_gen_stochastic_prob, dim=1, descending=True)
 
         if pos_and_neg: # for training discriminator

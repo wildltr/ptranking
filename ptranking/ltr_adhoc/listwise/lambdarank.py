@@ -1,23 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 """Description
-
+Christopher J.C. Burges, Robert Ragno, and Quoc Viet Le. 2006.
+Learning to Rank with Nonsmooth Cost Functions. In Proceedings of NIPS conference. 193–200.
 """
+
 import json
 
 import torch
 import torch.nn.functional as F
 
-from ptranking.ltr_global import torch_zero
 from ptranking.base.ranker import NeuralRanker
 from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.metric.metric_utils import get_delta_ndcg
 from ptranking.ltr_adhoc.util.gather_utils import torch_triu_indice
 from ptranking.data.data_utils import LABEL_TYPE
 
-from ptranking.ltr_global import global_gpu as gpu
 
 def lambdaRank_loss_diagonal(batch_preds=None, batch_stds=None, sigma=None, label_type=None):
     '''
@@ -51,7 +50,7 @@ def lambdaRank_loss_diagonal(batch_preds=None, batch_stds=None, sigma=None, labe
     return batch_loss
 
 
-def lambdaRank_loss_full(batch_preds=None, batch_stds=None, sigma=None, label_type=None):
+def lambdaRank_loss_full(batch_preds=None, batch_stds=None, sigma=None, label_type=None, gpu=False):
     '''
     Instead of strictly getting the uppper diagonal entries, here we compute the lambdaloss by fully making use of the properties as follows:
     (1) using the full pairwise difference matrix is twice the loss of using merely the uppper diagonal entries
@@ -100,12 +99,14 @@ def lambdaRank_loss_full_soft(batch_preds=None, batch_stds=None, sigma=None, lab
 
 ###### Function - LambdaRank ######
 
-def log_1_add_exp_minus_sigma(x, sigma=1.0):
+def log_1_add_exp_minus_sigma(x, sigma=1.0, gpu=False):
+    torch_zero = torch.cuda.FloatTensor([0.0]) if gpu else torch.FloatTensor([0.0])
     res = torch.where(x>0, torch.log(1.0+torch.exp(-sigma*x)), torch_zero)
     res = torch.where(x<0, torch.log(1.0+torch.exp(sigma*x)) - sigma*x, res)
     return res
 
-def reciprocal_1_add_exp_sigma(x, sigma=1.0):
+def reciprocal_1_add_exp_sigma(x, sigma=1.0, gpu=False):
+    torch_zero = torch.cuda.FloatTensor([0.0]) if gpu else torch.FloatTensor([0.0])
     res = torch.where(x<0, 1.0/(1.0 + torch.exp(sigma*x)), torch_zero)
     res = torch.where(x>0, 1.0-1.0/(1.0+torch.exp(-sigma*x)), res)
     return res
@@ -114,7 +115,7 @@ class LambdaRank_OP(torch.autograd.Function):
     """ Aiming at mannual gradient computation """
 
     @staticmethod
-    def forward(ctx, batch_preds, batch_stds, sigma):
+    def forward(ctx, batch_preds, batch_stds, sigma, gpu):
         batch_preds_sorted, batch_preds_sorted_inds = torch.sort(batch_preds, dim=1, descending=True)  # sort documents according to the predicted relevance
         batch_stds_sorted_via_preds = torch.gather(batch_stds, dim=1, index=batch_preds_sorted_inds)   # reorder batch_stds correspondingly so as to make it consistent. BTW, batch_stds[batch_preds_sorted_inds] only works with 1-D tensor
 
@@ -126,12 +127,12 @@ class LambdaRank_OP(torch.autograd.Function):
         batch_delta_ndcg = get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds)
 
         batch_loss_1st = 0.5 * sigma * batch_pred_s_ij * (1.0 - batch_std_Sij)  # cf. the 1st equation in page-3
-        batch_loss_2nd = log_1_add_exp_minus_sigma(batch_pred_s_ij, sigma=sigma)  # cf. the 1st equation in page-3
+        batch_loss_2nd = log_1_add_exp_minus_sigma(batch_pred_s_ij, sigma=sigma, gpu=gpu)  # cf. the 1st equation in page-3
 
         batch_loss = torch.sum((batch_loss_1st + batch_loss_2nd) * batch_delta_ndcg * 0.5)  # weighting with delta-nDCG, '0.5' is multiplied due to the symmetric property
 
         #- gradient -#
-        batch_grad = sigma * (0.5 * (1 - batch_std_Sij) - reciprocal_1_add_exp_sigma(batch_pred_s_ij, sigma=sigma))
+        batch_grad = sigma * (0.5 * (1 - batch_std_Sij) - reciprocal_1_add_exp_sigma(batch_pred_s_ij, sigma=sigma, gpu=gpu))
 
         batch_grad = batch_grad * batch_delta_ndcg
         batch_grad = torch.sum(batch_grad, dim=1, keepdim=True) # relying on the symmetric property, i-th row-sum corresponding to the cumulative gradient w.r.t. i-th document.
@@ -155,8 +156,8 @@ class LambdaRank(NeuralRanker):
     Christopher J.C. Burges, Robert Ragno, and Quoc Viet Le. 2006.
     Learning to Rank with Nonsmooth Cost Functions. In Proceedings of NIPS conference. 193–200.
     '''
-    def __init__(self, sf_para_dict=None, model_para_dict=None):
-        super(LambdaRank, self).__init__(id='LambdaRank', sf_para_dict=sf_para_dict)
+    def __init__(self, sf_para_dict=None, model_para_dict=None, gpu=False, device=None):
+        super(LambdaRank, self).__init__(id='LambdaRank', sf_para_dict=sf_para_dict, gpu=gpu, device=device)
         self.sigma = model_para_dict['sigma']
         self.loss_version = model_para_dict['loss_version']
 
@@ -184,8 +185,7 @@ class LambdaRank(NeuralRanker):
             Thus lambdaRank_loss_full is used as the default.
             Elapsed time: 0:04:04.392835 LambdaRank 2-fold cross validation scores: nDCG@1:0.4855, nDCG@3:0.4911, nDCG@5:0.5028, nDCG@10:0.5330, nDCG@20:0.5987, nDCG@50:0.0158
             '''
-            batch_loss = lambdaRank_loss_full(target_batch_preds, target_batch_stds,
-                                              sigma=self.sigma, label_type=label_type)
+            batch_loss = lambdaRank_loss_full(target_batch_preds, target_batch_stds, sigma=self.sigma, label_type=label_type, gpu=self.gpu)
 
         elif 'Diag' == self.loss_version:
             # Elapsed time: 0:06:19.067998 LambdaRank 2-fold cross validation scores: nDCG@1:0.4849, nDCG@3:0.4909, nDCG@5:0.5028, nDCG@10:0.5328, nDCG@20:0.5985, nDCG@50:0.0158

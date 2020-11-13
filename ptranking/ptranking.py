@@ -14,9 +14,13 @@ from ptranking.ltr_adversarial.eval.ltr_adversarial import AdLTREvaluator, LTR_A
 
 
 """
-Example command line usage:
+The command line usage:
 
+(1) Without using GPU
 python pt_ranking.py -data MQ2007_Super -dir_data /home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/ -dir_output /home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/ -model ListMLE
+
+(2) Using GPU
+python pt_ranking.py -cuda 0 -data MQ2007_Super -dir_data /home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/ -dir_output /home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/ -model ListMLE
 
 """
 
@@ -68,10 +72,10 @@ if __name__ == '__main__':
     l2r_args = args_obj.get_l2r_args()
 
     if l2r_args.model in LTR_ADHOC_MODEL:
-        evaluator = LTREvaluator()
+        evaluator = LTREvaluator(cuda=l2r_args.cuda)
 
     elif l2r_args.model in LTR_ADVERSARIAL_MODEL:
-        evaluator = AdLTREvaluator()
+        evaluator = AdLTREvaluator(cuda=l2r_args.cuda)
 
     elif l2r_args.model in LTR_TREE_MODEL:
         evaluator = TreeLTREvaluator()

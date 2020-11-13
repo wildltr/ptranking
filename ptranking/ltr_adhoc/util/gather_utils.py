@@ -9,7 +9,6 @@ import torch
 
 import numpy as np
 
-from ptranking.ltr_global import global_gpu as gpu, global_device as device
 
 #######
 # For Pair Extraction
@@ -17,7 +16,7 @@ from ptranking.ltr_global import global_gpu as gpu, global_device as device
 
 PAIR_TYPE = ['All', 'NoTies', 'No00', '00', 'Inversion']
 
-def torch_batch_triu(batch_mats=None, k=0, pair_type='All', batch_std_labels=None):
+def torch_batch_triu(batch_mats=None, k=0, pair_type='All', batch_std_labels=None, gpu=False, device=None):
     '''
     Get unique document pairs being consistent with the specified pair_type. This function is used to avoid duplicate computation.
 
@@ -67,7 +66,7 @@ def torch_batch_triu(batch_mats=None, k=0, pair_type='All', batch_std_labels=Non
     return batch_triu # shape: [batch_size, number of pairs]
 
 
-def torch_triu_indice(k=0, pair_type='All', batch_label=None):
+def torch_triu_indice(k=0, pair_type='All', batch_label=None, gpu=False, device=None):
     '''
     Get unique document pairs being consistent with the specified pair_type. This function is used to avoid duplicate computation.
 

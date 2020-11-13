@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Description
-
+NeuralRanker is a class that represents a general learning-to-rank model. The key component of NeuralRanker is the neural scoring function.
 """
 
 import os
@@ -17,7 +17,6 @@ from torch.optim.lr_scheduler import StepLR
 from torch.nn.init import xavier_normal_ as nr_init
 
 from ptranking.base.neural_utils import get_AF, ResidualBlock_FFNNs
-from ptranking.ltr_global import global_gpu as gpu, global_device as device
 
 @unique
 class LTRFRAME_TYPE(Enum):
@@ -55,9 +54,10 @@ class NeuralRanker(AbstractNeuralRanker):
     A common one-size-fits-all neural ranker
     '''
 
-    def __init__(self, id='NeuralRanker', sf_para_dict=None, opt='Adam', lr = 1e-3, weight_decay=1e-3):
+    def __init__(self, id='NeuralRanker', sf_para_dict=None, opt='Adam', lr = 1e-3, weight_decay=1e-3, gpu=False, device=None):
         super(NeuralRanker, self).__init__(id=id)
 
+        self.gpu, self.device = gpu, device
         self.sf_para_dict = sf_para_dict
         self.sf = self.config_neural_scoring_function()
 
@@ -71,7 +71,7 @@ class NeuralRanker(AbstractNeuralRanker):
 
     def config_neural_scoring_function(self):
         ffnns = self.ini_ffnns(**self.sf_para_dict['ffnns'])
-        if gpu: ffnns = ffnns.to(device)
+        if self.gpu: ffnns = ffnns.to(self.device)
 
         return ffnns
 

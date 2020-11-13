@@ -10,7 +10,6 @@ import torch
 import numpy as np
 
 from ptranking.data.data_utils import LABEL_TYPE
-from ptranking.ltr_global import tensor as global_tensor, global_device
 
 """ Precision """
 
@@ -27,8 +26,8 @@ def torch_precision_at_k(batch_sys_sorted_labels, k=None, gpu=False):
 	batch_bi_sys_sorted_labels = torch.clamp(batch_sys_sorted_labels, min=0, max=1) # binary
 	batch_sys_cumsum_reles = torch.cumsum(batch_bi_sys_sorted_labels, dim=1)
 
-	batch_ranks = (torch.arange(used_cutoff).type(global_tensor).expand_as(batch_sys_cumsum_reles) + 1.0) if gpu \
-											else (torch.arange(used_cutoff).expand_as(batch_sys_cumsum_reles) + 1.0)
+	batch_ranks = (torch.arange(used_cutoff).type(torch.cuda.FloatTensor).expand_as(batch_sys_cumsum_reles) + 1.0) \
+					if gpu else (torch.arange(used_cutoff).expand_as(batch_sys_cumsum_reles) + 1.0)
 
 	batch_sys_rankwise_precision = batch_sys_cumsum_reles / batch_ranks
 	batch_sys_p_at_k = batch_sys_rankwise_precision[:, used_cutoff-1:used_cutoff]
@@ -51,7 +50,7 @@ def torch_precision_at_ks(batch_sys_sorted_labels, ks=None, gpu=False):
 	batch_bi_sys_sorted_labels = torch.clamp(batch_sys_sorted_labels, min=0, max=1) # binary
 	batch_sys_cumsum_reles = torch.cumsum(batch_bi_sys_sorted_labels, dim=1)
 
-	batch_ranks = (torch.arange(max_cutoff).type(global_tensor).expand_as(batch_sys_cumsum_reles) + 1.0) if gpu \
+	batch_ranks = (torch.arange(max_cutoff).type(torch.cuda.FloatTensor).expand_as(batch_sys_cumsum_reles) + 1.0) if gpu \
 											else (torch.arange(max_cutoff).expand_as(batch_sys_cumsum_reles) + 1.0)
 
 	batch_sys_rankwise_precision = batch_sys_cumsum_reles / batch_ranks
@@ -80,7 +79,7 @@ def torch_ap_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, gp
 	batch_bi_sys_sorted_labels = torch.clamp(batch_sys_sorted_labels, min=0, max=1) # binary
 	batch_sys_cumsum_reles = torch.cumsum(batch_bi_sys_sorted_labels, dim=1)
 
-	batch_ranks = (torch.arange(used_cutoff).type(global_tensor).expand_as(batch_sys_cumsum_reles) + 1.0) if gpu \
+	batch_ranks = (torch.arange(used_cutoff).type(torch.cuda.FloatTensor).expand_as(batch_sys_cumsum_reles) + 1.0) if gpu \
 											else (torch.arange(used_cutoff).expand_as(batch_sys_cumsum_reles) + 1.0)
 
 	batch_sys_rankwise_precision = batch_sys_cumsum_reles / batch_ranks # rank-wise precision
@@ -109,7 +108,7 @@ def torch_ap_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, 
 	batch_bi_sys_sorted_labels = torch.clamp(batch_sys_sorted_labels, min=0, max=1) # binary
 	batch_sys_cumsum_reles = torch.cumsum(batch_bi_sys_sorted_labels, dim=1)
 
-	batch_ranks = (torch.arange(max_cutoff).type(global_tensor).expand_as(batch_sys_cumsum_reles) + 1.0) if gpu \
+	batch_ranks = (torch.arange(max_cutoff).type(torch.cuda.FloatTensor).expand_as(batch_sys_cumsum_reles) + 1.0) if gpu \
 											else (torch.arange(max_cutoff).expand_as(batch_sys_cumsum_reles) + 1.0)
 
 	batch_sys_rankwise_precision = batch_sys_cumsum_reles / batch_ranks # rank-wise precision
@@ -139,7 +138,7 @@ def torch_rankwise_err(batch_sorted_labels, max_label=None, k=10, point=True, gp
 	batch_unsatis_probs = torch.ones_like(batch_labels) - batch_satis_probs
 	batch_cum_unsatis_probs = torch.cumprod(batch_unsatis_probs, dim=1)
 
-	batch_ranks = torch.arange(k).type(global_tensor).expand_as(batch_labels) + 1.0 if gpu \
+	batch_ranks = torch.arange(k).type(torch.cuda.FloatTensor).expand_as(batch_labels) + 1.0 if gpu \
 															else torch.arange(k).expand_as(batch_labels) + 1.0
 	batch_expt_ranks = 1.0 / batch_ranks
 
@@ -217,7 +216,7 @@ def torch_dcg_at_k(batch_sorted_labels, cutoff=None, label_type=LABEL_TYPE.Multi
 	else:
 		raise NotImplementedError
 
-	batch_discounts = torch.log2(torch.arange(cutoff).type(global_tensor).expand_as(batch_numerators) + 2.0) if gpu \
+	batch_discounts = torch.log2(torch.arange(cutoff).type(torch.cuda.FloatTensor).expand_as(batch_numerators) + 2.0) if gpu \
 											else torch.log2(torch.arange(cutoff).expand_as(batch_numerators) + 2.0)
 	batch_dcg_at_k = torch.sum(batch_numerators/batch_discounts, dim=1, keepdim=True)
 	return batch_dcg_at_k
@@ -236,7 +235,7 @@ def torch_dcg_at_ks(batch_sorted_labels, max_cutoff, label_type=LABEL_TYPE.Multi
 	else:
 		raise NotImplementedError
 
-	batch_discounts = torch.log2(torch.arange(max_cutoff).type(global_tensor).expand_as(batch_numerators) + 2.0) if gpu\
+	batch_discounts = torch.log2(torch.arange(max_cutoff).type(torch.cuda.FloatTensor).expand_as(batch_numerators) + 2.0) if gpu\
 										else torch.log2(torch.arange(max_cutoff).expand_as(batch_numerators) + 2.0)
 	batch_dcg_at_ks = torch.cumsum(batch_numerators/batch_discounts, dim=1)   # dcg w.r.t. each position
 	return batch_dcg_at_ks
@@ -303,7 +302,7 @@ def rele_gain(rele_level, gain_base=2.0):
 	gain = np.power(gain_base, rele_level) - 1.0
 	return gain
 
-def np_metric_at_ks(ranker=None, test_Qs=None, ks=[1, 5, 10], label_type=LABEL_TYPE.MultiLabel, max_rele_level=None, gpu=False):
+def np_metric_at_ks(ranker=None, test_Qs=None, ks=[1, 5, 10], label_type=LABEL_TYPE.MultiLabel, max_rele_level=None, gpu=False, device=None):
 	'''
 	There is no check based on the assumption (say light_filtering() is called)
 	that each test instance Q includes at least k(k=max(ks)) documents, and at least one relevant document.
@@ -324,7 +323,7 @@ def np_metric_at_ks(ranker=None, test_Qs=None, ks=[1, 5, 10], label_type=LABEL_T
 		tor_test_ranking, tor_test_std_label_vec = entry[1], torch.squeeze(entry[2], dim=0)  # remove the size 1 of dim=0 from loader itself
 
 		if gpu:
-			tor_rele_pred = ranker.predict(tor_test_ranking.to(global_device))
+			tor_rele_pred = ranker.predict(tor_test_ranking.to(device))
 			tor_rele_pred = torch.squeeze(tor_rele_pred)
 			tor_rele_pred = tor_rele_pred.cpu()
 		else:

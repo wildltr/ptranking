@@ -3,7 +3,8 @@
 
 
 """Description
-
+Tao Qin, Xu-Dong Zhang, Ming-Feng Tsai, De-Sheng Wang, Tie-Yan Liu, and Hang Li. 2008.
+Query-level loss functions for information retrieval. Information Processing and Management 44, 2 (2008), 838–855.
 """
 
 import torch
@@ -18,9 +19,8 @@ class RankCosine(NeuralRanker):
 	Tao Qin, Xu-Dong Zhang, Ming-Feng Tsai, De-Sheng Wang, Tie-Yan Liu, and Hang Li. 2008.
 	Query-level loss functions for information retrieval. Information Processing and Management 44, 2 (2008), 838–855.
 	'''
-
-	def __init__(self, sf_para_dict=None):
-		super(RankCosine, self).__init__(id='RankCosine', sf_para_dict=sf_para_dict)
+	def __init__(self, sf_para_dict=None, gpu=False, device=None):
+		super(RankCosine, self).__init__(id='RankCosine', sf_para_dict=sf_para_dict, gpu=gpu, device=device)
 
 	def inner_train(self, batch_preds, batch_stds, **kwargs):
 		'''

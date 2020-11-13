@@ -10,7 +10,7 @@ import torch
 
 def batch_count(batch_std_labels=None, max_rele_grade=None, descending=False, gpu=False):
     """
-    
+    Todo now an api is already provided by pytorch
     :param batch_std_labels:
     :param max_rele_grade:
     :param descending:

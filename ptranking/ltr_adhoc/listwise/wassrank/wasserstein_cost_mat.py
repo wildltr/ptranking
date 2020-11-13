@@ -11,8 +11,6 @@ import torch.nn.functional as F
 
 from ptranking.metric.adhoc_metric import rele_gain
 
-from ptranking.ltr_global import global_gpu as gpu, global_device as device, tensor
-
 def tor_sum_norm(histogram):
     probs = torch.div(histogram, torch.sum(histogram, dim=1, keepdim=True))
     return probs
@@ -48,12 +46,12 @@ def _cost_mat_group(cpu_tor_batch_std_label_vec, non_rele_gap=100.0, var_penalty
 
     return cost_mat
 
-def torch_cost_mat_dist(batch_std_labels, exponent=1.0):
+def torch_cost_mat_dist(batch_std_labels, exponent=1.0, gpu=False):
     """ Viewing the absolute difference (with a exponent value) between two rank positions as the cost """
     batch_size = batch_std_labels.size(0)
     ranking_size = batch_std_labels.size(1)
 
-    positions = (torch.arange(ranking_size) + 1.0).type(tensor)
+    positions = (torch.arange(ranking_size) + 1.0).type(torch.cuda.FloatTensor) if gpu else (torch.arange(ranking_size) + 1.0).type(torch.FloatTensor)
     C = positions.view(-1, 1) - positions.view(1, -1)
     C = torch.abs(C)
     batch_C = C.expand(batch_size, -1, -1)
@@ -64,7 +62,7 @@ def torch_cost_mat_dist(batch_std_labels, exponent=1.0):
     return batch_C
 
 
-def get_delta_gains(batch_stds, discount=False):
+def get_delta_gains(batch_stds, discount=False, gpu=False):
     '''
     Delta-gains w.r.t. pairwise swapping of the ideal ltr_adhoc
     :param batch_stds: the standard labels sorted in a descending order
@@ -74,7 +72,7 @@ def get_delta_gains(batch_stds, discount=False):
     batch_g_diffs = torch.unsqueeze(batch_gains, dim=2) - torch.unsqueeze(batch_gains, dim=1)
 
     if discount:
-        batch_std_ranks = torch.arange(batch_stds.size(1)).type(tensor)
+        batch_std_ranks = torch.arange(batch_stds.size(1)).type(torch.cuda.FloatTensor) if gpu else torch.arange(batch_stds.size(1)).type(torch.FloatTensor)
         batch_dists = 1.0 / torch.log2(batch_std_ranks + 2.0)   # discount co-efficients
         batch_dists = torch.unsqueeze(batch_dists, dim=0)
         batch_dists_diffs = torch.unsqueeze(batch_dists, dim=2) - torch.unsqueeze(batch_dists, dim=1)
@@ -85,7 +83,7 @@ def get_delta_gains(batch_stds, discount=False):
     return batch_delta_gs
 
 
-def torch_cost_mat_group(batch_std_labels, non_rele_gap=100.0, var_penalty=0.01, gain_base=2.0):
+def torch_cost_mat_group(batch_std_labels, non_rele_gap=100.0, var_penalty=0.01, gain_base=2.0, gpu=False):
     """
     Take into account the group information among documents, namely whether two documents are of the same standard relevance degree
     :param batch_std_labels: standard relevance labels
@@ -98,20 +96,23 @@ def torch_cost_mat_group(batch_std_labels, non_rele_gap=100.0, var_penalty=0.01,
     ranking_size = batch_std_labels.size(1)
 
     batch_std_gains = torch.pow(gain_base, batch_std_labels) - 1.0
-    batch_std_gains_gaps = torch.where(batch_std_gains < 1.0, -tensor([non_rele_gap]), batch_std_gains) # add the gap between relevance and non-relevance
+    torch_non_rele_gap = torch.cuda.FloatTensor([non_rele_gap]) if gpu else torch.FloatTensor([non_rele_gap])
+    batch_std_gains_gaps = torch.where(batch_std_gains < 1.0, -torch_non_rele_gap, batch_std_gains) # add the gap between relevance and non-relevance
     batch_std_costs = batch_std_gains_gaps.view(batch_size, ranking_size, 1) - batch_std_gains_gaps.view(batch_size, 1, ranking_size)
     batch_std_costs = torch.abs(batch_std_costs) # symmetric cost, i.e., C_{ij} = C_{ji}
 
     # add variance penalty, i.e., the cost of transport among positions of the same relevance level. But the diagonal entries need to be revised later
-    batch_C = torch.where(batch_std_costs < 1.0, tensor([var_penalty]), batch_std_costs)
+    torch_var_penalty = torch.cuda.FloatTensor([var_penalty]) if gpu else torch.FloatTensor([var_penalty])
+    batch_C = torch.where(batch_std_costs < 1.0, torch_var_penalty, batch_std_costs)
 
-    diag = torch.eye(ranking_size).type(tensor) * var_penalty
+    torch_eye = torch.eye(ranking_size).type(torch.cuda.FloatTensor) if gpu else torch.eye(ranking_size).type(torch.FloatTensor)
+    diag = torch_eye * var_penalty
     batch_diags = diag.expand(batch_size, -1, -1)
     batch_C = batch_C - batch_diags              # revise the diagonal entries to zero again
 
     return batch_C
 
-def get_explicit_cost_mat(batch_std_labels, wass_para_dict=None):
+def get_explicit_cost_mat(batch_std_labels, wass_para_dict=None, gpu=False):
     """
     Initialize the cost matrix based on pre-defined (prior) knowledge
     :param batch_std_labels:
@@ -120,20 +121,20 @@ def get_explicit_cost_mat(batch_std_labels, wass_para_dict=None):
     """
     cost_type = wass_para_dict['cost_type']
     if cost_type   == 'p1': # |x-y|
-        batch_C = torch_cost_mat_dist(batch_std_labels)
+        batch_C = torch_cost_mat_dist(batch_std_labels, gpu=gpu)
 
     elif cost_type == 'p2': # |x-y|^2
-        batch_C = torch_cost_mat_dist(batch_std_labels, exponent=2.0)
+        batch_C = torch_cost_mat_dist(batch_std_labels, exponent=2.0, gpu=gpu)
 
     elif cost_type == 'eg': # explicit grouping of relevance labels
         gain_base, non_rele_gap, var_penalty = wass_para_dict['gain_base'], wass_para_dict['non_rele_gap'], wass_para_dict['var_penalty']
-        batch_C = torch_cost_mat_group(batch_std_labels, non_rele_gap=non_rele_gap, var_penalty=var_penalty, gain_base=gain_base)
+        batch_C = torch_cost_mat_group(batch_std_labels, non_rele_gap=non_rele_gap, var_penalty=var_penalty, gain_base=gain_base, gpu=gpu)
 
     elif cost_type == 'dg': # delta gain
-        batch_C = get_delta_gains(batch_std_labels)
+        batch_C = get_delta_gains(batch_std_labels, gpu=gpu)
 
     elif cost_type == 'ddg': # delta discounted gain
-        batch_C = get_delta_gains(batch_std_labels, discount=True)
+        batch_C = get_delta_gains(batch_std_labels, discount=True, gpu=gpu)
     else:
         raise NotImplementedError
 

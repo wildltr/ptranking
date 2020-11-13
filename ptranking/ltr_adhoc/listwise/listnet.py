@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """Description
-
+Zhe Cao, Tao Qin, Tie-Yan Liu, Ming-Feng Tsai, and Hang Li. 2007.
+Learning to Rank: From Pairwise Approach to Listwise Approach. In Proceedings of the 24th ICML. 129–136.
 """
 
 import torch
@@ -15,14 +16,12 @@ class ListNet(NeuralRanker):
 	Zhe Cao, Tao Qin, Tie-Yan Liu, Ming-Feng Tsai, and Hang Li. 2007.
 	Learning to Rank: From Pairwise Approach to Listwise Approach. In Proceedings of the 24th ICML. 129–136.
 	'''
-
-	def __init__(self, sf_para_dict=None):
-		super(ListNet, self).__init__(id='ListNet', sf_para_dict=sf_para_dict)
+	def __init__(self, sf_para_dict=None, gpu=False, device=None):
+		super(ListNet, self).__init__(id='ListNet', sf_para_dict=sf_para_dict, gpu=gpu, device=device)
 
 	def inner_train(self, batch_preds, batch_stds, **kwargs):
 		'''
 		The Top-1 approximated ListNet loss, which reduces to a softmax and simple cross entropy.
-
 		:param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents within a ltr_adhoc
 		:param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ltr_adhoc
 		:return:

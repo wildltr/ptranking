@@ -2,17 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """Description
-
+Given the neural ranker, compute nDCG values.
 """
 
 import torch
 
 from ptranking.data.data_utils import LABEL_TYPE
 from ptranking.metric.adhoc_metric import torch_nDCG_at_k, torch_nDCG_at_ks
-from ptranking.ltr_global import global_gpu as gpu, global_device as device
 
-
-def ndcg_at_k(ranker=None, test_data=None, k=10, label_type=LABEL_TYPE.MultiLabel):
+def ndcg_at_k(ranker=None, test_data=None, k=10, label_type=LABEL_TYPE.MultiLabel, gpu=False, device=None):
     '''
     There is no check based on the assumption (say light_filtering() is called) that each test instance Q includes at least k documents,
     and at least one relevant document. Or there will be errors.
@@ -45,7 +43,7 @@ def ndcg_at_k(ranker=None, test_data=None, k=10, label_type=LABEL_TYPE.MultiLabe
     avg_ndcg_at_k = sum_ndcg_at_k/cnt
     return  avg_ndcg_at_k
 
-def ndcg_at_ks(ranker=None, test_data=None, ks=[1, 5, 10], label_type=LABEL_TYPE.MultiLabel):
+def ndcg_at_ks(ranker=None, test_data=None, ks=[1, 5, 10], label_type=LABEL_TYPE.MultiLabel, gpu=False, device=None):
     '''
     There is no check based on the assumption (say light_filtering() is called)
     that each test instance Q includes at least k(k=max(ks)) documents, and at least one relevant document.

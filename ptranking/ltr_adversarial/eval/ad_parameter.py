@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 
 """Description
-
+The class of Parameter is designed as a wrapper of parameters of a model, a neural scoring function, etc.
+For data loading and evaluation-related setting, the corresponding classes are DataSetting and EvalSetting.
+The following classes are specially designed for adversarial ltr models, since the settings may differ a lot.
 """
+
 import json
 from itertools import product
 
@@ -96,9 +99,9 @@ class AdEvalSetting():
 		:return:
 		"""
 		do_log = False if self.debug else True
-		do_validation, do_summary = False, False
+		do_validation, do_summary = True, False
 		log_step = 2
-		epochs = 100
+		epochs = 50
 		vali_k = 5
 
 		'''on the usage of mask_label

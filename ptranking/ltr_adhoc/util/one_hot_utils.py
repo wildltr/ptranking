@@ -6,9 +6,8 @@
 """
 
 import torch
-from ptranking.ltr_global import global_gpu as gpu
 
-def get_one_hot_reprs(batch_stds):
+def get_one_hot_reprs(batch_stds, gpu=False):
     """ Get one-hot representation of batch ground-truth labels """
     batch_size = batch_stds.size(0)
     hist_size = batch_stds.size(1)

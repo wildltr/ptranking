@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Description
-
+A general framework for evaluating adversarial learning-to-rank methods.
 """
 
 import datetime
@@ -21,7 +21,7 @@ from ptranking.data.data_utils import MSLETOR_SEMI
 from ptranking.metric.metric_utils import metric_results_to_string
 from ptranking.ltr_adhoc.eval.eval_utils import ndcg_at_ks, ndcg_at_k
 from ptranking.ltr_adversarial.eval.ad_parameter import AdDataSetting, AdEvalSetting, AdScoringFunctionParameter
-from ptranking.ltr_global import global_gpu as gpu
+
 
 LTR_ADVERSARIAL_MODEL = ['IRGAN_Point', 'IRGAN_Pair', 'IRGAN_List']
 
@@ -29,8 +29,8 @@ class AdLTREvaluator(LTREvaluator):
     """
     The class for evaluating different adversarial adversarial ltr methods.
     """
-    def __init__(self, frame_id=LTRFRAME_TYPE.Adversarial):
-        super(AdLTREvaluator, self).__init__(frame_id=frame_id)
+    def __init__(self, frame_id=LTRFRAME_TYPE.Adversarial, cuda=None):
+        super(AdLTREvaluator, self).__init__(frame_id=frame_id, cuda=cuda)
 
     def check_consistency(self, data_dict, eval_dict, sf_para_dict):
         """
@@ -73,7 +73,7 @@ class AdLTREvaluator(LTREvaluator):
         """
         model_id = ad_para_dict['model_id']
         if model_id in ['IRGAN_Point', 'IRGAN_Pair', 'IRGAN_List']:
-            ad_machine = globals()[model_id](eval_dict=eval_dict, data_dict=data_dict,
+            ad_machine = globals()[model_id](eval_dict=eval_dict, data_dict=data_dict, gpu=self.gpu, device=self.device,
                                              sf_para_dict=sf_para_dict, ad_para_dict=ad_para_dict)
         else:
             raise NotImplementedError
@@ -154,9 +154,9 @@ class AdLTREvaluator(LTREvaluator):
 
                 if (do_summary or do_vali) and (epoch_k % log_step == 0 or epoch_k == 1):  # stepwise check
                     if do_vali:
-                        g_vali_eval_tmp = ndcg_at_k(ranker=g_ranker, test_data=vali_data, k=vali_k,
+                        g_vali_eval_tmp = ndcg_at_k(ranker=g_ranker, test_data=vali_data, k=vali_k, gpu=self.gpu, device=self.device,
                                                     label_type=self.data_setting.data_dict['label_type'])
-                        d_vali_eval_tmp = ndcg_at_k(ranker=d_ranker, test_data=vali_data, k=vali_k,
+                        d_vali_eval_tmp = ndcg_at_k(ranker=d_ranker, test_data=vali_data, k=vali_k, gpu=self.gpu, device=self.device,
                                                     label_type=self.data_setting.data_dict['label_type'])
                         g_vali_eval_v, d_vali_eval_v = g_vali_eval_tmp.data.numpy(), d_vali_eval_tmp.data.numpy()
 
@@ -218,11 +218,11 @@ class AdLTREvaluator(LTREvaluator):
                 d_ranker.save(dir=self.dir_run + fold_optimal_checkpoint + '/', name='_'.join(['net_params_epoch', str(epoch_k), 'D']) + '.pkl')
                 d_fold_optimal_ranker = d_ranker
 
-            g_torch_fold_ndcg_ks = ndcg_at_ks(ranker=g_fold_optimal_ranker, test_data=test_data, ks=cutoffs,
+            g_torch_fold_ndcg_ks = ndcg_at_ks(ranker=g_fold_optimal_ranker, test_data=test_data, ks=cutoffs, gpu=self.gpu, device=self.device,
                                               label_type=self.data_setting.data_dict['label_type'])
             g_fold_ndcg_ks = g_torch_fold_ndcg_ks.data.numpy()
 
-            d_torch_fold_ndcg_ks = ndcg_at_ks(ranker=d_fold_optimal_ranker, test_data=test_data, ks=cutoffs,
+            d_torch_fold_ndcg_ks = ndcg_at_ks(ranker=d_fold_optimal_ranker, test_data=test_data, ks=cutoffs, gpu=self.gpu, device=self.device,
                                               label_type=self.data_setting.data_dict['label_type'])
             d_fold_ndcg_ks = d_torch_fold_ndcg_ks.data.numpy()
 
@@ -277,14 +277,14 @@ class AdLTREvaluator(LTREvaluator):
     def per_epoch_summary_step1(self, ranker, train_data, list_fold_k_train_eval_track,
                           test_data, list_fold_k_test_eval_track, vali_eval_v, list_fold_k_vali_eval_track, cutoffs, do_vali):
 
-        fold_k_epoch_k_train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs,
+        fold_k_epoch_k_train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs, gpu=self.gpu, device=self.device,
                                                   label_type=self.data_setting.data_dict['label_type'])
-        np_fold_k_epoch_k_train_ndcg_ks = fold_k_epoch_k_train_ndcg_ks.cpu().numpy() if gpu else fold_k_epoch_k_train_ndcg_ks.data.numpy()
+        np_fold_k_epoch_k_train_ndcg_ks = fold_k_epoch_k_train_ndcg_ks.cpu().numpy() if self.gpu else fold_k_epoch_k_train_ndcg_ks.data.numpy()
         list_fold_k_train_eval_track.append(np_fold_k_epoch_k_train_ndcg_ks)
 
-        fold_k_epoch_k_test_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs,
+        fold_k_epoch_k_test_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs, gpu=self.gpu, device=self.device,
                                                  label_type=self.data_setting.data_dict['label_type'])
-        np_fold_k_epoch_k_test_ndcg_ks = fold_k_epoch_k_test_ndcg_ks.cpu().numpy() if gpu else fold_k_epoch_k_test_ndcg_ks.data.numpy()
+        np_fold_k_epoch_k_test_ndcg_ks = fold_k_epoch_k_test_ndcg_ks.cpu().numpy() if self.gpu else fold_k_epoch_k_test_ndcg_ks.data.numpy()
         list_fold_k_test_eval_track.append(np_fold_k_epoch_k_test_ndcg_ks)
 
         #fold_k_epoch_k_loss = torch_fold_k_epoch_k_loss.cpu().numpy() if gpu else torch_fold_k_epoch_k_loss.data.numpy()

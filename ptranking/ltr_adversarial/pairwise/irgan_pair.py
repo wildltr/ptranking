@@ -13,11 +13,11 @@ from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.ltr_adversarial.base.ad_player import AdversarialPlayer
 from ptranking.ltr_adversarial.base.ad_machine import AdversarialMachine
 
-from ptranking.ltr_global import global_gpu as gpu, global_device as device, torch_zero, torch_one, cpu_torch_one, cpu_torch_zero
+#from ptranking.ltr_global import global_gpu as gpu, global_device as device, torch_zero, torch_one, cpu_torch_one, cpu_torch_zero
 
 class IRGAN_Pair_Generator(AdversarialPlayer):
-    def __init__(self, sf_para_dict=None, temperature=None):
-        super(IRGAN_Pair_Generator, self).__init__(sf_para_dict=sf_para_dict)
+    def __init__(self, sf_para_dict=None, temperature=None, gpu=False, device=None):
+        super(IRGAN_Pair_Generator, self).__init__(sf_para_dict=sf_para_dict, gpu=gpu, device=device)
         self.temperature = temperature
 
     def predict(self, batch_ranking, train=False):
@@ -35,8 +35,10 @@ class IRGAN_Pair_Generator(AdversarialPlayer):
 
 
 class IRGAN_Pair_Discriminator(AdversarialPlayer):
-    def __init__(self, sf_para_dict=None):
-        super(IRGAN_Pair_Discriminator, self).__init__(sf_para_dict=sf_para_dict)
+    def __init__(self, sf_para_dict=None, gpu=False, device=None):
+        super(IRGAN_Pair_Discriminator, self).__init__(sf_para_dict=sf_para_dict, gpu=gpu, device=device)
+        self.torch_one = torch.cuda.FloatTensor([1.0]) if self.gpu else torch.FloatTensor([1.0])
+        self.torch_zero = torch.cuda.FloatTensor([0.0]) if self.gpu else torch.FloatTensor([0.0])
 
     def get_reward(self, pos_docs=None, neg_docs=None, loss_type='svm'):
         ''' used by irgan '''
@@ -44,7 +46,7 @@ class IRGAN_Pair_Discriminator(AdversarialPlayer):
         batch_neg_preds = self.predict(neg_docs)  # [batch, size_ranking]
 
         if 'svm' == loss_type:
-            reward = torch.sigmoid(torch.max(torch_zero, torch_one - (batch_pos_preds - batch_neg_preds)))
+            reward = torch.sigmoid(torch.max(self.torch_zero, self.torch_one - (batch_pos_preds - batch_neg_preds)))
         elif 'log' == loss_type:
             reward = torch.log(torch.sigmoid(batch_neg_preds - batch_pos_preds))
         else:
@@ -56,12 +58,15 @@ class IRGAN_Pair_Discriminator(AdversarialPlayer):
 
 class IRGAN_Pair(AdversarialMachine):
     ''''''
-    def __init__(self, eval_dict, data_dict, sf_para_dict=None, ad_para_dict=None):
+    def __init__(self, eval_dict, data_dict, sf_para_dict=None, ad_para_dict=None, gpu=False, device=None):
         '''
         :param sf_para_dict:
         :param temperature: according to the description around Eq-10, temperature is deployed, while it is not used within the provided code
         '''
-        super(IRGAN_Pair, self).__init__(eval_dict=eval_dict, data_dict=data_dict)
+        super(IRGAN_Pair, self).__init__(eval_dict=eval_dict, data_dict=data_dict, gpu=gpu, device=device)
+
+        self.torch_one  = torch.cuda.FloatTensor([1.0]) if self.gpu else torch.FloatTensor([1.0])
+        self.torch_zero = torch.cuda.FloatTensor([0.0]) if self.gpu else torch.FloatTensor([0.0])
 
         sf_para_dict['ffnns']['apply_tl_af'] = True
 
@@ -140,9 +145,9 @@ class IRGAN_Pair(AdversarialMachine):
 
     def per_query_generation(self, qid, batch_ranking, generator, global_buffer):
         num_pos, num_neg_unk = global_buffer[qid]
+        valid_num = min(num_pos, num_neg_unk, self.samples_per_query)
 
-        if num_pos >= 1:
-            valid_num = min(num_pos, num_neg_unk, self.samples_per_query)
+        if num_pos >= 1 and valid_num>=1:
             ranking_inds = torch.arange(batch_ranking.size(1))
             '''
             intersection implementation (keeping consistent with the released irgan-tensorflow):
@@ -150,7 +155,7 @@ class IRGAN_Pair(AdversarialMachine):
             '''
             pos_inds = torch.randperm(num_pos)[0:valid_num]  # randomly select positive documents
 
-            if gpu: batch_ranking = batch_ranking.to(device) # [batch, size_ranking]
+            if self.gpu: batch_ranking = batch_ranking.to(self.device) # [batch, size_ranking]
             batch_pred = generator.predict(batch_ranking)  # [batch, size_ranking]
             pred_probs = F.softmax(torch.squeeze(batch_pred), dim=0)
             neg_unk_probs = pred_probs[num_pos:]
@@ -168,7 +173,7 @@ class IRGAN_Pair(AdversarialMachine):
             qid, batch_ranking = entry[0], entry[1]
 
             if qid in generated_data:
-                if gpu: batch_ranking = batch_ranking.to(device)
+                if self.gpu: batch_ranking = batch_ranking.to(self.device)
 
                 pos_inds, neg_inds = generated_data[qid]
                 pos_docs = batch_ranking[:, pos_inds, :]
@@ -179,7 +184,7 @@ class IRGAN_Pair(AdversarialMachine):
 
                 if 'svm' == self.loss_type:
                     #dis_loss = torch.mean(torch.max(torch.zeros(1), 1.0-(batch_pos_preds-batch_neg_preds)))
-                    dis_loss = torch.mean(torch.max(torch_zero, torch_one - (batch_pos_preds - batch_neg_preds)))
+                    dis_loss = torch.mean(torch.max(self.torch_zero, self.torch_one - (batch_pos_preds - batch_neg_preds)))
                 elif 'log' == self.loss_type:
                     dis_loss = -torch.mean(torch.log(torch.sigmoid(batch_pos_preds-batch_neg_preds)))
                 else:
@@ -194,7 +199,7 @@ class IRGAN_Pair(AdversarialMachine):
                         global_buffer=None):
         for entry in train_data:
             qid, batch_ranking, batch_label = entry[0], entry[1], entry[2]
-            if gpu: batch_ranking = batch_ranking.to(device)
+            if self.gpu: batch_ranking = batch_ranking.to(self.device)
 
             num_pos, num_neg_unk = global_buffer[qid]
             if num_pos < 1: continue

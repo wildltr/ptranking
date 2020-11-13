@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Description
+Viewing the prediction of relevance as a conventional regression problem.
 """
 
 import torch
@@ -26,8 +27,8 @@ def rankMSE_loss_function(batch_pred=None, batch_label=None, TL_AF=None):
 	return batch_loss
 
 class RankMSE(NeuralRanker):
-	def __init__(self, sf_para_dict=None):
-		super(RankMSE, self).__init__(id='RankMSE', sf_para_dict=sf_para_dict)
+	def __init__(self, sf_para_dict=None, gpu=False, device=None):
+		super(RankMSE, self).__init__(id='RankMSE', sf_para_dict=sf_para_dict, gpu=gpu, device=device)
 		self.TL_AF = self.get_tl_af()
 
 	def inner_train(self, batch_pred, batch_label, **kwargs):

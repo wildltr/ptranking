@@ -13,7 +13,6 @@ from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.ltr_adversarial.base.ad_player import AdversarialPlayer
 from ptranking.ltr_adversarial.base.ad_machine import AdversarialMachine
 
-from ptranking.ltr_global import global_gpu as gpu, global_device as device
 
 LAMBDA = 0.5
 
@@ -23,8 +22,8 @@ dis_loss_function = nn.BCEWithLogitsLoss()
 
 
 class IRGAN_Point_Generator(AdversarialPlayer):
-    def __init__(self, sf_para_dict=None, temperature=0.2):
-        super(IRGAN_Point_Generator, self).__init__(sf_para_dict=sf_para_dict)
+    def __init__(self, sf_para_dict=None, temperature=0.2, gpu=False, device=None):
+        super(IRGAN_Point_Generator, self).__init__(sf_para_dict=sf_para_dict, gpu=gpu, device=device)
         self.temperature = temperature
 
     def predict(self, batch_ranking, train=False):
@@ -41,8 +40,8 @@ class IRGAN_Point_Generator(AdversarialPlayer):
 
 
 class IRGAN_Point_Discriminator(AdversarialPlayer):
-    def __init__(self, sf_para_dict=None):
-        super(IRGAN_Point_Discriminator, self).__init__(sf_para_dict=sf_para_dict)
+    def __init__(self, sf_para_dict=None, gpu=False, device=None):
+        super(IRGAN_Point_Discriminator, self).__init__(sf_para_dict=sf_para_dict, gpu=gpu, device=device)
 
     def get_reward(self, batch_ranking):
         ''' used by irgan '''
@@ -53,11 +52,11 @@ class IRGAN_Point_Discriminator(AdversarialPlayer):
 
 
 class IRGAN_Point(AdversarialMachine):
-    def __init__(self, eval_dict, data_dict, sf_para_dict=None, ad_para_dict=None):
+    def __init__(self, eval_dict, data_dict, sf_para_dict=None, ad_para_dict=None, gpu=False, device=None):
         '''
         :param ad_training_order: really matters, DG is preferred than GD
         '''
-        super(IRGAN_Point, self).__init__(eval_dict=eval_dict, data_dict=data_dict)
+        super(IRGAN_Point, self).__init__(eval_dict=eval_dict, data_dict=data_dict, gpu=gpu, device=device)
 
         ''' required final layer setting for Point_IR_GAN '''
         # the setting of 'apply_tl_af=False' is due to the later application of softmax function w.r.t. all documents
@@ -71,8 +70,8 @@ class IRGAN_Point(AdversarialMachine):
         #d_sf_para_dict['ffnns']['apply_tl_af'] = True
         d_sf_para_dict['ffnns']['TL_AF'] = 'S' # as required by the IRGAN model
 
-        self.generator = IRGAN_Point_Generator(sf_para_dict=g_sf_para_dict, temperature=ad_para_dict['temperature'])
-        self.discriminator = IRGAN_Point_Discriminator(sf_para_dict=d_sf_para_dict)
+        self.generator = IRGAN_Point_Generator(sf_para_dict=g_sf_para_dict, temperature=ad_para_dict['temperature'], gpu=gpu, device=device)
+        self.discriminator = IRGAN_Point_Discriminator(sf_para_dict=d_sf_para_dict, gpu=gpu, device=device)
 
         self.d_epoches = ad_para_dict['d_epoches']
         self.g_epoches = ad_para_dict['g_epoches']
@@ -142,7 +141,7 @@ class IRGAN_Point(AdversarialMachine):
             valid_num = min(num_pos, self.samples_per_query)
             pos_inds = torch.randperm(num_pos)[0:valid_num] # randomly select positive documents
 
-            if gpu: batch_ranking = batch_ranking.to(device) # [batch, size_ranking]
+            if self.gpu: batch_ranking = batch_ranking.to(self.device) # [batch, size_ranking]
 
             batch_pred = generator.predict(batch_ranking)
             pred_probs = F.softmax(torch.squeeze(batch_pred), dim=0)
@@ -159,7 +158,7 @@ class IRGAN_Point(AdversarialMachine):
             qid, batch_ranking = entry[0], entry[1]
 
             if qid in generated_data:
-                if gpu: batch_ranking = batch_ranking.to(device)
+                if self.gpu: batch_ranking = batch_ranking.to(self.device)
 
                 pos_inds, neg_inds = generated_data[qid]
                 pos_docs = batch_ranking[0, pos_inds, :]
@@ -168,7 +167,7 @@ class IRGAN_Point(AdversarialMachine):
                 num = len(pos_inds)
                 batch_docs = torch.unsqueeze(torch.cat([pos_docs, neg_docs], dim=0), dim=0)  # [batch=1, num_doc, num_features] w.r.t. one query
                 batch_label = torch.unsqueeze(torch.cat((torch.ones(num), torch.zeros(num)), dim=0), dim=0)  # corresponding labels
-                if gpu: batch_label = batch_label.to(device)
+                if self.gpu: batch_label = batch_label.to(self.device)
 
                 batch_pred = discriminator.predict(batch_docs, train=True)
 
@@ -184,7 +183,7 @@ class IRGAN_Point(AdversarialMachine):
                         global_buffer=None):
         for entry in train_data:
             qid, batch_ranking, batch_label = entry[0], entry[1], entry[2]
-            if gpu: batch_ranking = batch_ranking.to(device)
+            if self.gpu: batch_ranking = batch_ranking.to(self.device)
 
             num_pos = global_buffer[qid]
             if num_pos < 1: continue

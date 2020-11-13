@@ -10,7 +10,6 @@ import torch
 
 from ptranking.data.data_utils import LABEL_TYPE
 from ptranking.metric.adhoc_metric import torch_dcg_at_k
-from ptranking.ltr_global import tensor as global_tensor
 
 #######
 # For Delta Metrics
@@ -36,7 +35,7 @@ def get_delta_ndcg(batch_stds, batch_stds_sorted_via_preds, label_type=LABEL_TYP
     batch_n_gains = batch_gains / batch_idcgs               # normalised gains
     batch_ng_diffs = torch.unsqueeze(batch_n_gains, dim=2) - torch.unsqueeze(batch_n_gains, dim=1)
 
-    batch_std_ranks = torch.arange(batch_stds_sorted_via_preds.size(1)).type(global_tensor) if gpu \
+    batch_std_ranks = torch.arange(batch_stds_sorted_via_preds.size(1)).type(torch.cuda.FloatTensor) if gpu \
                                             else torch.arange(batch_stds_sorted_via_preds.size(1))
     batch_dists = 1.0 / torch.log2(batch_std_ranks + 2.0)   # discount co-efficients
     batch_dists = torch.unsqueeze(batch_dists, dim=0)

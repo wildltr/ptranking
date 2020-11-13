@@ -2,16 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """Description
-
+Some utility components for building a neural ranker
 """
+
 import torch
 
 import torch.nn as nn
 import torch.nn.functional as F
 #from torch.nn.init import kaiming_normal_ as nr_init
 from torch.nn.init import xavier_normal_ as nr_init
-
-from ptranking.ltr_global import torch_half
 
 
 class Vanilla_Sigmoid(torch.autograd.Function):
@@ -55,7 +54,7 @@ class Robust_Sigmoid(torch.autograd.Function):
     ''' Aiming for a stable sigmoid operator with specified sigma '''
 
     @staticmethod
-    def forward(ctx, input, sigma=1.0):
+    def forward(ctx, input, sigma=1.0, gpu=False):
         '''
         :param ctx:
         :param input: the input tensor
@@ -64,6 +63,7 @@ class Robust_Sigmoid(torch.autograd.Function):
         '''
         x = input if 1.0==sigma else sigma * input
 
+        torch_half = torch.cuda.FloatTensor([0.5]) if gpu else torch.FloatTensor([0.5])
         sigmoid_x_pos = torch.where(input>0, 1./(1. + torch.exp(-x)), torch_half)
 
         exp_x = torch.exp(x)
@@ -85,7 +85,7 @@ class Robust_Sigmoid(torch.autograd.Function):
 
         bg = grad_output * grad # chain rule
 
-        return bg, None
+        return bg, None, None
 
 #- function: robust_sigmoid-#
 robust_sigmoid = Robust_Sigmoid.apply

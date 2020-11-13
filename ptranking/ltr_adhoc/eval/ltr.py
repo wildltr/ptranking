@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Description
+A general framework for evaluating traditional learning-to-rank methods.
 """
 
 import os
@@ -32,8 +33,6 @@ from ptranking.ltr_adhoc.listwise.wassrank.wassRank import WassRank, WassRankPar
 from ptranking.ltr_adhoc.listwise.lambdarank        import LambdaRank, LambdaRankParameter
 from ptranking.ltr_adhoc.listwise.lambdaloss import LambdaLoss, LambdaLossParameter
 
-from ptranking.ltr_global import global_gpu as gpu, global_device as device, tensor
-
 LTR_ADHOC_MODEL = ['RankMSE',
                    'RankNet',
                    'RankCosine', 'ListNet', 'ListMLE', 'STListNet', 'ApproxNDCG', 'WassRank', 'LambdaRank', 'LambdaLoss']
@@ -42,8 +41,15 @@ class LTREvaluator():
     """
     The class for evaluating different ltr_adhoc methods.
     """
-    def __init__(self, frame_id=LTRFRAME_TYPE.Adhoc):
+    def __init__(self, frame_id=LTRFRAME_TYPE.Adhoc, cuda=None):
         self.frame_id = frame_id
+
+        if cuda is None:
+            self.gpu, self.device = False, 'cpu'
+        else:
+            self.gpu, self.device = True, 'cuda:'+str(cuda)
+            torch.cuda.set_device(cuda)
+
 
     def display_information(self, data_dict, model_para_dict):
         """
@@ -52,7 +58,7 @@ class LTREvaluator():
         :param model_para_dict:
         :return:
         """
-        if gpu: print('-- GPU({}) is launched --'.format(device))
+        if self.gpu: print('-- GPU({}) is launched --'.format(self.device))
         print(' '.join(['\nStart {} on {} >>>'.format(model_para_dict['model_id'], data_dict['data_id'])]))
 
     def check_consistency(self, data_dict, eval_dict, sf_para_dict):
@@ -158,13 +164,13 @@ class LTREvaluator():
         model_id = model_para_dict['model_id']
 
         if model_id in ['RankMSE', 'RankNet', 'ListNet', 'ListMLE', 'RankCosine']:
-            ranker = globals()[model_id](sf_para_dict=sf_para_dict)
+            ranker = globals()[model_id](sf_para_dict=sf_para_dict, gpu=self.gpu, device=self.device)
 
         elif model_id in ['LambdaRank', 'STListNet', 'ApproxNDCG', 'DirectOpt', 'LambdaLoss', 'MarginLambdaLoss']:
-            ranker = globals()[model_id](sf_para_dict=sf_para_dict, model_para_dict=model_para_dict)
+            ranker = globals()[model_id](sf_para_dict=sf_para_dict, model_para_dict=model_para_dict, gpu=self.gpu, device=self.device)
 
         elif model_id == 'WassRank':
-            ranker = WassRank(sf_para_dict=sf_para_dict, wass_para_dict=model_para_dict, dict_cost_mats=self.dict_cost_mats, dict_std_dists=self.dict_std_dists)
+            ranker = WassRank(sf_para_dict=sf_para_dict, wass_para_dict=model_para_dict, dict_cost_mats=self.dict_cost_mats, dict_std_dists=self.dict_std_dists, gpu=self.gpu, device=self.device)
         else:
             raise NotImplementedError
 
@@ -185,7 +191,7 @@ class LTREvaluator():
         mask_label = eval_dict['mask_label']
 
         if grid_search:
-            dir_root = dir_output + '_'.join(['gpu', 'grid', model_id]) + '/' if gpu else dir_output + '_'.join(['grid', model_id]) + '/'
+            dir_root = dir_output + '_'.join(['gpu', 'grid', model_id]) + '/' if self.gpu else dir_output + '_'.join(['grid', model_id]) + '/'
         else:
             dir_root = dir_output
 
@@ -254,7 +260,7 @@ class LTREvaluator():
 
     def train_ranker(self, ranker, train_data, model_para_dict=None, epoch_k=None, reranking=False):
         '''	One-epoch train of the given ranker '''
-        epoch_loss = tensor([0.0])
+        epoch_loss = torch.cuda.FloatTensor([0.0]) if self.gpu else torch.FloatTensor([0.0])
 
         if 'em_label' in model_para_dict and model_para_dict['em_label']:
             raise NotImplementedError
@@ -262,7 +268,7 @@ class LTREvaluator():
             presort = train_data.presort
             label_type = train_data.label_type
             for qid, batch_rankings, batch_stds in train_data: # _, [batch, ranking_size, num_features], [batch, ranking_size]
-                if gpu: batch_rankings, batch_stds = batch_rankings.to(device), batch_stds.to(device)
+                if self.gpu: batch_rankings, batch_stds = batch_rankings.to(self.device), batch_stds.to(self.device)
 
                 if reranking:
                     if torch.nonzero(batch_stds).size(0) <= 0:
@@ -313,7 +319,9 @@ class LTREvaluator():
 
             if do_vali: fold_optimal_ndcgk = 0.0
             if do_summary: list_epoch_loss, list_fold_k_train_eval_track, list_fold_k_test_eval_track, list_fold_k_vali_eval_track = [], [], [], []
-            if not do_vali and loss_guided: first_round, threshold_epoch_loss = True, tensor([10000000.0])
+            if not do_vali and loss_guided:
+                first_round = True
+                threshold_epoch_loss = torch.cuda.FloatTensor([10000000.0]) if self.gpu else torch.FloatTensor([10000000.0])
 
             for epoch_k in range(1, epochs + 1):
                 torch_fold_k_epoch_k_loss, stop_training = self.train_ranker(ranker=ranker, train_data=train_data, model_para_dict=model_para_dict, epoch_k=epoch_k)
@@ -326,7 +334,7 @@ class LTREvaluator():
 
                 if (do_summary or do_vali) and (epoch_k % log_step == 0 or epoch_k == 1):  # stepwise check
                     if do_vali:     # per-step validation score
-                        vali_eval_tmp = ndcg_at_k(ranker=ranker, test_data=vali_data, k=vali_k,
+                        vali_eval_tmp = ndcg_at_k(ranker=ranker, test_data=vali_data, k=vali_k, gpu=self.gpu, device=self.device,
                                                   label_type=self.data_setting.data_dict['label_type'])
                         vali_eval_v = vali_eval_tmp.data.numpy()
                         if epoch_k > 1:  # further validation comparison
@@ -341,17 +349,17 @@ class LTREvaluator():
                                 print('\t\t', epoch_k, '- nDCG@{} - '.format(vali_k), curr_vali_ndcg)
 
                     if do_summary:  # summarize per-step performance w.r.t. train, test
-                        fold_k_epoch_k_train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs,
+                        fold_k_epoch_k_train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs, gpu=self.gpu, device=self.device,
                                                                   label_type=self.data_setting.data_dict['label_type'])
-                        np_fold_k_epoch_k_train_ndcg_ks = fold_k_epoch_k_train_ndcg_ks.cpu().numpy() if gpu else fold_k_epoch_k_train_ndcg_ks.data.numpy()
+                        np_fold_k_epoch_k_train_ndcg_ks = fold_k_epoch_k_train_ndcg_ks.cpu().numpy() if self.gpu else fold_k_epoch_k_train_ndcg_ks.data.numpy()
                         list_fold_k_train_eval_track.append(np_fold_k_epoch_k_train_ndcg_ks)
 
-                        fold_k_epoch_k_test_ndcg_ks  = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs,
+                        fold_k_epoch_k_test_ndcg_ks  = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs, gpu=self.gpu, device=self.device,
                                                                   label_type=self.data_setting.data_dict['label_type'])
-                        np_fold_k_epoch_k_test_ndcg_ks  = fold_k_epoch_k_test_ndcg_ks.cpu().numpy() if gpu else fold_k_epoch_k_test_ndcg_ks.data.numpy()
+                        np_fold_k_epoch_k_test_ndcg_ks  = fold_k_epoch_k_test_ndcg_ks.cpu().numpy() if self.gpu else fold_k_epoch_k_test_ndcg_ks.data.numpy()
                         list_fold_k_test_eval_track.append(np_fold_k_epoch_k_test_ndcg_ks)
 
-                        fold_k_epoch_k_loss = torch_fold_k_epoch_k_loss.cpu().numpy() if gpu else torch_fold_k_epoch_k_loss.data.numpy()
+                        fold_k_epoch_k_loss = torch_fold_k_epoch_k_loss.cpu().numpy() if self.gpu else torch_fold_k_epoch_k_loss.data.numpy()
                         list_epoch_loss.append(fold_k_epoch_k_loss)
 
                         if do_vali: list_fold_k_vali_eval_track.append(vali_eval_v)
@@ -390,7 +398,7 @@ class LTREvaluator():
                 ranker.save(dir=self.dir_run + fold_optimal_checkpoint + '/', name='_'.join(['net_params_epoch', str(epoch_k)]) + '.pkl')
                 fold_optimal_ranker = ranker
 
-            torch_fold_ndcg_ks = ndcg_at_ks(ranker=fold_optimal_ranker, test_data=test_data, ks=cutoffs,
+            torch_fold_ndcg_ks = ndcg_at_ks(ranker=fold_optimal_ranker, test_data=test_data, ks=cutoffs, gpu=self.gpu, device=self.device,
                                             label_type=self.data_setting.data_dict['label_type'])
             fold_ndcg_ks = torch_fold_ndcg_ks.data.numpy()
 
@@ -434,20 +442,20 @@ class LTREvaluator():
         epochs, cutoffs = eval_dict['epochs'], eval_dict['cutoffs']
 
         for i in range(epochs):
-            epoch_loss = torch.zeros(1).to(device) if gpu else torch.zeros(1)
+            epoch_loss = torch.zeros(1).to(self.device) if self.gpu else torch.zeros(1)
             for qid, batch_rankings, batch_stds in train_data:
-                if gpu: batch_rankings, batch_stds = batch_rankings.to(device), batch_stds.to(device)
+                if self.gpu: batch_rankings, batch_stds = batch_rankings.to(self.device), batch_stds.to(self.device)
                 batch_loss, stop_training = ranker.train(batch_rankings, batch_stds, qid=qid)
                 epoch_loss += batch_loss.item()
 
-            np_epoch_loss = epoch_loss.cpu().numpy() if gpu else epoch_loss.data.numpy()
+            np_epoch_loss = epoch_loss.cpu().numpy() if self.gpu else epoch_loss.data.numpy()
             list_losses.append(np_epoch_loss)
 
-            test_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs, label_type=LABEL_TYPE.MultiLabel)
+            test_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs, label_type=LABEL_TYPE.MultiLabel, gpu=self.gpu, device=self.device,)
             np_test_ndcg_ks = test_ndcg_ks.data.numpy()
             list_test_ndcgs.append(np_test_ndcg_ks)
 
-            train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs, label_type=LABEL_TYPE.MultiLabel)
+            train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs, label_type=LABEL_TYPE.MultiLabel, gpu=self.gpu, device=self.device,)
             np_train_ndcg_ks = train_ndcg_ks.data.numpy()
             list_train_ndcgs.append(np_train_ndcg_ks)
 

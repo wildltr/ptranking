@@ -11,10 +11,11 @@ class AdversarialMachine():
     An abstract adversarial learning-to-rank framework
     '''
 
-    def __init__(self, eval_dict=None, data_dict=None):
+    def __init__(self, eval_dict=None, data_dict=None, gpu=False, device=None):
         #todo double-check the necessity of these two arguments
         self.eval_dict = eval_dict
         self.data_dict = data_dict
+        self.gpu, self.device = gpu, device
 
     def pre_check(self):
         pass

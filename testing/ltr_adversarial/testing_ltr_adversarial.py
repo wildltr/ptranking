@@ -47,17 +47,19 @@ if __name__ == '__main__':
 
     """
 
-    debug = True  # in a debug mode, we just check whether the model can operate
+    cuda = 1                    # the gpu id, e.g., 0 or 1, otherwise, set it as None indicating to use cpu
 
-    config_with_json = False  # specify configuration with json files or not
+    debug = True                # in a debug mode, we just check whether the model can operate
+
+    config_with_json = False    # specify configuration with json files or not
 
     models_to_run = [
         #'IRGAN_Point',
-        'IRGAN_Pair',
-        #'IRGAN_List'
+        #'IRGAN_Pair',
+        'IRGAN_List'
     ]
 
-    evaluator = AdLTREvaluator()
+    evaluator = AdLTREvaluator(cuda=cuda)
 
     if config_with_json:  # specify configuration with json files
         # the directory of json files
@@ -69,12 +71,12 @@ if __name__ == '__main__':
     else:  # specify configuration manually
         data_id = 'MQ2008_Super'
 
-        ''' location of the adopted data '''
+        ''' Location of the adopted data '''
         #dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
         dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
         #dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
 
-        ''' output directory '''
+        ''' Output directory '''
         #dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/ALTR/'
         dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
         #dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'

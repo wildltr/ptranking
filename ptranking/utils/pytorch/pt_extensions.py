@@ -6,9 +6,6 @@ from torch.distributions.multivariate_normal import MultivariateNormal
 import math
 import numpy as np
 
-from ptranking.ltr_global import global_gpu as gpu
-
-
 
 def shuffle_ties(vec, descending=True):
     '''
@@ -114,7 +111,7 @@ ONEOVERSQRT2PI = 1.0 / math.sqrt(2*math.pi)
 from scipy.integrate import quad
 class Gaussian_Integral_0_Inf(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, MU, sigma):
+    def forward(ctx, MU, sigma, gpu):
         '''
         :param ctx:
         :param mu:
@@ -140,7 +137,7 @@ class Gaussian_Integral_0_Inf(torch.autograd.Function):
         probs = ONEOVERSQRT2PI * torch.exp(-0.5 * (-mu/sigma) ** 2) / sigma  # point gaussian probabilities given mu and sigma
         # chain rule
         bk_output = grad_output * probs
-        return bk_output, None
+        return bk_output, None, None
 
 
 def sinkhorn_2D(x, num_iter=5):

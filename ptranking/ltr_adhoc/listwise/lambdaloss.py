@@ -21,8 +21,7 @@ from ptranking.data.data_utils import LABEL_TYPE
 from ptranking.base.ranker import NeuralRanker
 from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.metric.adhoc_metric import torch_dcg_at_k
-from ptranking.ltr_global import global_device as device, global_gpu as gpu, tensor, epsilon
-
+from ptranking.ltr_global import epsilon
 
 LAMBDALOSS_TYPE = ['NDCG_Loss1', 'NDCG_Loss2', 'NDCG_Loss2++'] # todo add 'ARP_Loss1', 'ARP_Loss2',
 
@@ -34,8 +33,9 @@ LAMBDALOSS_TYPE = ['NDCG_Loss1', 'NDCG_Loss2', 'NDCG_Loss2++'] # todo add 'ARP_L
 def ndcg_loss1_power_weights(batch_n_gains=None, discounts=None):
     return batch_n_gains/discounts
 
-def ndcg_loss2_power_weights(batch_n_gains=None, discounts=None):
-    ranks = torch.arange(batch_n_gains.size(1)).type(tensor) + 1.0
+def ndcg_loss2_power_weights(batch_n_gains=None, discounts=None, gpu=False):
+    torch_arange = torch.arange(batch_n_gains.size(1)).type(torch.cuda.FloatTensor) if gpu else torch.arange(batch_n_gains.size(1)).type(torch.FloatTensor)
+    ranks = torch_arange + 1.0
     abs_rank_deltas = torch.abs(ranks[:, None] - ranks[None, :]).type(torch.LongTensor)
     #delta_ij = torch.abs(torch.pow(discounts[0, abs_rank_deltas - 1], -1.) - torch.pow(discounts[0, abs_rank_deltas], -1.))
     delta_ij = torch.abs(torch.pow(discounts[abs_rank_deltas - 1], -1.) - torch.pow(discounts[abs_rank_deltas], -1.))
@@ -44,11 +44,12 @@ def ndcg_loss2_power_weights(batch_n_gains=None, discounts=None):
     power_weights = delta_ij[None, :, :] * torch.abs(batch_n_gains[:, :, None] - batch_n_gains[:, None, :])
     return power_weights
 
-def ndcg_loss2plusplus_power_weights(batch_n_gains=None, discounts=None, mu=5.):
+def ndcg_loss2plusplus_power_weights(batch_n_gains=None, discounts=None, mu=5., gpu=False):
     #
     rho_ij = torch.abs(torch.pow(discounts[:, None], -1.) - torch.pow(discounts[None, :], -1.))
 
-    ranks = torch.arange(batch_n_gains.size(1)).type(tensor) + 1.0
+    torch_arange = torch.arange(batch_n_gains.size(1)).type(torch.cuda.FloatTensor) if gpu else torch.arange(batch_n_gains.size(1)).type(torch.FloatTensor)
+    ranks = torch_arange + 1.0
     abs_rank_deltas = torch.abs(ranks[:, None] - ranks[None, :]).type(torch.LongTensor)
     delta_ij = torch.abs(torch.pow(discounts[abs_rank_deltas - 1], -1.) - torch.pow(discounts[abs_rank_deltas], -1.))
     delta_ij.diagonal().zero_()
@@ -59,9 +60,12 @@ def ndcg_loss2plusplus_power_weights(batch_n_gains=None, discounts=None, mu=5.):
 
 class LambdaLoss(NeuralRanker):
     '''
+    author = {Wang, Xuanhui and Li, Cheng and Golbandi, Nadav and Bendersky, Michael and Najork, Marc},
+    title = {The LambdaLoss Framework for Ranking Metric Optimization},
+    year = {2018},
     '''
-    def __init__(self, sf_para_dict=None, model_para_dict=None):
-        super(LambdaLoss, self).__init__(id='LambdaLoss', sf_para_dict=sf_para_dict)
+    def __init__(self, sf_para_dict=None, model_para_dict=None, gpu=False, device=None):
+        super(LambdaLoss, self).__init__(id='LambdaLoss', sf_para_dict=sf_para_dict, gpu=gpu, device=device)
         self.lambdaloss_dict = model_para_dict
         self.k, self.sigma, self.loss_type = model_para_dict['k'], model_para_dict['sigma'], model_para_dict['loss_type']
         if 'NDCG_Loss2++' == self.loss_type: self.mu = model_para_dict['mu']
@@ -85,11 +89,11 @@ class LambdaLoss(NeuralRanker):
         batch_preds_sorted, batch_preds_sorted_inds = torch.sort(target_batch_preds, dim=1, descending=True)  # sort documents according to the predicted relevance
         batch_stds_sorted_via_preds = torch.gather(target_batch_stds, dim=1, index=batch_preds_sorted_inds)  # reorder batch_stds correspondingly so as to make it consistent. BTW, batch_stds[batch_preds_sorted_inds] only works with 1-D tensor
 
-        batch_std_ranks = torch.arange(target_batch_preds.size(1)).type(tensor)
+        batch_std_ranks = torch.arange(target_batch_preds.size(1)).type(torch.cuda.FloatTensor) if self.gpu else torch.arange(target_batch_preds.size(1)).type(torch.FloatTensor)
         dists_1D = 1.0 / torch.log2(batch_std_ranks + 2.0)  # discount co-efficients
 
         # ideal dcg values based on optimal order
-        batch_idcgs = torch_dcg_at_k(batch_sorted_labels=target_batch_stds, gpu=gpu)
+        batch_idcgs = torch_dcg_at_k(batch_sorted_labels=target_batch_stds, gpu=self.gpu)
 
         if label_type == LABEL_TYPE.MultiLabel:
             batch_gains = torch.pow(2.0, batch_stds_sorted_via_preds) - 1.0
@@ -114,7 +118,7 @@ class LambdaLoss(NeuralRanker):
         log_weighted_probas = torch.log2(weighted_probas)
 
         # mask for truncation based on cutoff k
-        trunc_mask = torch.zeros((target_batch_preds.shape[1], target_batch_preds.shape[1]), dtype=torch.bool, device=device)
+        trunc_mask = torch.zeros((target_batch_preds.shape[1], target_batch_preds.shape[1]), dtype=torch.bool, device=self.device)
         trunc_mask[:self.k, :self.k] = 1
 
         if self.loss_type in ['NDCG_Loss2', 'NDCG_Loss2++']:

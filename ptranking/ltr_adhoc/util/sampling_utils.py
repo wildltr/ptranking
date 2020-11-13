@@ -7,9 +7,6 @@
 
 import torch
 
-from ptranking.ltr_global import tensor
-
-
 def unique_count(std_labels, descending=True):
     asc_std_labels, _ = torch.sort(std_labels)
     uni_elements, inds = torch.unique(asc_std_labels, sorted=True, return_inverse=True)
@@ -22,10 +19,11 @@ def unique_count(std_labels, descending=True):
         return asc_uni_cnts
 
 
-def batch_global_unique_count(batch_std_labels, max_rele_lavel, descending=True):
+def batch_global_unique_count(batch_std_labels, max_rele_lavel, descending=True, gpu=False):
     '''  '''
     batch_asc_std_labels, _ = torch.sort(batch_std_labels, dim=1)
-    global_uni_elements = torch.arange(max_rele_lavel+1).type(tensor) # default ascending order
+    # default ascending order
+    global_uni_elements = torch.arange(max_rele_lavel+1).type(torch.cuda.FloatTensor) if gpu else torch.arange(max_rele_lavel+1).type(torch.FloatTensor)
 
     asc_uni_cnts = torch.cat([(batch_asc_std_labels == e).sum(dim=1, keepdim=True) for e in global_uni_elements], dim=1) # row-wise count per element
 

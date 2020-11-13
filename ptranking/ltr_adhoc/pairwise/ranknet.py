@@ -3,7 +3,8 @@
 
 
 """Description
-
+Chris Burges, Tal Shaked, Erin Renshaw, Ari Lazier, Matt Deeds, Nicole Hamilton, and Greg Hullender. 2005.
+Learning to rank using gradient descent. In Proceedings of the 22nd ICML. 89–96.
 """
 
 import torch
@@ -37,9 +38,8 @@ class RankNet(NeuralRanker):
     Chris Burges, Tal Shaked, Erin Renshaw, Ari Lazier, Matt Deeds, Nicole Hamilton, and Greg Hullender. 2005.
     Learning to rank using gradient descent. In Proceedings of the 22nd ICML. 89–96.
     '''
-
-    def __init__(self, sf_para_dict=None):
-        super(RankNet, self).__init__(id='RankNet', sf_para_dict=sf_para_dict)
+    def __init__(self, sf_para_dict=None, gpu=False, device=None):
+        super(RankNet, self).__init__(id='RankNet', sf_para_dict=sf_para_dict, gpu=gpu, device=device)
         self.sigma = 1.0
         self.pair  = 'All'
         self.dict_indice = dict()  # buffering pair indice to avoid duplicate computation, which is refreshed per ranker
