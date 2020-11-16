@@ -623,7 +623,7 @@
 In other words, we appeal to particularly designed class objects for setting. For example, <strong>DataSetting</strong> for data loading, <strong>EvalSetting</strong> for evaluation setting and <strong>ModelParameter</strong> for a model's parameter setting. Moreover, configuration with <strong>json files</strong> is also supported for DataSetting, EvalSetting and ModelParameter, which is the recommended way.</p>
 <p>Thanks to this strategy, on one hand, we can initialize the settings for data-loading, evaluation, and models in a simple way. In particular, the parameter setting of a model is self-contained, and easy to customize. On the other hand, given the specified setting, e.g., settings with json files, it is very easy to reproduce an experiment.</p>
 <h2 id="setting-on-loading-a-dataset">Setting on Loading A Dataset<a class="headerlink" href="#setting-on-loading-a-dataset" title="Permanent link">&para;</a></h2>
-<p>When loading a dataset, the meta-information and preprocessing are specified with <strong><a href="https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/eval/parameter.py">DataSetting</a></strong>. Taking the json file for initializing DataSetting for example,</p>
+<p>When loading a dataset, the meta-information and preprocessing are specified with <strong><a href="https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/ltr_adhoc/eval/parameter.py">DataSetting</a></strong>. Taking the json file for initializing DataSetting for example,</p>
 <ul>
 <li>"data_id":"MQ2008_Super", # the ID of an adopted dataset</li>
 <li>
@@ -643,7 +643,7 @@ In other words, we appeal to particularly designed class objects for setting. Fo
 <li>"presort":[true] # whether sort documents based on ground-truth labels in advance</li>
 </ul>
 <h2 id="setting-on-evaluation">Setting on Evaluation<a class="headerlink" href="#setting-on-evaluation" title="Permanent link">&para;</a></h2>
-<p>When testing a specific learning-to-rank method, the evaluation details are specified with <strong><a href="https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/eval/parameter.py">EvalSetting</a></strong>. Taking the json file for initializing EvalSetting for example,</p>
+<p>When testing a specific learning-to-rank method, the evaluation details are specified with <strong><a href="https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/ltr_adhoc/eval/parameter.py">EvalSetting</a></strong>. Taking the json file for initializing EvalSetting for example,</p>
 <ul>
 <li>
 <p>"dir_output":"/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/", # output directory of results</p>
@@ -678,7 +678,7 @@ In other words, we appeal to particularly designed class objects for setting. Fo
 </ul>
 <h2 id="parameter-setting">Parameter Setting<a class="headerlink" href="#parameter-setting" title="Permanent link">&para;</a></h2>
 <h3 id="parameters-for-base-scoring-function">Parameters for Base Scoring Function<a class="headerlink" href="#parameters-for-base-scoring-function" title="Permanent link">&para;</a></h3>
-<p>For most learning-to-rank methods, PT-Ranking offers deep neural networks as the basis to construct a scoring function. Therefore, we use <a href="https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/eval/parameter.py">ScoringFunctionParameter</a> to specify the details, such as the number of layers and activation function. Taking the json file for initializing ScoringFunctionParameter for example,</p>
+<p>For most learning-to-rank methods, PT-Ranking offers deep neural networks as the basis to construct a scoring function. Therefore, we use <a href="https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/ltr_adhoc/eval/parameter.py">ScoringFunctionParameter</a> to specify the details, such as the number of layers and activation function. Taking the json file for initializing ScoringFunctionParameter for example,</p>
 <ul>
 <li>"BN":[true], # batch normalization</li>
 <li>"RD":[false], # residual module</li>
@@ -687,7 +687,7 @@ In other words, we appeal to particularly designed class objects for setting. Fo
 <li>"hd_hn_tl_af":["R"] # type of activation function</li>
 </ul>
 <h3 id="parameters-for-loss-function">Parameters for Loss Function<a class="headerlink" href="#parameters-for-loss-function" title="Permanent link">&para;</a></h3>
-<p>Besides the configuration of the scoring function, for some relatively complex learning-to-rank methods, we also need to specify some parameters for the loss function. In this case, it is required to develop the subclass ModelAParameter by inheriting <strong><a href="https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/eval/parameter.py">ModelParameter</a></strong> and customizing the functions, such as to_para_string(), default_para_dict() and grid_search(). Please refer to <a href="https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/ltr_adhoc/listwise/lambdarank.py">LambdaRankParameter</a> as an example.</p>
+<p>Besides the configuration of the scoring function, for some relatively complex learning-to-rank methods, we also need to specify some parameters for the loss function. In this case, it is required to develop the subclass ModelAParameter by inheriting <strong><a href="https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/ltr_adhoc/eval/parameter.py">ModelParameter</a></strong> and customizing the functions, such as to_para_string(), default_para_dict() and grid_search(). Please refer to <a href="https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/ltr_adhoc/listwise/lambdarank.py">LambdaRankParameter</a> as an example.</p>
                 
               
               
