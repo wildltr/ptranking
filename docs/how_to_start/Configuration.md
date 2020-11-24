@@ -7,7 +7,7 @@ Thanks to this strategy, on one hand, we can initialize the settings for data-lo
 
 ## Setting on Loading A Dataset
 
-When loading a dataset, the meta-information and preprocessing are specified with **[DataSetting](https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/eval/parameter.py)**. Taking the json file for initializing DataSetting for example,
+When loading a dataset, the meta-information and preprocessing are specified with **[DataSetting](https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/ltr_adhoc/eval/parameter.py)**. Taking the json file for initializing DataSetting for example,
 
 - "data_id":"MQ2008_Super", # the ID of an adopted dataset
 - "dir_data":"/Users/dryuhaitao/WorkBench/Corpus/LETOR4.0/MQ2008/", # the location of an adopted dataset
@@ -22,7 +22,7 @@ When loading a dataset, the meta-information and preprocessing are specified wit
 
 ## Setting on Evaluation
 
-When testing a specific learning-to-rank method, the evaluation details are specified with **[EvalSetting](https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/eval/parameter.py)**. Taking the json file for initializing EvalSetting for example,
+When testing a specific learning-to-rank method, the evaluation details are specified with **[EvalSetting](https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/ltr_adhoc/eval/parameter.py)**. Taking the json file for initializing EvalSetting for example,
 
 - "dir_output":"/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/", # output directory of results
 
@@ -46,7 +46,7 @@ When testing a specific learning-to-rank method, the evaluation details are spec
 ## Parameter Setting
 
 ### Parameters for Base Scoring Function
-For most learning-to-rank methods, PT-Ranking offers deep neural networks as the basis to construct a scoring function. Therefore, we use [ScoringFunctionParameter](https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/eval/parameter.py) to specify the details, such as the number of layers and activation function. Taking the json file for initializing ScoringFunctionParameter for example,
+For most learning-to-rank methods, PT-Ranking offers deep neural networks as the basis to construct a scoring function. Therefore, we use [ScoringFunctionParameter](https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/ltr_adhoc/eval/parameter.py) to specify the details, such as the number of layers and activation function. Taking the json file for initializing ScoringFunctionParameter for example,
 
 - "BN":[true], # batch normalization
 - "RD":[false], # residual module
@@ -55,4 +55,4 @@ For most learning-to-rank methods, PT-Ranking offers deep neural networks as the
 - "hd_hn_tl_af":["R"] # type of activation function
 
 ### Parameters for Loss Function
-Besides the configuration of the scoring function, for some relatively complex learning-to-rank methods, we also need to specify some parameters for the loss function. In this case, it is required to develop the subclass ModelAParameter by inheriting **[ModelParameter](https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/eval/parameter.py)** and customizing the functions, such as to_para_string(), default_para_dict() and grid_search(). Please refer to [LambdaRankParameter](https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/ltr_adhoc/listwise/lambdarank.py) as an example.
+Besides the configuration of the scoring function, for some relatively complex learning-to-rank methods, we also need to specify some parameters for the loss function. In this case, it is required to develop the subclass ModelAParameter by inheriting **[ModelParameter](https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/ltr_adhoc/eval/parameter.py)** and customizing the functions, such as to_para_string(), default_para_dict() and grid_search(). Please refer to [LambdaRankParameter](https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/ltr_adhoc/listwise/lambdarank.py) as an example.

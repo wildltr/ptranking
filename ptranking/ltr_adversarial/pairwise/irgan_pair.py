@@ -151,7 +151,7 @@ class IRGAN_Pair(AdversarialMachine):
             '''
             pos_inds = torch.randperm(num_pos)[0:valid_num]  # randomly select positive documents
 
-            if self.gpu: batch_ranking = batch_ranking.to(self.device) # [batch, size_ranking]
+            #if self.gpu: batch_ranking = batch_ranking.to(self.device) # [batch, size_ranking]
             batch_pred = generator.predict(batch_ranking)  # [batch, size_ranking]
             pred_probs = F.softmax(torch.squeeze(batch_pred), dim=0)
             neg_unk_probs = pred_probs[num_pos:]

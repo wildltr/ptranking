@@ -260,30 +260,17 @@ class LTREvaluator():
 
     def train_ranker(self, ranker, train_data, model_para_dict=None, epoch_k=None, reranking=False):
         '''	One-epoch train of the given ranker '''
+        presort, label_type = train_data.presort, train_data.label_type
         epoch_loss = torch.cuda.FloatTensor([0.0]) if self.gpu else torch.FloatTensor([0.0])
+        for qid, batch_rankings, batch_stds in train_data: # size: _, [batch, ranking_size, num_features], [batch, ranking_size]
+            if self.gpu: batch_rankings, batch_stds = batch_rankings.to(self.device), batch_stds.to(self.device)
 
-        if 'em_label' in model_para_dict and model_para_dict['em_label']:
-            raise NotImplementedError
-        else:
-            presort = train_data.presort
-            label_type = train_data.label_type
-            for qid, batch_rankings, batch_stds in train_data: # _, [batch, ranking_size, num_features], [batch, ranking_size]
-                if self.gpu: batch_rankings, batch_stds = batch_rankings.to(self.device), batch_stds.to(self.device)
+            batch_loss, stop_training = ranker.train(batch_rankings, batch_stds, qid=qid, epoch_k=epoch_k, presort=presort, label_type=label_type)
 
-                if reranking:
-                    if torch.nonzero(batch_stds).size(0) <= 0:
-                        '''
-                        In case the standard labels of the initial retrieval are all zeros providing no optimization
-                        information. Meanwhile, some models (e.g., lambdaRank) may fail to train
-                        '''
-                        continue
-
-                batch_loss, stop_training = ranker.train(batch_rankings, batch_stds, qid=qid, epoch_k=epoch_k,
-                                                         presort=presort, label_type=label_type)
-                if stop_training:
-                    break
-                else:
-                    epoch_loss += batch_loss.item()
+            if stop_training:
+                break
+            else:
+                epoch_loss += batch_loss.item()
 
         return epoch_loss, stop_training
 
@@ -307,13 +294,13 @@ class LTREvaluator():
         vali_k, log_step, cutoffs   = eval_dict['vali_k'], eval_dict['log_step'], eval_dict['cutoffs']
         do_vali, do_summary = eval_dict['do_validation'], eval_dict['do_summary']
 
-        ranker   = self.load_ranker(model_para_dict=model_para_dict, sf_para_dict=sf_para_dict)
+        ranker = self.load_ranker(model_para_dict=model_para_dict, sf_para_dict=sf_para_dict)
 
-        time_begin = datetime.datetime.now()            # timing
+        time_begin = datetime.datetime.now()       # timing
         l2r_cv_avg_scores = np.zeros(len(cutoffs)) # fold average
 
-        for fold_k in range(1, fold_num + 1): # evaluation over k-fold data
-            ranker.reset_parameters()              # reset with the same random initialization
+        for fold_k in range(1, fold_num + 1):   # evaluation over k-fold data
+            ranker.reset_parameters()           # reset with the same random initialization
 
             train_data, test_data, vali_data = self.load_data(eval_dict, data_dict, fold_k)
 

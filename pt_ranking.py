@@ -5,7 +5,6 @@
 
 """
 
-
 from ptranking.utils.args.argsUtil import ArgsUtil
 
 from ptranking.ltr_adhoc.eval.ltr import LTREvaluator, LTR_ADHOC_MODEL
@@ -17,10 +16,10 @@ from ptranking.ltr_adversarial.eval.ltr_adversarial import AdLTREvaluator, LTR_A
 The command line usage:
 
 (1) Without using GPU
-python pt_ranking.py -data MQ2007_Super -dir_data /home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/ -dir_output /home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/ -model ListMLE
+python pt_ranking.py -model ListMLE -dir_json /home/dl-box/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/
 
 (2) Using GPU
-python pt_ranking.py -cuda 0 -data MQ2007_Super -dir_data /home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/ -dir_output /home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/ -model ListMLE
+python pt_ranking.py -cuda 0 -model ListMLE -dir_json /home/dl-box/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/
 
 """
 
@@ -66,7 +65,7 @@ if __name__ == '__main__':
 
     """
 
-    print('Started PT_Ranking ...')
+    print('Started pt_ranking ...')
 
     args_obj = ArgsUtil(given_root='./')
     l2r_args = args_obj.get_l2r_args()
@@ -79,8 +78,9 @@ if __name__ == '__main__':
 
     elif l2r_args.model in LTR_TREE_MODEL:
         evaluator = TreeLTREvaluator()
+
     else:
         raise NotImplementedError
 
-    evaluator.run(debug=True, model_id=l2r_args.model, data_id=l2r_args.data_id, dir_data=l2r_args.dir_data, dir_output=l2r_args.dir_output, grid_search=False)
+    evaluator.run(model_id=l2r_args.model, dir_json=l2r_args.dir_json, debug=False, config_with_json=True)
 

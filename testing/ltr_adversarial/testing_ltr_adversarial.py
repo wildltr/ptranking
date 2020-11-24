@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     """
 
-    cuda = None                    # the gpu id, e.g., 0 or 1, otherwise, set it as None indicating to use cpu
+    cuda = 0                    # the gpu id, e.g., 0 or 1, otherwise, set it as None indicating to use cpu
 
     debug = True                # in a debug mode, we just check whether the model can operate
 

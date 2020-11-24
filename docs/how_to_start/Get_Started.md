@@ -27,8 +27,8 @@ python ptranking -data MQ2008_Super -dir_data /home/dl-box/dataset/MQ2008/ -dir_
 
 To get a taste of learning-to-rank models without writing any code, you could try the following script. You just need to specify the model name, the dataset id, as well as the directories for input and output.
 
-- [Jupyter Notebook example on RankNet & LambdaRank](tutorial/ptranking_demo_ltr.ipynb)
+- [Jupyter Notebook example on RankNet & LambdaRank](https://github.com/ptranking/ptranking.github.io/raw/master/tutorial/)
 
 To get familiar with the process of data loading, you could try the following script, namely, get the statistics of a dataset.
 
-- [Jupyter Notebook example on getting dataset statistics](tutorial/ptranking_demo_dataset_statistics.ipynb)
+- [Jupyter Notebook example on getting dataset statistics](https://github.com/ptranking/ptranking.github.io/raw/master/tutorial/)

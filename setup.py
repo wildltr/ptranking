@@ -18,7 +18,7 @@ extras_requires = None
 
 setuptools.setup(
     name="ptranking",
-    version="0.0.1",
+    version="0.0.3",
     author="II-Research",
     author_email="yuhaitao@slis.tsukuba.ac.jp",
     description="A library of scalable and extendable implementations of typical learning-to-rank methods based on PyTorch.",

@@ -17,7 +17,7 @@ class ArgsUtil(object):
         self.given_root = given_root
 
         ''' gpu '''
-        self.args_parser.add_argument('-cuda', type=int, help='gpu id')
+        self.args_parser.add_argument('-cuda', type=int, help='gpu id', default=None)
 
         ''' data '''
         self.args_parser.add_argument('-data_id', type=str, help='the data collection upon which you will perform learning-to-rank.')

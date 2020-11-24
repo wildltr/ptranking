@@ -513,11 +513,12 @@ def iter_queries(in_file, presort=None, data_dict=None, scale_data=None, scaler_
                 list_features_per_q = tmp[1]
                 feature_mat = np.vstack(list_features_per_q)
 
-                if data_dict['data_id'] in ISTELLA_LTR:
-                    # due to the possible extremely large features, e.g., 1.79769313486e+308
-                    feature_mat = scaler.fit_transform(np.clip(feature_mat, a_min=None, a_max=ISTELLA_MAX))
-                else:
-                    feature_mat = scaler.fit_transform(feature_mat)
+                if scale_data:
+                    if data_dict['data_id'] in ISTELLA_LTR:
+                        # due to the possible extremely large features, e.g., 1.79769313486e+308
+                        feature_mat = scaler.fit_transform(np.clip(feature_mat, a_min=None, a_max=ISTELLA_MAX))
+                    else:
+                        feature_mat = scaler.fit_transform(feature_mat)
 
                 Q = clip_query_data(qid=qid, feature_mat=feature_mat, std_label_vec=np.array(list_labels_per_q),
                                     binary_rele=binary_rele, unknown_as_zero=unknown_as_zero, clip_query=clip_query,

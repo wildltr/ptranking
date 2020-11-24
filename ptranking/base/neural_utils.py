@@ -104,6 +104,9 @@ def get_AF(af_str):
     elif af_str == 'RR':
         return nn.RReLU()        # the randomized leaky rectified liner unit function
 
+    elif af_str == 'PR':
+        return nn.PRelU()
+
     elif af_str == 'E':          # ELU(x)=max(0,x)+min(0,α∗(exp(x)−1))
         return nn.ELU()
 
@@ -112,6 +115,9 @@ def get_AF(af_str):
 
     elif af_str == 'CE':         # CELU(x)=max(0,x)+min(0,α∗(exp(x/α)−1))
         return nn.CELU()
+
+    elif af_str == 'GE':
+        return nn.GELU()
 
     elif af_str == 'S':
         return nn.Sigmoid()
@@ -125,10 +131,6 @@ def get_AF(af_str):
 
     elif af_str == 'ST':         # a kind of normalization
         return F.softmax()      # Applies the Softmax function to an n-dimensional input Tensor rescaling them so that the elements of the n-dimensional output Tensor lie in the range (0,1) and sum to 1
-
-    elif af_str == 'EP':
-        #return Exp()
-        raise NotImplementedError
 
     else:
         raise NotImplementedError
