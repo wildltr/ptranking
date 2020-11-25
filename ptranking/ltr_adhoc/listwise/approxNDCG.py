@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 """Description
 Tao Qin, Tie-Yan Liu, and Hang Li. 2010.
 A general approximation framework for direct optimization of information retrieval measures.
 Journal of Information Retrieval 13, 4 (2010), 375–397.
 """
+
 import json
 
 import torch

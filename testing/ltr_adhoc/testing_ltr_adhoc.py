@@ -51,14 +51,14 @@ if __name__ == '__main__':
 	models_to_run = [
 		#'RankMSE',
 		#'RankNet',
-		#'LambdaRank',
+		'LambdaRank',
 		#'ListNet',
 		#'ListMLE',
 		#'RankCosine',
 		#'ApproxNDCG',
-		'WassRank',
-		'STListNet',
-		'LambdaLoss'
+		#'WassRank',
+		#'STListNet',
+		#'LambdaLoss'
 	]
 
 	evaluator = LTREvaluator(cuda=cuda)

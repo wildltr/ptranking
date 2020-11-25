@@ -6,11 +6,10 @@ Viewing the prediction of relevance as a conventional regression problem.
 """
 
 import torch
-import torch.nn as nn
+import torch.nn.functional as F
 
 from ptranking.base.ranker import NeuralRanker
 
-mse = nn.MSELoss()
 
 def rankMSE_loss_function(batch_pred=None, batch_label=None, TL_AF=None):
 	'''
@@ -23,7 +22,7 @@ def rankMSE_loss_function(batch_pred=None, batch_label=None, TL_AF=None):
 		max_rele_level = torch.max(batch_label)
 		batch_pred = batch_pred * max_rele_level
 
-	batch_loss = mse(batch_pred, batch_label)
+	batch_loss = F.mse_loss(batch_pred, batch_label)
 	return batch_loss
 
 class RankMSE(NeuralRanker):
@@ -37,7 +36,6 @@ class RankMSE(NeuralRanker):
 		:param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ltr_adhoc
 		:return:
 		'''
-
 		batch_loss = rankMSE_loss_function(batch_pred, batch_label, TL_AF=self.TL_AF)
 
 		self.optimizer.zero_grad()

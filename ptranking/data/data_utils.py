@@ -483,7 +483,10 @@ def iter_queries(in_file, presort=None, data_dict=None, scale_data=None, scaler_
                 if Q is not None:
                     list_Qs.append(Q)
         else:
-            all_features_mat, all_labels_vec, qids = parse_letor(file_obj.readlines(), has_comment=False)
+            if data_dict['data_id'] in YAHOO_LTR:
+                all_features_mat, all_labels_vec, qids = parse_letor(file_obj.readlines(), has_comment=False, one_indexed=False)
+            else:
+                all_features_mat, all_labels_vec, qids = parse_letor(file_obj.readlines(), has_comment=False)
 
             for i in range(len(qids)):
                 f_vec = all_features_mat[i, :]
