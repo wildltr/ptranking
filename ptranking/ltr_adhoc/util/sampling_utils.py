@@ -7,6 +7,25 @@
 
 import torch
 
+def arg_shuffle_ties(target_batch_stds, descending=True, gpu=False, device=None):
+    ''' Shuffle ties, and return the corresponding indice '''
+    batch_size, ranking_size = target_batch_stds.size()
+    if batch_size > 1:
+        list_rperms = []
+        for _ in range(batch_size):
+            list_rperms.append(torch.randperm(ranking_size))
+        batch_rperms = torch.stack(list_rperms, dim=0)
+    else:
+        batch_rperms = torch.randperm(ranking_size).view(1, -1)
+
+    if gpu: batch_rperms = batch_rperms.to(device)
+
+    shuffled_target_batch_stds = torch.gather(target_batch_stds, dim=1, index=batch_rperms)
+    batch_sorted_inds = torch.argsort(shuffled_target_batch_stds, descending=descending)
+    batch_shuffle_ties_inds = torch.gather(batch_rperms, dim=1, index=batch_sorted_inds)
+
+    return batch_shuffle_ties_inds
+
 def unique_count(std_labels, descending=True):
     asc_std_labels, _ = torch.sort(std_labels)
     uni_elements, inds = torch.unique(asc_std_labels, sorted=True, return_inverse=True)

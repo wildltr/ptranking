@@ -22,10 +22,10 @@ from ptranking.data.data_utils import LTRDataset, YAHOO_LTR, ISTELLA_LTR, MSLETO
 from ptranking.ltr_adhoc.eval.parameter import ModelParameter, DataSetting, EvalSetting, ScoringFunctionParameter
 
 from ptranking.ltr_adhoc.pointwise.rank_mse   import RankMSE
-from ptranking.ltr_adhoc.pairwise.ranknet     import RankNet
+from ptranking.ltr_adhoc.pairwise.ranknet     import RankNet, RankNetParameter
 from ptranking.ltr_adhoc.listwise.rank_cosine import RankCosine
 from ptranking.ltr_adhoc.listwise.listnet     import ListNet
-from ptranking.ltr_adhoc.listwise.listmle     import ListMLE
+from ptranking.ltr_adhoc.listwise.listmle     import ListMLE, ListMLEParameter
 from ptranking.ltr_adhoc.listwise.st_listnet  import STListNet, STListNetParameter
 
 from ptranking.ltr_adhoc.listwise.approxNDCG        import ApproxNDCG, ApproxNDCGParameter
@@ -163,10 +163,11 @@ class LTREvaluator():
         """
         model_id = model_para_dict['model_id']
 
-        if model_id in ['RankMSE', 'RankNet', 'ListNet', 'ListMLE', 'RankCosine']:
+        if model_id in ['RankMSE', 'ListNet', 'RankCosine']:
             ranker = globals()[model_id](sf_para_dict=sf_para_dict, gpu=self.gpu, device=self.device)
 
-        elif model_id in ['LambdaRank', 'STListNet', 'ApproxNDCG', 'DirectOpt', 'LambdaLoss', 'MarginLambdaLoss']:
+        elif model_id in ['RankNet', 'ListMLE', 'LambdaRank', 'STListNet', 'ApproxNDCG', 'DirectOpt',
+                          'LambdaLoss', 'MarginLambdaLoss']:
             ranker = globals()[model_id](sf_para_dict=sf_para_dict, model_para_dict=model_para_dict, gpu=self.gpu, device=self.device)
 
         elif model_id == 'WassRank':
@@ -494,7 +495,7 @@ class LTREvaluator():
         :param model_id:
         :return:
         """
-        if model_id in ['RankMSE', 'RankNet', 'ListNet', 'ListMLE', 'RankCosine']: # ModelParameter is sufficient
+        if model_id in ['RankMSE', 'ListNet', 'RankCosine']: # ModelParameter is sufficient
             self.model_parameter = ModelParameter(model_id=model_id)
         else:
             if dir_json is not None:

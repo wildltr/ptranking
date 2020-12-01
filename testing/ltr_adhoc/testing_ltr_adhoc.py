@@ -42,18 +42,18 @@ if __name__ == '__main__':
 
     """
 
-	cuda = None				# the gpu id, e.g., 0 or 1, otherwise, set it as None indicating to use cpu
+	cuda = 0				# the gpu id, e.g., 0 or 1, otherwise, set it as None indicating to use cpu
 
-	debug = True            # in a debug mode, we just check whether the model can operate
+	debug = False            # in a debug mode, we just check whether the model can operate
 
-	config_with_json = False # specify configuration with json files or not
+	config_with_json = True # specify configuration with json files or not
 
 	models_to_run = [
 		#'RankMSE',
-		#'RankNet',
+		'RankNet',
 		'LambdaRank',
 		#'ListNet',
-		#'ListMLE',
+		'ListMLE',
 		#'RankCosine',
 		#'ApproxNDCG',
 		#'WassRank',
@@ -67,7 +67,10 @@ if __name__ == '__main__':
 		# the directory of json files
 		#dir_json = '/Users/dryuhaitao/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/'
 		#dir_json = '/Users/solar/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/'
-		dir_json = '/home/dl-box/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/'
+		#dir_json = '/home/dl-box/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/'
+
+		data_id = 'yahoo'
+		dir_json = '/home/dl-box/WorkBench/ExperimentBench/ALTR/sigir2021/rankingmdn/'+data_id+'/'
 
 		for model_id in models_to_run:
 			evaluator.run(debug=debug, model_id=model_id, config_with_json=config_with_json, dir_json=dir_json)
@@ -80,8 +83,8 @@ if __name__ == '__main__':
 		grid_search = False
 
 		''' Location of the adopted data '''
-		dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
-		#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
+		#dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
+		dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
 		#dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
 
 		#data_id = 'Istella_X'
@@ -94,8 +97,8 @@ if __name__ == '__main__':
 		#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella_S/'
 
 		''' Output directory '''
-		dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/'
-		#dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
+		#dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/'
+		dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
 		#dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
 
 		for model_id in models_to_run:
