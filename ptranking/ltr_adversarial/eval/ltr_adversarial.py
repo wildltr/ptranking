@@ -342,14 +342,11 @@ class AdLTREvaluator(LTREvaluator):
         Perform adversarial learning-to-rank based on grid search of optimal parameter setting
         """
         if dir_json is not None:
-            ad_eval_json = dir_json + 'AdEvalSetting.json'
-            ad_data_json = dir_json + 'AdDataSetting.json'
-            ad_sf_json   = dir_json + 'AdSFParameter.json'
+            ad_data_eval_sf_json = dir_json + 'Ad_Data_Eval_ScoringFunction.json'
             para_json = dir_json + model_id + "Parameter.json"
-
-            self.set_eval_setting(debug=debug, ad_eval_json=ad_eval_json)
-            self.set_data_setting(ad_data_json=ad_data_json)
-            self.set_scoring_function_setting(sf_json=ad_sf_json)
+            self.set_eval_setting(debug=debug, ad_eval_json=ad_data_eval_sf_json)
+            self.set_data_setting(ad_data_json=ad_data_eval_sf_json)
+            self.set_scoring_function_setting(sf_json=ad_data_eval_sf_json)
             self.set_model_setting(model_id=model_id, para_json=para_json)
         else:
             self.set_eval_setting(debug=debug, dir_output=dir_output)

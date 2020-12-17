@@ -1,0 +1,45 @@
+{
+  "AdDataSetting": {
+    "data_id":"MQ2008_Super",
+    "dir_data":"/Users/dryuhaitao/WorkBench/Corpus/LETOR4.0/MQ2008/",
+
+    "min_docs":[10],
+    "min_rele":[1],
+    "train_batch_size":[1],
+
+    "binary_rele":[false],
+    "unknown_as_zero":[false],
+    "train_presort":[true]
+  },
+
+  "AdEvalSetting": {
+    "dir_output":"/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/ALTR/",
+
+    "epochs":100,
+
+    "do_validation":true,
+
+    "vali_k":5,
+    "cutoffs":[1, 3, 5, 10, 20, 50],
+
+    "loss_guided":false,
+
+    "do_log":true,
+    "log_step":2,
+    "do_summary":false,
+
+    "mask":{
+      "mask_label":false,
+      "mask_type":["rand_mask_all"],
+      "mask_ratio":[0.2]
+    }
+  },
+
+  "SFParameter": {
+    "BN":[false],
+    "RD":[false],
+    "layers":[5],
+    "apply_tl_af":[true],
+    "hd_hn_tl_af":["R"]
+  }
+}

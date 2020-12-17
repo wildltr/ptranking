@@ -7,8 +7,6 @@ A general approximation framework for direct optimization of information retriev
 Journal of Information Retrieval 13, 4 (2010), 375–397.
 """
 
-import json
-
 import torch
 
 from ptranking.data.data_utils import LABEL_TYPE
@@ -112,9 +110,8 @@ def get_apxndcg_paras_str(model_para_dict, log=False):
 class ApproxNDCGParameter(ModelParameter):
     ''' Parameter class for ApproxNDCG '''
     def __init__(self, debug=False, para_json=None):
-        super(ApproxNDCGParameter, self).__init__(model_id='ApproxNDCG')
+        super(ApproxNDCGParameter, self).__init__(model_id='ApproxNDCG', para_json=para_json)
         self.debug = debug
-        self.para_json = para_json
 
     def default_para_dict(self):
         """
@@ -142,10 +139,8 @@ class ApproxNDCGParameter(ModelParameter):
         """
         Iterator of parameter settings for ApproxNDCG
         """
-        if self.para_json is not None:
-            with open(self.para_json) as json_file:
-                json_dict = json.load(json_file)
-            choice_alpha = json_dict['alpha']
+        if self.use_json:
+            choice_alpha = self.json_dict['alpha']
         else:
             choice_alpha = [10.0] if self.debug else [10.0]  # 1.0, 10.0, 50.0, 100.0
 

@@ -5,7 +5,7 @@
 ListMLE: Fen Xia, Tie-Yan Liu, Jue Wang, Wensheng Zhang, and Hang Li. 2008. Listwise Approach to Learning to Rank: Theory and Algorithm.
 In Proceedings of the 25th ICML. 1192–1199.
 """
-import json
+
 import torch
 
 from ptranking.base.ranker import NeuralRanker
@@ -81,7 +81,7 @@ class ListMLE(NeuralRanker):
 
 		# shuffle per epoch rather than using the same order for a query
 		batch_shuffle_ties_inds = arg_shuffle_ties(target_batch_stds=expd_batch_stds, descending=True, gpu=self.gpu,
-												   device=self.device)
+		                                           device=self.device)
 		target_batch_preds = torch.gather(expd_batch_preds, dim=1, index=batch_shuffle_ties_inds)
 
 		batch_logcumsumexps = apply_LogCumsumExp(target_batch_preds)
@@ -98,9 +98,8 @@ class ListMLE(NeuralRanker):
 class ListMLEParameter(ModelParameter):
 	''' Parameter class for ListMLE '''
 	def __init__(self, debug=False, para_json=None):
-		super(ListMLEParameter, self).__init__(model_id='ListMLE')
+		super(ListMLEParameter, self).__init__(model_id='ListMLE', para_json=para_json)
 		self.debug = debug
-		self.para_json = para_json
 
 	def default_para_dict(self):
 		"""
@@ -127,10 +126,8 @@ class ListMLEParameter(ModelParameter):
 		"""
         Iterator of parameter settings for ListMLE
         """
-		if self.para_json is not None:
-			with open(self.para_json) as json_file:
-				json_dict = json.load(json_file)
-			choice_samples_per_query = json_dict['samples_per_query']
+		if self.use_json:
+			choice_samples_per_query = self.json_dict['samples_per_query']
 		else:
 			choice_samples_per_query = [1] if self.debug else [1, 5, 10]
 

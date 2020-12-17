@@ -17,46 +17,51 @@ class Parameter(object):
     An abstract class for parameter
     """
     def __init__(self):
-	    pass
+        pass
 
-    def default_para_dict(self):
-        """
-        The default parameter setting.
-        :return:
-        """
-        return None
+    def grid_search(self): # Iterator of parameter setting via grid-search
+        pass
 
-    def to_para_string(self):
-        """
-        The string identifier of parameters
-        :return:
-        """
-        return None
-
-    def grid_search(self):
-        """
-        Iterator of parameter setting for grid-search
-        :return:
-        """
-        return None
+    def load_para_json(self, para_json):
+        """ load json file of parameter setting """
+        with open(para_json) as json_file:
+            json_dict = json.load(json_file)
+        return json_dict
 
 
 class ModelParameter(Parameter):
     """
     A simple class for model parameter
     """
-    def __init__(self, model_id=None):
+    def __init__(self, model_id=None, para_json=None):
         super(ModelParameter, self).__init__()
         self.model_id = model_id
+        if para_json is None:
+            self.use_json = False
+        else:
+            self.use_json = True
+            self.json_dict = self.load_para_json(para_json=para_json)
 
     def default_para_dict(self):
+        """
+        The default parameter setting.
+        :return:
+        """
         return dict(model_id=self.model_id)
 
     def to_para_string(self, log=False, given_para_dict=None):
+        """
+        The string identifier of parameters
+        :return:
+        """
         return ''
 
     def grid_search(self):
-         yield dict(model_id=self.model_id)
+        """
+        Iterator of parameter setting for grid-search
+        :return:
+        """
+        return dict(model_id=self.model_id)
 
 
 class ScoringFunctionParameter(ModelParameter):
@@ -64,10 +69,14 @@ class ScoringFunctionParameter(ModelParameter):
     The parameter class w.r.t. a neural scoring fuction
     """
     def __init__(self, debug=False, data_dict=None, model_id='ffnns', sf_json=None):
-        super(ScoringFunctionParameter, self).__init__(model_id=model_id)
+        super(ScoringFunctionParameter, self).__init__(model_id=model_id, para_json=sf_json)
         self.debug = debug
         self.data_dict = data_dict
-        self.sf_json = sf_json
+
+    def load_para_json(self, para_json):
+        with open(para_json) as json_file:
+            json_dict = json.load(json_file)["SFParameter"]
+        return json_dict
 
     def default_para_dict(self):
         """
@@ -94,14 +103,12 @@ class ScoringFunctionParameter(ModelParameter):
         """
         assert data_dict is not None
         FBN = False if data_dict['scale_data'] else True  # for feature normalization
-        if self.sf_json is not None:
-            with open(self.sf_json) as json_file:
-                json_dict = json.load(json_file)
-                choice_BN = json_dict['BN']
-                choice_RD = json_dict['RD']
-                choice_layers = json_dict['layers']
-                choice_apply_tl_af = json_dict['apply_tl_af']
-                choice_hd_hn_tl_af = json_dict['hd_hn_tl_af']
+        if self.use_json:
+            choice_BN = self.json_dict['BN']
+            choice_RD = self.json_dict['RD']
+            choice_layers = self.json_dict['layers']
+            choice_apply_tl_af = self.json_dict['apply_tl_af']
+            choice_hd_hn_tl_af = self.json_dict['hd_hn_tl_af']
         else:
             choice_BN = [False] if self.debug else [True]  # True, False
             choice_RD = [False] if self.debug else [False]  # True, False
@@ -149,19 +156,23 @@ class ScoringFunctionParameter(ModelParameter):
         return rf_str
 
 
-class EvalSetting():
+class EvalSetting(Parameter):
     """
     Class object for evaluation settings w.r.t. training, etc.
     """
     def __init__(self, debug=False, dir_output=None, eval_json=None):
         self.debug = debug
-        self.eval_json = eval_json
-
-        if eval_json is not None:
-            with open(self.eval_json) as json_file:
-                self.json_dict = json.load(json_file)
-        else:
+        if eval_json is None:
+            self.use_json = False
             self.dir_output = dir_output
+        else:
+            self.use_json = True
+            self.json_dict = self.load_para_json(para_json=eval_json)
+
+    def load_para_json(self, para_json):
+        with open(para_json) as json_file:
+            json_dict = json.load(json_file)["EvalSetting"]
+        return json_dict
 
     def to_eval_setting_string(self, log=False):
         """
@@ -200,9 +211,9 @@ class EvalSetting():
 
         # more evaluation settings that are rarely changed
         self.eval_dict = dict(debug=self.debug, grid_search=False, dir_output=self.dir_output,
-                         cutoffs=[1, 3, 5, 10, 20, 50], do_validation=do_validation, vali_k=vali_k,
-                         do_summary=do_summary, do_log=do_log, log_step=log_step, loss_guided=False, epochs=epochs,
-                         mask_label=mask_label, mask_type=mask_type, mask_ratio=mask_ratio)
+                              cutoffs=[1, 3, 5, 10, 20, 50], do_validation=do_validation, vali_k=vali_k,
+                              do_summary=do_summary, do_log=do_log, log_step=log_step, loss_guided=False, epochs=epochs,
+                              mask_label=mask_label, mask_type=mask_type, mask_ratio=mask_ratio)
 
         return self.eval_dict
 
@@ -214,19 +225,19 @@ class EvalSetting():
         return (self.eval_dict['vali_k'] == vali_k) and (self.eval_dict['cutoffs'] == cutoffs)
 
     def grid_search(self):
-        if self.eval_json is not None:  # using json file
-                dir_output = self.json_dict['dir_output']
-                epochs = 5 if self.debug else self.json_dict['epochs'] # debug is added for a quick check
-                do_validation, vali_k = self.json_dict['do_validation'], self.json_dict['vali_k']
-                cutoffs = self.json_dict['cutoffs']
-                do_log, log_step = self.json_dict['do_log'], self.json_dict['log_step']
-                do_summary = self.json_dict['do_summary']
-                loss_guided = self.json_dict['loss_guided']
-                mask_label = self.json_dict['mask']['mask_label']
-                choice_mask_type = self.json_dict['mask']['mask_type']
-                choice_mask_ratio = self.json_dict['mask']['mask_ratio']
+        if self.use_json:
+            dir_output = self.json_dict['dir_output']
+            epochs = 5 if self.debug else self.json_dict['epochs'] # debug is added for a quick check
+            do_validation, vali_k = self.json_dict['do_validation'], self.json_dict['vali_k']
+            cutoffs = self.json_dict['cutoffs']
+            do_log, log_step = self.json_dict['do_log'], self.json_dict['log_step']
+            do_summary = self.json_dict['do_summary']
+            loss_guided = self.json_dict['loss_guided']
+            mask_label = self.json_dict['mask']['mask_label']
+            choice_mask_type = self.json_dict['mask']['mask_type']
+            choice_mask_ratio = self.json_dict['mask']['mask_ratio']
 
-                base_dict = dict(debug=False, grid_search=True, dir_output=dir_output)
+            base_dict = dict(debug=False, grid_search=True, dir_output=dir_output)
         else:
             base_dict = dict(debug=self.debug, grid_search=True, dir_output=self.dir_output)
             epochs = 20 if self.debug else 100
@@ -254,20 +265,26 @@ class EvalSetting():
             yield self.eval_dict
 
 
-class DataSetting():
+class DataSetting(Parameter):
     """
     Class object for data settings w.r.t. data loading and pre-process.
     """
     def __init__(self, debug=False, data_id=None, dir_data=None, data_json=None):
-        self.data_json = data_json
-        if data_json is not None:
-            with open(self.data_json) as json_file:
-                self.json_dict = json.load(json_file)
-            self.data_id = self.json_dict["data_id"]
-        else:
-            self.debug = debug
+        self.debug = debug
+
+        if data_json is None:
+            self.use_json = False
             self.data_id = data_id
             self.dir_data = dir_data
+        else:
+            self.use_json = True
+            self.json_dict = self.load_para_json(para_json=data_json)
+            self.data_id = self.json_dict["data_id"]
+
+    def load_para_json(self, para_json):
+        with open(para_json) as json_file:
+            json_dict = json.load(json_file)["DataSetting"]
+        return json_dict
 
     def to_data_setting_string(self, log=False):
         """
@@ -277,14 +294,14 @@ class DataSetting():
         s1, s2 = (':', '\n') if log else ('_', '_')
 
         data_id, binary_rele = data_dict['data_id'], data_dict['binary_rele']
-        min_docs, min_rele, train_batch_size, train_presort = data_dict['min_docs'], data_dict['min_rele'],\
+        min_docs, min_rele, train_batch_size, train_presort = data_dict['min_docs'], data_dict['min_rele'], \
                                                               data_dict['train_batch_size'], data_dict['train_presort']
 
         setting_string = s2.join([s1.join(['data_id', data_id]),
                                   s1.join(['min_docs', str(min_docs)]),
                                   s1.join(['min_rele', str(min_rele)]),
                                   s1.join(['TrBat', str(train_batch_size)])]) if log \
-                         else s1.join([data_id, 'MiD', str(min_docs), 'MiR', str(min_rele), 'TrBat', str(train_batch_size)])
+            else s1.join([data_id, 'MiD', str(min_docs), 'MiR', str(min_rele), 'TrBat', str(train_batch_size)])
 
         if train_presort:
             tr_presort_str = s1.join(['train_presort', str(train_presort)]) if log else 'TrPresort'
@@ -320,7 +337,7 @@ class DataSetting():
         return self.data_dict
 
     def grid_search(self):
-        if self.data_json is not None: # using json file
+        if self.use_json:
             choice_min_docs = self.json_dict['min_docs']
             choice_min_rele = self.json_dict['min_rele']
             choice_binary_rele = self.json_dict['binary_rele']

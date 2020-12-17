@@ -42,21 +42,21 @@ if __name__ == '__main__':
 
     """
 
-	cuda = 0				# the gpu id, e.g., 0 or 1, otherwise, set it as None indicating to use cpu
+	cuda = None				# the gpu id, e.g., 0 or 1, otherwise, set it as None indicating to use cpu
 
-	debug = False            # in a debug mode, we just check whether the model can operate
+	debug = True            # in a debug mode, we just check whether the model can operate
 
 	config_with_json = True # specify configuration with json files or not
 
 	models_to_run = [
 		#'RankMSE',
-		'RankNet',
+		#'RankNet',
 		'LambdaRank',
 		#'ListNet',
-		'ListMLE',
+		#'ListMLE',
 		#'RankCosine',
 		#'ApproxNDCG',
-		#'WassRank',
+		'WassRank',
 		#'STListNet',
 		#'LambdaLoss'
 	]
@@ -65,12 +65,9 @@ if __name__ == '__main__':
 
 	if config_with_json: # specify configuration with json files
 		# the directory of json files
-		#dir_json = '/Users/dryuhaitao/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/'
+		dir_json = '/Users/dryuhaitao/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/'
 		#dir_json = '/Users/solar/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/'
 		#dir_json = '/home/dl-box/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/'
-
-		data_id = 'yahoo'
-		dir_json = '/home/dl-box/WorkBench/ExperimentBench/ALTR/sigir2021/rankingmdn/'+data_id+'/'
 
 		for model_id in models_to_run:
 			evaluator.run(debug=debug, model_id=model_id, config_with_json=config_with_json, dir_json=dir_json)

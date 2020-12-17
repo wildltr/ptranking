@@ -10,7 +10,7 @@ The following classes are specially designed for adversarial ltr models, since t
 import json
 from itertools import product
 
-from ptranking.ltr_adhoc.eval.parameter import ScoringFunctionParameter
+from ptranking.ltr_adhoc.eval.parameter import EvalSetting, DataSetting, ScoringFunctionParameter
 from ptranking.data.data_utils import get_default_scaler_setting, MSLETOR_SEMI, get_data_meta
 
 class AdScoringFunctionParameter(ScoringFunctionParameter):
@@ -35,14 +35,12 @@ class AdScoringFunctionParameter(ScoringFunctionParameter):
 		"""
 		Iterator of settinging of the hyper-parameters of the stump neural scoring function for adversarial ltr
 		"""
-		if self.sf_json is not None:
-			with open(self.sf_json) as json_file:
-				json_dict = json.load(json_file)
-				choice_BN = json_dict['BN']
-				choice_RD = json_dict['RD']
-				choice_layers = json_dict['layers']
-				choice_apply_tl_af = json_dict['apply_tl_af']
-				choice_hd_hn_tl_af = json_dict['hd_hn_tl_af']
+		if self.use_json:
+			choice_BN = self.json_dict['BN']
+			choice_RD = self.json_dict['RD']
+			choice_layers = self.json_dict['layers']
+			choice_apply_tl_af = self.json_dict['apply_tl_af']
+			choice_hd_hn_tl_af = self.json_dict['hd_hn_tl_af']
 		else:
 			choice_BN = [False] if self.debug else [False]  # True, False
 			choice_RD = [False] if self.debug else [False]  # True, False
@@ -61,18 +59,17 @@ class AdScoringFunctionParameter(ScoringFunctionParameter):
 			yield sf_para_dict
 
 
-class AdEvalSetting():
+class AdEvalSetting(EvalSetting):
 	"""
 	Class object for evaluation settings w.r.t. adversarial training, etc.
 	"""
 	def __init__(self, debug=False, dir_output=None, ad_eval_json=None):
-		self.debug = debug
-		self.ad_eval_json = ad_eval_json
-		if ad_eval_json is not None:
-			with open(self.ad_eval_json) as json_file:
-				self.json_dict = json.load(json_file)
-		else:
-			self.dir_output = dir_output
+		super(AdEvalSetting, self).__init__(debug=debug, dir_output=dir_output, eval_json=ad_eval_json)
+
+	def load_para_json(self, para_json):
+		with open(para_json) as json_file:
+			json_dict = json.load(json_file)["AdEvalSetting"]
+		return json_dict
 
 	def to_eval_setting_string(self, log=False):
 		"""
@@ -129,7 +126,7 @@ class AdEvalSetting():
 		"""
 		Iterator of settings for evaluation when performing adversarial ltr
 		"""
-		if self.ad_eval_json is not None:  # using json file
+		if self.use_json:
 			dir_output = self.json_dict['dir_output']
 			epochs = 5 if self.debug else self.json_dict['epochs']
 			do_validation, vali_k = self.json_dict['do_validation'], self.json_dict['vali_k']
@@ -169,20 +166,17 @@ class AdEvalSetting():
 			yield self.eval_dict
 
 
-class AdDataSetting():
+class AdDataSetting(DataSetting):
 	"""
 	Class object for data settings w.r.t. data loading and pre-process w.r.t. adversarial optimization
 	"""
 	def __init__(self, debug=False, data_id=None, dir_data=None, ad_data_json=None):
-		self.ad_data_json = ad_data_json
-		if ad_data_json is not None:
-			with open(self.ad_data_json) as json_file:
-				self.json_dict = json.load(json_file)
-			self.data_id = self.json_dict["data_id"]
-		else:
-			self.debug = debug
-			self.dir_data = dir_data
-			self.data_id = data_id
+		super(AdDataSetting, self).__init__(debug=debug, data_id=data_id, dir_data=dir_data, data_json=ad_data_json)
+
+	def load_para_json(self, para_json):
+		with open(para_json) as json_file:
+			json_dict = json.load(json_file)["AdDataSetting"]
+		return json_dict
 
 	def to_data_setting_string(self, log=False):
 		"""
@@ -240,7 +234,7 @@ class AdDataSetting():
 		"""
 		Iterator of settings for data loading when performing adversarial ltr
 		"""
-		if self.ad_data_json is not None:  # using json file
+		if self.use_json:
 			choice_min_docs = self.json_dict['min_docs']
 			choice_min_rele = self.json_dict['min_rele']
 			choice_binary_rele = self.json_dict['binary_rele']

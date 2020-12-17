@@ -7,7 +7,6 @@ Hai-Tao Yu, Adam Jatowt, Hideo Joho, Joemon Jose, Xiao Yang and Long Chen. WassR
 Proceedings of the 12th International Conference on Web Search and Data Mining (WSDM), 2019.2.
 """
 #import ot
-import json
 import numpy as np
 from itertools import product
 
@@ -80,9 +79,8 @@ class WassRank(NeuralRanker):
 class WassRankParameter(ModelParameter):
     ''' Parameter class for WassRank '''
     def __init__(self, debug=False, para_json=None):
-        super(WassRankParameter, self).__init__(model_id='WassRank')
+        super(WassRankParameter, self).__init__(model_id='WassRank', para_json=para_json)
         self.debug = debug
-        self.para_json = para_json
 
     def default_para_dict(self):
         """
@@ -139,21 +137,19 @@ class WassRankParameter(ModelParameter):
         """
         Iterator of parameter settings for WassRank
         """
-        if self.para_json is not None:
-            with open(self.para_json) as json_file:
-                json_dict = json.load(json_file)
-            wass_choice_mode = json_dict['mode']
-            wass_choice_itr = json_dict['itr']
-            wass_choice_lam = json_dict['lam']
+        if self.use_json:
+            wass_choice_mode = self.json_dict['mode']
+            wass_choice_itr = self.json_dict['itr']
+            wass_choice_lam = self.json_dict['lam']
 
-            wass_cost_type = json_dict['cost_type']
+            wass_cost_type = self.json_dict['cost_type']
             # member parameters of 'Group' include margin, div, group-base
-            wass_choice_non_rele_gap = json_dict['non_rele_gap']
-            wass_choice_var_penalty = json_dict['var_penalty']
-            wass_choice_group_base = json_dict['group_base']
+            wass_choice_non_rele_gap = self.json_dict['non_rele_gap']
+            wass_choice_var_penalty = self.json_dict['var_penalty']
+            wass_choice_group_base = self.json_dict['group_base']
 
-            wass_choice_smooth = json_dict['smooth']
-            wass_choice_norm = json_dict['norm']
+            wass_choice_smooth = self.json_dict['smooth']
+            wass_choice_norm = self.json_dict['norm']
         else:
             wass_choice_mode = ['WassLossSta']  # EOTLossSta | WassLossSta
             wass_choice_itr = [10]  # number of iterations w.r.t. sink-horn operation

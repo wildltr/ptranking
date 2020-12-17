@@ -6,8 +6,6 @@ Chris Burges, Tal Shaked, Erin Renshaw, Ari Lazier, Matt Deeds, Nicole Hamilton,
 Learning to rank using gradient descent. In Proceedings of the 22nd ICML. 89–96.
 """
 
-import json
-
 import torch
 import torch.nn.functional as F
 
@@ -50,9 +48,8 @@ class RankNet(NeuralRanker):
 class RankNetParameter(ModelParameter):
     ''' Parameter class for RankNet '''
     def __init__(self, debug=False, para_json=None):
-        super(RankNetParameter, self).__init__(model_id='RankNet')
+        super(RankNetParameter, self).__init__(model_id='RankNet', para_json=para_json)
         self.debug = debug
-        self.para_json = para_json
 
     def default_para_dict(self):
         """
@@ -79,10 +76,8 @@ class RankNetParameter(ModelParameter):
         """
         Iterator of parameter settings for RankNet
         """
-        if self.para_json is not None:
-            with open(self.para_json) as json_file:
-                json_dict = json.load(json_file)
-            choice_sigma = json_dict['sigma']
+        if self.use_json:
+            choice_sigma = self.json_dict['sigma']
         else:
             choice_sigma = [5.0, 1.0] if self.debug else [1.0]  # 1.0, 10.0, 50.0, 100.0
 

@@ -59,8 +59,8 @@ class STListNet(NeuralRanker):
 
 class STListNetParameter(ModelParameter):
     ''' Parameter class for STListNet '''
-    def __init__(self, debug=False):
-        super(STListNetParameter, self).__init__(model_id='STListNet')
+    def __init__(self, debug=False, para_json=None):
+        super(STListNetParameter, self).__init__(model_id='STListNet', para_json=para_json)
         self.debug = debug
 
     def default_para_dict(self):
@@ -92,7 +92,11 @@ class STListNetParameter(ModelParameter):
         :param debug:
         :return:
         """
-        plus_choice_temperature = [1.0] if self.debug else [1.0]  # 1.0, 10.0, 50.0, 100.0
-        for temperature in plus_choice_temperature:
+        if self.use_json:
+            choice_temperature = self.json_dict['temperature']
+        else:
+            choice_temperature = [1.0] if self.debug else [1.0]  # 1.0, 10.0, 50.0, 100.0
+
+        for temperature in choice_temperature:
             self.stlistnet_para_dict = dict(model_id=self.model_id, temperature=temperature)
             yield self.stlistnet_para_dict

@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     debug = True  # in a debug mode, we just check whether the model can operate
 
-    config_with_json = False  # specify configuration with json files or not
+    config_with_json = True  # specify configuration with json files or not
 
     evaluator = TreeLTREvaluator()
 

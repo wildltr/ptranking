@@ -361,12 +361,11 @@ class TreeLTREvaluator(LTREvaluator):
         Run based on grid-search.
         """
         if dir_json is not None:
-            tree_eval_json = dir_json + 'TreeEvalSetting.json'
-            tree_data_json = dir_json + 'TreeDataSetting.json'
+            tree_data_eval_json = dir_json + 'Tree_Data_Eval_ScoringFunction.json'
             para_json = dir_json + model_id + "Parameter.json"
 
-            self.set_eval_setting(debug=debug, tree_eval_json=tree_eval_json)
-            self.set_data_setting(tree_data_json=tree_data_json)
+            self.set_eval_setting(debug=debug, tree_eval_json=tree_data_eval_json)
+            self.set_data_setting(tree_data_json=tree_data_eval_json)
             self.set_model_setting(model_id=model_id, para_json=para_json)
         else:
             self.set_eval_setting(debug=debug, dir_output=dir_output)

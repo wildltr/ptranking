@@ -390,9 +390,8 @@ class IRGAN_List(AdversarialMachine):
 class IRGAN_ListParameter(ModelParameter):
     ''' Parameter class for IRGAN_List '''
     def __init__(self, debug=False, para_json=None):
-        super(IRGAN_ListParameter, self).__init__(model_id='IRGAN_List')
+        super(IRGAN_ListParameter, self).__init__(model_id='IRGAN_List', para_json=para_json)
         self.debug = debug
-        self.para_json = para_json
 
     def default_para_dict(self):
         """
@@ -444,23 +443,20 @@ class IRGAN_ListParameter(ModelParameter):
         """
         Iterator of parameter settings for IRGAN_List
         """
-        if self.para_json is not None:
-            with open(self.para_json) as json_file:
-                json_dict = json.load(json_file)
-
-            choice_samples_per_query = json_dict['samples_per_query']
-            choice_ad_training_order = json_dict['ad_training_order']
-            choice_temperature = json_dict['temperature']
-            d_g_epoch_strings = json_dict['d_g_epoch']
+        if self.use_json:
+            choice_samples_per_query = self.json_dict['samples_per_query']
+            choice_ad_training_order = self.json_dict['ad_training_order']
+            choice_temperature = self.json_dict['temperature']
+            d_g_epoch_strings = self.json_dict['d_g_epoch']
             choice_d_g_epoch = []
             for d_g_epoch_str in d_g_epoch_strings:
                 epoch_arr = d_g_epoch_str.split('-')
                 choice_d_g_epoch.append((int(epoch_arr[0]), int(epoch_arr[1])))
 
-            choice_top_k = json_dict['top_k']
-            choice_PL_D = json_dict['PL_D']
-            choice_repTrick = json_dict['repTrick']
-            choice_dropLog = json_dict['dropLog']
+            choice_top_k = self.json_dict['top_k']
+            choice_PL_D = self.json_dict['PL_D']
+            choice_repTrick = self.json_dict['repTrick']
+            choice_dropLog = self.json_dict['dropLog']
         else:
             choice_samples_per_query = [5]
             choice_ad_training_order = ['DG']  # GD for irganlist DG for point/pair

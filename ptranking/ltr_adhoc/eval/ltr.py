@@ -557,13 +557,10 @@ class LTREvaluator():
         :return:
         """
         if dir_json is not None:
-            eval_json = dir_json + 'EvalSetting.json'
-            data_json = dir_json + 'DataSetting.json'
-            sf_json   = dir_json + 'SFParameter.json'
-
-            self.set_eval_setting(debug=debug, eval_json=eval_json)
-            self.set_data_setting(data_json=data_json)
-            self.set_scoring_function_setting(sf_json=sf_json)
+            data_eval_sf_json = dir_json + 'Data_Eval_ScoringFunction.json'
+            self.set_eval_setting(debug=debug, eval_json=data_eval_sf_json)
+            self.set_data_setting(data_json=data_eval_sf_json)
+            self.set_scoring_function_setting(sf_json=data_eval_sf_json)
             self.set_model_setting(model_id=model_id, dir_json=dir_json)
         else:
             self.set_eval_setting(debug=debug, dir_output=dir_output)

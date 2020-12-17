@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import json
 import copy
 from itertools import product
 
@@ -237,9 +236,8 @@ class IRGAN_Pair(AdversarialMachine):
 class IRGAN_PairParameter(ModelParameter):
     ''' Parameter class for IRGAN_Pair '''
     def __init__(self, debug=False, para_json=None):
-        super(IRGAN_PairParameter, self).__init__(model_id='IRGAN_Pair')
+        super(IRGAN_PairParameter, self).__init__(model_id='IRGAN_Pair', para_json=para_json)
         self.debug = debug
-        self.para_json = para_json
 
     def default_para_dict(self):
         """
@@ -280,15 +278,12 @@ class IRGAN_PairParameter(ModelParameter):
         """
         Iterator of parameter settings for IRGAN_Pair
         """
-        if self.para_json is not None:
-            with open(self.para_json) as json_file:
-                json_dict = json.load(json_file)
-
-            choice_samples_per_query = json_dict['samples_per_query']
-            choice_ad_training_order = json_dict['ad_training_order']
-            choice_temperature = json_dict['temperature']
-            choice_losstype_d = json_dict['losstype_d']
-            d_g_epoch_strings = json_dict['d_g_epoch']
+        if self.use_json:
+            d_g_epoch_strings = self.json_dict['d_g_epoch']
+            choice_losstype_d = self.json_dict['losstype_d']
+            choice_temperature = self.json_dict['temperature']
+            choice_samples_per_query = self.json_dict['samples_per_query']
+            choice_ad_training_order = self.json_dict['ad_training_order']
             choice_d_g_epoch = []
             for d_g_epoch_str in d_g_epoch_strings:
                 epoch_arr = d_g_epoch_str.split('-')

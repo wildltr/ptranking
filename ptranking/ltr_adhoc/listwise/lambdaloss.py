@@ -140,18 +140,16 @@ class LambdaLoss(NeuralRanker):
 
 class LambdaLossParameter(ModelParameter):
     ''' Parameter class for LambdaLoss '''
-    def __init__(self, debug=False, std_rele_is_permutation=False):
-        super(LambdaLossParameter, self).__init__(model_id='LambdaLoss')
+    def __init__(self, debug=False, para_json=None):
+        super(LambdaLossParameter, self).__init__(model_id='LambdaLoss', para_json=para_json)
         self.debug = debug
-        self.std_rele_is_permutation = std_rele_is_permutation
 
     def default_para_dict(self):
         """
         Default parameter setting for LambdaLoss
         :return:
         """
-        self.lambdaloss_para_dict = dict(model_id=self.model_id, std_rele_is_permutation=self.std_rele_is_permutation,
-                                         loss_type='NDCG_Loss2++', sigma=1.0, k=5, mu=5.0)
+        self.lambdaloss_para_dict = dict(model_id=self.model_id, loss_type='NDCG_Loss2++', sigma=1.0, k=5, mu=5.0)
         return self.lambdaloss_para_dict
 
     def to_para_string(self, log=False, given_para_dict=None):
@@ -180,20 +178,22 @@ class LambdaLossParameter(ModelParameter):
         :param debug:
         :return:
         """
-        choice_loss_type = ['NDCG_Loss2'] if self.debug else ['NDCG_Loss2']  #
-        choice_sigma = [1.0] if self.debug else [1.0]  #
-        choice_mu = [5.0] if self.debug else [5.0]  #
-        choice_k = [5] if self.debug else [5]
+        if self.use_json:
+            choice_k = self.json_dict['k']
+            choice_mu = self.json_dict['mu']
+            choice_sigma = self.json_dict['sigma']
+            choice_loss_type = self.json_dict['loss_type']
+        else:
+            choice_loss_type = ['NDCG_Loss2'] if self.debug else ['NDCG_Loss2']  #
+            choice_sigma = [1.0] if self.debug else [1.0]  #
+            choice_mu = [5.0] if self.debug else [5.0]  #
+            choice_k = [5] if self.debug else [5]
 
         for loss_type, sigma, k in product(choice_loss_type, choice_sigma, choice_k):
             if 'NDCG_Loss2++' == loss_type:
                 for mu in choice_mu:
-                    self.lambdaloss_para_dict = dict(model_id='LambdaLoss',
-                                                     std_rele_is_permutation=self.std_rele_is_permutation,
-                                                     sigma=sigma, loss_type=loss_type, mu=mu, k=k)
+                    self.lambdaloss_para_dict = dict(model_id='LambdaLoss', sigma=sigma, loss_type=loss_type, mu=mu, k=k)
                     yield self.lambdaloss_para_dict
             else:
-                self.lambdaloss_para_dict = dict(model_id='LambdaLoss',
-                                                 std_rele_is_permutation=self.std_rele_is_permutation,
-                                                 sigma=sigma, loss_type=loss_type, k=k)
+                self.lambdaloss_para_dict = dict(model_id='LambdaLoss', sigma=sigma, loss_type=loss_type, k=k)
                 yield self.lambdaloss_para_dict

@@ -82,20 +82,17 @@ class TreeEvalSetting(EvalSetting):
         """
         Iterator of settings for evaluation
         """
-        if self.eval_json is not None:
-            with open(self.eval_json) as json_file:
-                json_dict = json.load(json_file)
+        if self.use_json:
+            dir_output = self.json_dict['dir_output']
+            epochs = 20 if self.debug else self.json_dict['epochs']
+            do_validation = self.json_dict['do_validation']
+            cutoffs = self.json_dict['cutoffs']
+            do_log = self.json_dict['do_log']
+            mask_label = self.json_dict['mask']['mask_label']
+            choice_mask_type = self.json_dict['mask']['mask_type']
+            choice_mask_ratio = self.json_dict['mask']['mask_ratio']
 
-                dir_output = json_dict['dir_output']
-                epochs = 20 if self.debug else json_dict['epochs']
-                do_validation = json_dict['do_validation']
-                cutoffs = json_dict['cutoffs']
-                do_log = json_dict['do_log']
-                mask_label = json_dict['mask']['mask_label']
-                choice_mask_type = json_dict['mask']['mask_type']
-                choice_mask_ratio = json_dict['mask']['mask_ratio']
-
-                base_dict = dict(debug=False, grid_search=True, dir_output=dir_output)
+            base_dict = dict(debug=False, grid_search=True, dir_output=dir_output)
         else:
             base_dict = dict(debug=self.debug, grid_search=True, dir_output=self.dir_output)
             epochs = 20 if self.debug else 100
