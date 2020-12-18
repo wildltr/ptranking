@@ -17,19 +17,16 @@ class ArgsUtil(object):
         self.given_root = given_root
 
         ''' gpu '''
-        self.args_parser.add_argument('-cuda', type=int, help='gpu id', default=None)
-
-        ''' data '''
-        self.args_parser.add_argument('-data_id', type=str, help='the data collection upon which you will perform learning-to-rank.')
-        self.args_parser.add_argument('-dir_data', type=str, help='the path where the data locates.')
-
-        ''' output '''
-        self.args_parser.add_argument('-dir_output', type=str, help='the output path of the results.')
+        self.args_parser.add_argument('-cuda', type=int, help='specify the gpu id if needed, such as 0 or 1.', default=None)
 
         ''' model '''
         self.args_parser.add_argument('-model', type=str, help='specify the learning-to-rank method')
 
-        self.args_parser.add_argument('-engine', type=str, help='specify the driving engine for LambdaMART, either XGBoost or LightGBM')
+        ''' debug '''
+        self.args_parser.add_argument("-debug", action="store_true", help="quickly check the setting in a debug mode")
+
+        ''' path of json files specifying the evaluation details '''
+        self.args_parser.add_argument('-dir_json', type=str, help='the path of json files specifying the evaluation details.')
 
     def update_if_required(self, args):
         return args

@@ -4,7 +4,7 @@
 """Description
 
 """
-
+import sys
 from ptranking.utils.args.argsUtil import ArgsUtil
 
 from ptranking.ltr_adhoc.eval.ltr import LTREvaluator, LTR_ADHOC_MODEL
@@ -65,8 +65,6 @@ if __name__ == '__main__':
 
     """
 
-    print('Started pt_ranking ...')
-
     args_obj = ArgsUtil(given_root='./')
     l2r_args = args_obj.get_l2r_args()
 
@@ -80,7 +78,10 @@ if __name__ == '__main__':
         evaluator = TreeLTREvaluator()
 
     else:
-        raise NotImplementedError
+        args_obj.args_parser.print_help()
+        sys.exit()
 
-    evaluator.run(model_id=l2r_args.model, dir_json=l2r_args.dir_json, debug=False, config_with_json=True)
+    print('Started evaluation with pt_ranking !')
+    evaluator.run(model_id=l2r_args.model, dir_json=l2r_args.dir_json, debug=l2r_args.debug, config_with_json=True)
+    print('Finished evaluation with pt_ranking !')
 
