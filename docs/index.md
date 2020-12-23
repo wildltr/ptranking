@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This open-source project, referred to as **PTRanking** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous learning-to-rank methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank.
+This open-source project, referred to as **PTRanking** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets, leading to an in-depth understanding of previous learning-to-rank methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank.
 
 **Key Features**:
 
@@ -34,7 +34,7 @@ Please refer to the Github Repository [PT-Ranking](https://github.com/wildltr/pt
 | Pairwise  | IR_GAN_Pair |
 | Listwise  | IR_GAN_List |
 
-- Tree-based Model (provided by LightGBM & XGBoost)
+- Tree-based Model (provided by LightGBM)
 
 | |Model|
 |:----|:----|

@@ -35,11 +35,11 @@ class IRGAN_List(AdversarialMachine):
         d_sf_para_dict['ffnns']['apply_tl_af'] = True
         d_sf_para_dict['ffnns']['TL_AF'] = 'S'
 
-        self.generator = List_Generator(sf_para_dict=g_sf_para_dict)
-        self.discriminator = List_Discriminator(sf_para_dict=d_sf_para_dict)
+        self.generator = List_Generator(sf_para_dict=g_sf_para_dict, gpu=gpu, device=device)
+        self.discriminator = List_Discriminator(sf_para_dict=d_sf_para_dict, gpu=gpu, device=device)
 
-        self.super_generator = List_Generator(sf_para_dict=g_sf_para_dict)
-        self.super_discriminator = List_Discriminator(sf_para_dict=d_sf_para_dict)
+        self.super_generator = List_Generator(sf_para_dict=g_sf_para_dict, gpu=gpu, device=device)
+        self.super_discriminator = List_Discriminator(sf_para_dict=d_sf_para_dict, gpu=gpu, device=device)
 
         self.top_k = ad_para_dict['top_k']
         self.d_epoches = ad_para_dict['d_epoches']

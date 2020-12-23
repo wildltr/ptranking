@@ -72,8 +72,8 @@ class IRGAN_Pair(AdversarialMachine):
         d_sf_para_dict['ffnns']['apply_tl_af'] = False
         #d_sf_para_dict['ffnns']['TL_AF'] = 'S'  # as required by the IRGAN model
 
-        self.generator     = IRGAN_Pair_Generator(sf_para_dict=g_sf_para_dict, temperature=ad_para_dict['temperature'])
-        self.discriminator = IRGAN_Pair_Discriminator(sf_para_dict=d_sf_para_dict)
+        self.generator     = IRGAN_Pair_Generator(sf_para_dict=g_sf_para_dict, temperature=ad_para_dict['temperature'], gpu=gpu, device=device)
+        self.discriminator = IRGAN_Pair_Discriminator(sf_para_dict=d_sf_para_dict, gpu=gpu, device=device)
 
         self.loss_type = ad_para_dict['loss_type']
         self.d_epoches = ad_para_dict['d_epoches']

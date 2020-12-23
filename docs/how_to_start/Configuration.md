@@ -56,3 +56,11 @@ For most learning-to-rank methods, PT-Ranking offers deep neural networks as the
 
 ### Parameters for Loss Function
 Besides the configuration of the scoring function, for some relatively complex learning-to-rank methods, we also need to specify some parameters for the loss function. In this case, it is required to develop the subclass ModelAParameter by inheriting **[ModelParameter](https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/ltr_adhoc/eval/parameter.py)** and customizing the functions, such as to_para_string(), default_para_dict() and grid_search(). Please refer to [LambdaRankParameter](https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/ltr_adhoc/listwise/lambdarank.py) as an example.
+
+## Prepare Configuration Json Files
+
+When evaluating a method, two json files are commonly required:
+
+- **Data_Eval_ScoringFunction.json**, which specifies the detailed settings for data loading (i.e, DataSetting), evaluation (i.e, EvalSetting) and the parameters for base scoring function (i.e, ScoringFunctionParameter). Please refer to [Data_Eval_ScoringFunction](https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/testing/ltr_adhoc/json/) as an example.
+
+- **XParameter**, which specifies the parameters for model **X**. Please refer to [LambdaRankParameter](https://github.com/ptranking/ptranking.github.io/raw/master/ptranking/ltr_adhoc/listwise/lambdarank.py) as an example.
