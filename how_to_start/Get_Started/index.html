@@ -624,10 +624,10 @@
 <p>Prepare the required json files (Data_Eval_ScoringFunction.json and XParameter.json, please refer to <a href="../Configuration/">Configuration</a> for more information) for specifying evaluation details.</p>
 </li>
 <li>
-<p>Run the following command script on your Terminal/Command Prompt:
-(1) Without using GPU</p>
+<p>Run the following command script on your Terminal/Command Prompt:</p>
 </li>
 </ol>
+<p>(1) Without using GPU</p>
 <div class="codehilite"><pre><span></span><code><span class="err">python pt_ranking.py -model ListMLE -dir_json /home/dl-box/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/</span>
 </code></pre></div>
 
@@ -649,8 +649,35 @@
 
 
 <h2 id="pycharm-usage">PyCharm Usage<a class="headerlink" href="#pycharm-usage" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p>Install <a href="https://www.jetbrains.com/pycharm/">PyCharm</a> (either Professional version or Community version)</p>
+</li>
+<li>
+<p>Download source code</p>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="err">git clone https://github.com/wildltr/ptranking</span>
+</code></pre></div>
+
+
+<ol>
+<li>
+<p>Open the unzipped source code with PyCharm as a new project</p>
+</li>
+<li>
+<p>Test the supported learning-to-rank models by selectively running the following files, where the setting arguments can be changed accordingly</p>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="err">testing/ltr_adhoc/testing_ltr_adhoc.py</span>
+<span class="err">testing/ltr_adversarial/testing_ltr_adversarial.py</span>
+<span class="err">testing/ltr_tree/testing_ltr_tree.py</span>
+</code></pre></div>
+
+
 <h2 id="python-package-usage">Python-package Usage<a class="headerlink" href="#python-package-usage" title="Permanent link">&para;</a></h2>
-<p>TODO: pip install ...</p>
+<p>TBA</p>
+<p>Install ptranking: pip install ptranking</p>
 <h2 id="demo-scripts">Demo Scripts<a class="headerlink" href="#demo-scripts" title="Permanent link">&para;</a></h2>
 <p>To get a taste of learning-to-rank models without writing any code, you could try the following script. You just need to specify the model name, the dataset id, as well as the directories for input and output.</p>
 <ul>
