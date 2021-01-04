@@ -270,6 +270,20 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pycharm-usage" class="md-nav__link">
+    PyCharm Usage
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python-package-usage" class="md-nav__link">
+    Python-package Usage
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#demo-scripts" class="md-nav__link">
     Demo Scripts
   </a>
@@ -536,6 +550,20 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pycharm-usage" class="md-nav__link">
+    PyCharm Usage
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python-package-usage" class="md-nav__link">
+    Python-package Usage
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#demo-scripts" class="md-nav__link">
     Demo Scripts
   </a>
@@ -575,28 +603,54 @@
 <li>
 <p>Install scikit-learn following the <a href="https://scikit-learn.org/stable/install.html#installation-instructions">instructions</a></p>
 </li>
-<li>
-<p>Install ptranking: pip install ptranking</p>
-</li>
 </ol>
 <h2 id="command-line-usage">Command-line Usage<a class="headerlink" href="#command-line-usage" title="Permanent link">&para;</a></h2>
 <ol>
+<li>Download source code</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="err">git clone https://github.com/wildltr/ptranking</span>
+</code></pre></div>
+
+
+<ol>
+<li>Download <a href="../../data/data/">Supported Datasets</a>, such as <strong>MQ2008</strong> and unrar the .rar file.</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="err">wget &quot;https://lyoz5a.ch.files.1drv.com/y4mM8g8v4d2mFfO5djKT-ELADpDDRcsVwXRSaZu-9rlOlgvW62Qeuc8hFe_wr6m5NZMnUSEfr6QpMP81ZIQIiwI4BnoHmIZT9Sraf53AmhhIfLi531DOKYZTy4MtDHbBC7dn_Z9DSKvLJZhERPIamAXCrONg7WrFPiG0sTpOXl3-YEYZ1scTslmNyg2a__3YalWRMyEIipY56sy97pb68Sdww&quot; -O MQ2008.rar</span>
+</code></pre></div>
+
+
+<ol>
 <li>
-<p>Download <a href="./data.md">Supported Datasets</a></p>
+<p>Prepare the required json files (Data_Eval_ScoringFunction.json and XParameter.json, please refer to <a href="../Configuration/">Configuration</a> for more information) for specifying evaluation details.</p>
 </li>
 <li>
-<p>Run the following command script on your Terminal/Command Prompt:</p>
+<p>Run the following command script on your Terminal/Command Prompt:
+(1) Without using GPU</p>
 </li>
 </ol>
-<div class="codehilite"><pre><span></span><code><span class="n">python</span><span class="w"> </span><span class="n">ptranking</span><span class="w"> </span><span class="o">-</span><span class="k">data</span><span class="w"> </span><span class="o">[</span><span class="n">DATASETNAME</span><span class="o">]</span><span class="w"> </span><span class="o">-</span><span class="n">dir_data</span><span class="w"> </span><span class="o">[</span><span class="n">DATASET_DIR</span><span class="o">]</span><span class="w"> </span><span class="o">-</span><span class="n">dir_output</span><span class="w"> </span><span class="o">[</span><span class="n">OUTPUT_DIR</span><span class="o">]</span><span class="w"> </span><span class="o">-</span><span class="n">model</span><span class="w"> </span><span class="o">[</span><span class="n">MODELNAME</span><span class="o">]</span><span class="w"></span>
+<div class="codehilite"><pre><span></span><code><span class="err">python pt_ranking.py -model ListMLE -dir_json /home/dl-box/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/</span>
 </code></pre></div>
 
 
-<p>e.g.:</p>
-<div class="codehilite"><pre><span></span><code><span class="err">python ptranking -data MQ2008_Super -dir_data /home/dl-box/dataset/MQ2008/ -dir_output /home/dl-box/WorkBench/CodeBench/Project_output/Out_L2R/Listwise/ -model ListMLE</span>
+<p>(2) Using GPU</p>
+<div class="codehilite"><pre><span></span><code><span class="err">python pt_ranking.py -cuda 0 -model ListMLE -dir_json /home/dl-box/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/</span>
 </code></pre></div>
 
 
+<p>The meaning of each supported argument is:</p>
+<div class="codehilite"><pre><span></span><code><span class="err">optional arguments:</span>
+<span class="err">  -h, --help          show this help message and exit</span>
+<span class="err">  -cuda CUDA          specify the gpu id if needed, such as 0 or 1.</span>
+<span class="err">  -model MODEL        specify the learning-to-rank method</span>
+<span class="err">  -debug              quickly check the setting in a debug mode</span>
+<span class="err">  -dir_json DIR_JSON  the path of json files specifying the evaluation</span>
+<span class="err">                      details.</span>
+</code></pre></div>
+
+
+<h2 id="pycharm-usage">PyCharm Usage<a class="headerlink" href="#pycharm-usage" title="Permanent link">&para;</a></h2>
+<h2 id="python-package-usage">Python-package Usage<a class="headerlink" href="#python-package-usage" title="Permanent link">&para;</a></h2>
+<p>TODO: pip install ...</p>
 <h2 id="demo-scripts">Demo Scripts<a class="headerlink" href="#demo-scripts" title="Permanent link">&para;</a></h2>
 <p>To get a taste of learning-to-rank models without writing any code, you could try the following script. You just need to specify the model name, the dataset id, as well as the directories for input and output.</p>
 <ul>
