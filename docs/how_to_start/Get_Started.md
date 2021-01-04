@@ -21,6 +21,7 @@ wget "https://lyoz5a.ch.files.1drv.com/y4mM8g8v4d2mFfO5djKT-ELADpDDRcsVwXRSaZu-9
 3. Prepare the required json files (Data_Eval_ScoringFunction.json and XParameter.json, please refer to [Configuration](./Configuration.md) for more information) for specifying evaluation details.
    
 4. Run the following command script on your Terminal/Command Prompt:
+
 (1) Without using GPU
 ```
 python pt_ranking.py -model ListMLE -dir_json /home/dl-box/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/
@@ -42,8 +43,28 @@ optional arguments:
 
 ## PyCharm Usage
 
+1. Install [PyCharm](https://www.jetbrains.com/pycharm/) (either Professional version or Community version)
+   
+2. Download source code
+   
+```
+git clone https://github.com/wildltr/ptranking
+```
+3. Open the unzipped source code with PyCharm as a new project
+
+4. Test the supported learning-to-rank models by selectively running the following files, where the setting arguments can be changed accordingly
+```
+testing/ltr_adhoc/testing_ltr_adhoc.py
+testing/ltr_adversarial/testing_ltr_adversarial.py
+testing/ltr_tree/testing_ltr_tree.py
+```
+
 ## Python-package Usage
-TODO: pip install ...
+
+TBA
+
+Install ptranking: pip install ptranking
+
 ## Demo Scripts
 
 To get a taste of learning-to-rank models without writing any code, you could try the following script. You just need to specify the model name, the dataset id, as well as the directories for input and output.
