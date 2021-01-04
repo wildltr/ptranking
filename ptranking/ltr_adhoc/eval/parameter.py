@@ -61,7 +61,7 @@ class ModelParameter(Parameter):
         Iterator of parameter setting for grid-search
         :return:
         """
-        return dict(model_id=self.model_id)
+        yield dict(model_id=self.model_id)
 
 
 class ScoringFunctionParameter(ModelParameter):
