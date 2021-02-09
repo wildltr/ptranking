@@ -101,20 +101,20 @@ class LightGBMLambdaMART():
                 '''
                 lgbm_ranker.fit(x_train, y_train, group=group_train,
                                 eval_set=[(x_valid, y_valid)], eval_group=[group_valid], eval_at=[5],
-                                early_stopping_rounds=eval_dict['epochs'],
+                                early_stopping_rounds=eval_dict['early_stop_or_boost_round'],
                                 verbose=10)
 
             elif self.custom_dict['custom']:
                 # use the argument of fobj
                 lgbm_ranker = lgbm.train(params=self.lightgbm_para_dict, verbose_eval=10,
                                          train_set=train_set, valid_sets=[valid_set],
-                                         early_stopping_rounds=eval_dict['epochs'],
+                                         early_stopping_rounds=eval_dict['early_stop_or_boost_round'],
                                          fobj=self.get_custom_obj(custom_obj_id=self.custom_dict['custom_obj_id'],
                                                                   fobj=True))
             else: # trained booster as ranker
                 lgbm_ranker = lgbm.train(params=self.lightgbm_para_dict, verbose_eval=10,
                                          train_set=train_set, valid_sets=[valid_set],
-                                         early_stopping_rounds=eval_dict['epochs'])
+                                         early_stopping_rounds=eval_dict['early_stop_or_boost_round'])
         else: # without validation
             if self.custom_dict['custom'] and self.custom_dict['use_LGBMRanker']:
                 lgbm_ranker = lgbm.LGBMRanker()
@@ -124,17 +124,17 @@ class LightGBMLambdaMART():
                 lgbm_ranker.set_params(**custom_obj_dict)
 
                 lgbm_ranker.fit(x_train, y_train, group=group_train, verbose=10, eval_at=[5],
-                                early_stopping_rounds=eval_dict['epochs'])
+                                early_stopping_rounds=eval_dict['early_stop_or_boost_round'])
 
             elif self.custom_dict['custom']: # use the argument of fobj
                 lgbm_ranker = lgbm.train(params=self.lightgbm_para_dict, verbose_eval=10,
-                                         train_set=train_set, num_boost_round=eval_dict['epochs'],
+                                         train_set=train_set, early_stopping_rounds=eval_dict['early_stop_or_boost_round'],
                                          fobj=self.get_custom_obj(custom_obj_id=self.custom_dict['custom_obj_id'],
                                                                   fobj=True))
 
             else: # trained booster as ranker
                 lgbm_ranker = lgbm.train(params=self.lightgbm_para_dict,  verbose_eval=10,
-                                         train_set=train_set, num_boost_round=eval_dict['epochs'])
+                                         train_set=train_set, early_stopping_rounds=eval_dict['early_stop_or_boost_round'])
 
         if data_id in YAHOO_LTR:
             model_file = save_model_dir + 'model.txt'
@@ -157,9 +157,8 @@ class LightGBMLambdaMARTParameter(ModelParameter):
     ''' Parameter class for LambdaMART based on LightGBM '''
 
     def __init__(self, debug=False, para_json=None):
-        super(LightGBMLambdaMARTParameter, self).__init__(model_id='LightGBMLambdaMART')
+        super(LightGBMLambdaMARTParameter, self).__init__(model_id='LightGBMLambdaMART', para_json=para_json)
         self.debug = debug
-        self.para_json = para_json
 
     def default_para_dict(self):
         """
@@ -167,8 +166,8 @@ class LightGBMLambdaMARTParameter(ModelParameter):
         :return:
         """
         # for custom setting
-        custom_dict = dict(custom=False, custom_obj_id='lambdarank', use_LGBMRanker=True) #
-        #custom_dict = dict(custom=False, custom_obj_id=None)
+        #custom_dict = dict(custom=False, custom_obj_id='lambdarank', use_LGBMRanker=True) #
+        custom_dict = dict(custom=False, custom_obj_id=None)
 
         # common setting when using in-built lightgbm's ranker
         lightgbm_para_dict = {'boosting_type': 'gbdt',   # ltr_gbdt, dart
@@ -180,6 +179,7 @@ class LightGBMLambdaMARTParameter(ModelParameter):
                               'num_threads': 16,
                               'min_data_in_leaf': 50,
                               'min_sum_hessian_in_leaf': 200,
+                              'eval_at': 1, # which matters much (early stopping), say setting as 5 is better than default
                               # 'lambdamart_norm':False,
                               # 'is_training_metric':True,
                               'verbosity': -1}
@@ -201,16 +201,17 @@ class LightGBMLambdaMARTParameter(ModelParameter):
 
         s1, s2 = (':', '\n') if log else ('_', '_')
 
-        BT, metric, num_leaves, num_trees, min_data_in_leaf, min_sum_hessian_in_leaf, lr = \
+        BT, metric, num_leaves, num_trees, min_data_in_leaf, min_sum_hessian_in_leaf, lr, eval_at = \
             lightgbm_para_dict['boosting_type'], lightgbm_para_dict['metric'], lightgbm_para_dict['num_leaves'],\
             lightgbm_para_dict['num_trees'], lightgbm_para_dict['min_data_in_leaf'],\
-            lightgbm_para_dict['min_sum_hessian_in_leaf'], lightgbm_para_dict['learning_rate']
+            lightgbm_para_dict['min_sum_hessian_in_leaf'], lightgbm_para_dict['learning_rate'],\
+            lightgbm_para_dict['eval_at']
 
         para_string = s2.join([s1.join(['BT', BT]), s1.join(['Metric', metric]),
                                s1.join(['Leaves', str(num_leaves)]), s1.join(['Trees', str(num_trees)]),
                                s1.join(['MiData', '{:,g}'.format(min_data_in_leaf)]),
                                s1.join(['MSH', '{:,g}'.format(min_sum_hessian_in_leaf)]),
-                               s1.join(['LR', '{:,g}'.format(lr)])
+                               s1.join(['LR', '{:,g}'.format(lr)]), s1.join(['EvalAt', str(eval_at)])
                                ])
 
         return para_string
@@ -229,19 +230,18 @@ class LightGBMLambdaMARTParameter(ModelParameter):
         Iterator of parameter settings for LambdaRank
         """
         # for custom setting
-        custom_dict = dict(custom=True, custom_obj_id='lambdarank', use_LGBMRanker=False)
+        #custom_dict = dict(custom=False, custom_obj_id='lambdarank', use_LGBMRanker=False)
+        custom_dict = dict(custom=False, custom_obj_id=None)
 
-        if self.para_json is not None:
-            with open(self.para_json) as json_file:
-                json_dict = json.load(json_file)
-
-            choice_BT = json_dict['BT']
-            choice_metric = json_dict['metric']
-            choice_leaves = json_dict['leaves']
-            choice_trees = json_dict['trees']
-            choice_MiData = json_dict['MiData']
-            choice_MSH = json_dict['MSH']
-            choice_LR = json_dict['LR']
+        if self.use_json:
+            choice_BT = self.json_dict['BT']
+            choice_metric = self.json_dict['metric']
+            choice_leaves = self.json_dict['leaves']
+            choice_trees = self.json_dict['trees']
+            choice_MiData = self.json_dict['MiData']
+            choice_MSH = self.json_dict['MSH']
+            choice_LR = self.json_dict['LR']
+            eval_at = self.json_dict['eval_at']
         else:
             # common setting when using in-built lightgbm's ranker
             choice_BT = ['gbdt'] if self.debug else ['gbdt']
@@ -251,6 +251,7 @@ class LightGBMLambdaMARTParameter(ModelParameter):
             choice_MiData = [50] if self.debug else [50]
             choice_MSH = [200] if self.debug else [200]
             choice_LR = [0.05, 0.01] if self.debug else [0.05, 0.01]
+            eval_at = 5
 
         for BT, metric, num_leaves, num_trees, min_data_in_leaf, min_sum_hessian_in_leaf, lr in product(choice_BT,
                                 choice_metric, choice_leaves, choice_trees, choice_MiData, choice_MSH, choice_LR):
@@ -265,6 +266,9 @@ class LightGBMLambdaMARTParameter(ModelParameter):
                                      'min_sum_hessian_in_leaf': min_sum_hessian_in_leaf,
                                      # 'lambdamart_norm':False,
                                      # 'is_training_metric':True,
+                                     'eval_at': eval_at, # which matters much (early stopping), say setting as 5 is better than default
+                                  #'max_bin': 64,
+                                  #'max_depth':4,
                                      'verbosity': -1}
 
             self.para_dict = dict(custom_dict=custom_dict, lightgbm_para_dict=lightgbm_para_dict)

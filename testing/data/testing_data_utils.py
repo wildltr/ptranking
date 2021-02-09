@@ -4,9 +4,9 @@
 """Description
 Examples on how to use data_utils module
 """
-
-from ptranking.data.data_utils import LTRDataset, YAHOO_LTR, ISTELLA_LTR, MSLETOR_SEMI
 import torch
+
+from ptranking.data.data_utils import LTRDataset, YAHOO_LTR, ISTELLA_LTR, MSLETOR_SEMI, SPLIT_TYPE, get_data_meta
 
 def get_doc_num(dataset):
     ''' compute the number of documents in a dataset '''
@@ -55,6 +55,29 @@ def get_min_max_docs(train_dataset, vali_dataset, test_dataset, semi_supervised=
     else:
         return min_doc, max_doc, sum_rele.data.numpy()
 
+def get_label_distribution(train_dataset, vali_dataset, test_dataset, semi_supervised=False, max_lavel=None):
+    ''' get the overall label distribution '''
+    assert semi_supervised is False
+    assert max_lavel is not None
+
+    minlength = max_lavel + 1
+    sum_bin_cnts = torch.zeros(minlength, dtype=torch.int)
+    for qid, torch_batch_rankings, torch_batch_std_labels in train_dataset:
+        #print('torch_batch_std_labels', torch_batch_std_labels)
+        bin_cnt = torch.bincount(torch.squeeze(torch_batch_std_labels, dim=0).type(torch.IntTensor), minlength=minlength)
+        #print('qid', qid, 'bin-cnts:', bin_cnt)
+        sum_bin_cnts = torch.add(sum_bin_cnts, bin_cnt)
+
+    if vali_dataset is not None:
+        for qid, torch_batch_rankings, torch_batch_std_labels in vali_dataset:
+            bin_cnt = torch.bincount(torch.squeeze(torch_batch_std_labels, dim=0).type(torch.IntTensor), minlength=minlength)
+            sum_bin_cnts = torch.add(sum_bin_cnts, bin_cnt)
+
+    for qid, torch_batch_rankings, torch_batch_std_labels in test_dataset:
+        bin_cnt = torch.bincount(torch.squeeze(torch_batch_std_labels, dim=0).type(torch.IntTensor), minlength=minlength)
+        sum_bin_cnts = torch.add(sum_bin_cnts, bin_cnt)
+
+    return sum_bin_cnts.data.numpy()
 
 def get_min_max_feature(train_dataset, vali_dataset, test_dataset):
     ''' get the minimum / maximum feature values in a dataset '''
@@ -112,8 +135,8 @@ def check_dataset_statistics(data_id, dir_data, buffer=False):
 
     # common
     if 'Istella' == data_id:
-        train_dataset = LTRDataset(train=True, file=file_train, data_id=data_id, shuffle=False, buffer=buffer)
-        test_dataset =  LTRDataset(train=False, file=file_test, data_id=data_id, shuffle=False, buffer=buffer)
+        train_dataset = LTRDataset(split_type=SPLIT_TYPE.Train, file=file_train, data_id=data_id, shuffle=False, buffer=buffer)
+        test_dataset =  LTRDataset(split_type=SPLIT_TYPE.Test, file=file_test, data_id=data_id, shuffle=False, buffer=buffer)
 
         num_queries = train_dataset.__len__() + test_dataset.__len__()
         print('Dataset:\t', data_id)
@@ -124,10 +147,14 @@ def check_dataset_statistics(data_id, dir_data, buffer=False):
         print('Total docs:\t', num_docs)
 
         min_doc, max_doc, sum_rele = get_min_max_docs(train_dataset=train_dataset, vali_dataset=None, test_dataset=test_dataset)
+        data_meta = get_data_meta(data_id=data_id)
+        max_rele_label = data_meta['max_rele_level']
+        sum_bin_cnts = get_label_distribution(train_dataset=train_dataset, test_dataset=test_dataset,
+                                              semi_supervised=False, max_lavel=max_rele_label)
     else:
-        train_dataset = LTRDataset(train=True, file=file_train, data_id=data_id, shuffle=False, buffer=buffer)
-        vali_dataset =  LTRDataset(train=False, file=file_vali, data_id=data_id, shuffle=False, buffer=buffer)
-        test_dataset =  LTRDataset(train=False, file=file_test, data_id=data_id, shuffle=False, buffer=buffer)
+        train_dataset = LTRDataset(split_type=SPLIT_TYPE.Train, file=file_train, data_id=data_id, shuffle=False, buffer=buffer)
+        vali_dataset =  LTRDataset(split_type=SPLIT_TYPE.Validation, file=file_vali, data_id=data_id, shuffle=False, buffer=buffer)
+        test_dataset =  LTRDataset(split_type=SPLIT_TYPE.Test, file=file_test, data_id=data_id, shuffle=False, buffer=buffer)
 
         num_queries = train_dataset.__len__() + vali_dataset.__len__() + test_dataset.__len__()
         print('Dataset:\t', data_id)
@@ -142,16 +169,26 @@ def check_dataset_statistics(data_id, dir_data, buffer=False):
                 get_min_max_docs(train_dataset=train_dataset, vali_dataset=vali_dataset, test_dataset=test_dataset, semi_supervised=True)
         else:
             min_doc, max_doc, sum_rele = get_min_max_docs(train_dataset=train_dataset, vali_dataset=vali_dataset, test_dataset=test_dataset)
+            data_meta = get_data_meta(data_id=data_id)
+            max_rele_label = data_meta['max_rele_level']
+            sum_bin_cnts = get_label_distribution(train_dataset=train_dataset, vali_dataset=vali_dataset,
+                                                  test_dataset=test_dataset, semi_supervised=False, max_lavel=max_rele_label)
+
 
     print('min, max documents per query', min_doc, max_doc)
     print('total relevant documents', sum_rele)
     print('avg rele documents per query', sum_rele * 1.0 / num_queries)
     print('avg documents per query', num_docs * 1.0 / num_queries)
+    print('label distribution: ', sum_bin_cnts)
     if data_id in MSLETOR_SEMI:
         print('total unlabeled documents', sum_unknown)
 
         #print()
         #get_min_max_feature(train_dataset=train_dataset, vali_dataset=vali_dataset, test_dataset=test_dataset)
+
+    #==
+
+
 
 
 
@@ -176,9 +213,17 @@ if __name__ == '__main__':
 
     data_id = 'MQ2008_Super'
     dir_data = '/Users/dryuhaitao/WorkBench/Corpus/LETOR4.0/MQ2008/'
-    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
     '''
-    
+    Dataset:	 MQ2008_Super
+    Total queries:	 784
+        Train: 471 Vali: 157 Test: 156
+    Total docs:	 15211
+    min, max documents per query 5 121
+    total relevant documents 2932
+    avg rele documents per query 3.739795918367347
+    avg documents per query 19.401785714285715
+    label distribution:  [12279  2001   931]
     '''
 
     #2
@@ -263,4 +308,34 @@ if __name__ == '__main__':
     total relevant documents 902220
     avg rele documents per query 1150.7908163265306
     avg documents per query 1150.7908163265306
+    '''
+
+    data_id  = 'MSLRWEB30K'
+    dir_data = '/home/dl-box/WorkBench/Datasets/L2R/MSLR-WEB30K/'
+    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    '''
+    Dataset:	 MSLRWEB30K
+    Total queries:	 31531
+        Train: 18919 Vali: 6306 Test: 6306
+    Total docs:	 3771125
+    min, max documents per query 1 1251
+    total relevant documents 1830173
+    avg rele documents per query 58.04360787796137
+    avg documents per query 119.60055183787384
+    label distribution:  [1940952 1225770  504958   69010   30435]
+    '''
+
+    data_id  = 'Set1'
+    dir_data = '/home/dl-box/WorkBench/Datasets/L2R/Yahoo_L2R_Set_1/'
+    #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    '''
+    Dataset:	 Set1
+    Total queries:	 29921
+        Train: 19944 Vali: 2994 Test: 6983
+    Total docs:	 709877
+    min, max documents per query 1 139
+    total relevant documents 524685
+    avg rele documents per query 17.53567728351325
+    avg documents per query 23.72504261221216
+    label distribution:  [185192 254110 202700  54473  13402]
     '''

@@ -55,11 +55,11 @@ class TreeEvalSetting(EvalSetting):
         eval_dict = self.eval_dict
         s1, s2 = (':', '\n') if log else ('_', '_')
 
-        epochs, do_validation = eval_dict['epochs'], eval_dict['do_validation']
+        early_stop_or_boost_round, do_validation = eval_dict['early_stop_or_boost_round'], eval_dict['do_validation']
         if do_validation:
-            eval_string = s1.join(['EarlyStop', str(epochs)])
+            eval_string = s1.join(['EarlyStop', str(early_stop_or_boost_round)])
         else:
-            eval_string = s1.join(['BoostRound', str(epochs)])
+            eval_string = s1.join(['BoostRound', str(early_stop_or_boost_round)])
 
         return eval_string
 
@@ -69,12 +69,12 @@ class TreeEvalSetting(EvalSetting):
         """
         do_validation = True if self.debug else True
         do_log = False if self.debug else True
-        epochs = 10 if self.debug else 100
+        early_stop_or_boost_round = 10 if self.debug else 200
 
         # more evaluation settings that are rarely changed
         self.eval_dict = dict(debug=self.debug, grid_search=False, dir_output=self.dir_output, do_log=do_log,
-                              cutoffs=[1, 3, 5, 10, 20, 50], do_validation=do_validation, epochs=epochs,
-                              mask_label=False)
+                              cutoffs=[1, 3, 5, 10, 20, 50], do_validation=do_validation,
+                              mask_label=False, early_stop_or_boost_round=early_stop_or_boost_round)
 
         return self.eval_dict
 
@@ -84,7 +84,7 @@ class TreeEvalSetting(EvalSetting):
         """
         if self.use_json:
             dir_output = self.json_dict['dir_output']
-            epochs = 20 if self.debug else self.json_dict['epochs']
+            early_stop_or_boost_round = 20 if self.debug else self.json_dict['early_stop_or_boost_round']
             do_validation = self.json_dict['do_validation']
             cutoffs = self.json_dict['cutoffs']
             do_log = self.json_dict['do_log']
@@ -95,17 +95,17 @@ class TreeEvalSetting(EvalSetting):
             base_dict = dict(debug=False, grid_search=True, dir_output=dir_output)
         else:
             base_dict = dict(debug=self.debug, grid_search=True, dir_output=self.dir_output)
-            epochs = 20 if self.debug else 100
+            early_stop_or_boost_round = 20 if self.debug else 100
             do_validation = False if self.debug else True  # True, False
-            cutoffs = 5, [1, 3, 5, 10, 20, 50]
+            cutoffs = [1, 3, 5, 10, 20, 50]
             do_log = False if self.debug else True
 
             mask_label = False if self.debug else False
             choice_mask_type = ['rand_mask_all']
             choice_mask_ratio = [0.2]
 
-        self.eval_dict = dict(epochs=epochs, do_validation=do_validation, cutoffs=cutoffs,
-                              do_log=do_log, mask_label=mask_label)
+        self.eval_dict = dict(early_stop_or_boost_round=early_stop_or_boost_round, do_validation=do_validation,
+                              cutoffs=cutoffs, do_log=do_log, mask_label=mask_label)
         self.eval_dict.update(base_dict)
 
         if mask_label:

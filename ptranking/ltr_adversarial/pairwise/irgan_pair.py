@@ -132,6 +132,7 @@ class IRGAN_Pair(AdversarialMachine):
         generated_data = dict()
         for entry in train_data:
             qid, batch_ranking, batch_label = entry[0], entry[1], entry[2]
+            if self.gpu: batch_ranking = batch_ranking.to(self.device)
             samples = self.per_query_generation(qid=qid, batch_ranking=batch_ranking, generator=generator,
                                                 global_buffer=global_buffer)
             if samples is not None: generated_data[qid] = samples
