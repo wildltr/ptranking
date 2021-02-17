@@ -1,11 +1,12 @@
 {
   "DataSetting": {
     "data_id":"MQ2008_Super",
-    "dir_data":"/Users/dryuhaitao/WorkBench/Corpus/LETOR4.0/MQ2008/",
+    "dir_data":"/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/",
 
     "min_docs":[10],
     "min_rele":[1],
     "train_batch_size":[1],
+    "scaler_id":"SLog1P",
 
     "binary_rele":[false],
     "unknown_as_zero":[false],
@@ -13,7 +14,7 @@
   },
 
   "EvalSetting": {
-    "dir_output":"/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/",
+    "dir_output":"/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/",
 
     "epochs":100,
 
@@ -24,7 +25,7 @@
 
     "loss_guided":false,
 
-    "do_log":true,
+    "do_log":false,
     "log_step":2,
     "do_summary":false,
 

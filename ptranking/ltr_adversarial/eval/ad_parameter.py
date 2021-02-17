@@ -11,7 +11,7 @@ import json
 from itertools import product
 
 from ptranking.ltr_adhoc.eval.parameter import EvalSetting, DataSetting, ScoringFunctionParameter
-from ptranking.data.data_utils import get_default_scaler_setting, MSLETOR_SEMI, get_data_meta
+from ptranking.data.data_utils import get_scaler_setting, MSLETOR_SEMI, get_data_meta
 
 class AdScoringFunctionParameter(ScoringFunctionParameter):
 	"""  """
@@ -211,12 +211,13 @@ class AdDataSetting(DataSetting):
 		"""
 		A default setting for data loading when performing adversarial ltr
 		"""
+		scaler_id = None
 		unknown_as_zero = False
 		binary_rele = False  # using the original values
 		train_presort, validation_presort, test_presort = True, True, True
 		train_batch_size, validation_batch_size, test_batch_size = 1, 1, 1
 
-		scale_data, scaler_id, scaler_level = get_default_scaler_setting(data_id=self.data_id)
+		scale_data, scaler_id, scaler_level = get_scaler_setting(data_id=self.data_id, scaler_id=scaler_id)
 
 		# more data settings that are rarely changed
 		self.data_dict = dict(data_id=self.data_id, dir_data=self.dir_data, min_docs=10, min_rele=1,
@@ -235,6 +236,7 @@ class AdDataSetting(DataSetting):
 		Iterator of settings for data loading when performing adversarial ltr
 		"""
 		if self.use_json:
+			scaler_id = self.json_dict['scaler_id']
 			choice_min_docs = self.json_dict['min_docs']
 			choice_min_rele = self.json_dict['min_rele']
 			choice_binary_rele = self.json_dict['binary_rele']
@@ -244,6 +246,7 @@ class AdDataSetting(DataSetting):
 			base_data_dict = dict(data_id=self.data_id, dir_data=self.json_dict["dir_data"], test_presort=True,
 								  validation_presort=True, validation_batch_size=1, test_batch_size=1)
 		else:
+			scaler_id = None
 			choice_min_docs = [10]
 			choice_min_rele = [1]
 			choice_binary_rele = [False]
@@ -257,8 +260,8 @@ class AdDataSetting(DataSetting):
 		data_meta = get_data_meta(data_id=self.data_id)  # add meta-information
 		base_data_dict.update(data_meta)
 
-		choice_scale_data, choice_scaler_id, choice_scaler_level = get_default_scaler_setting(data_id=self.data_id,
-																							  grid_search=True)
+		choice_scale_data, choice_scaler_id, choice_scaler_level = \
+			get_scaler_setting(data_id=self.data_id, grid_search=True, scaler_id=scaler_id)
 
 		for min_docs, min_rele, train_batch_size in product(choice_min_docs, choice_min_rele, choice_train_batch_size):
 			threshold_dict = dict(min_docs=min_docs, min_rele=min_rele, train_batch_size=train_batch_size)

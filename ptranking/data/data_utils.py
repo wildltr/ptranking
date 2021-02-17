@@ -75,7 +75,7 @@ For GLTR_LETOR, it is defined as follows, where features with zero values are st
 
 ## supported feature normalization ##
 SCALER_LEVEL = ['QUERY', 'DATASET']
-SCALER_ID    = ['MinMaxScaler', 'RobustScaler', 'StandardScaler']
+SCALER_ID    = ['MinMaxScaler', 'RobustScaler', 'StandardScaler', "SLog1P"]
 
 @unique
 class MASK_TYPE(Enum):
@@ -97,6 +97,20 @@ class SPLIT_TYPE(Enum):
     Train = auto()
     Test = auto()
     Validation = auto()
+
+class SymmetricLog1pScaler(object):
+    """
+    Symmetric Log1p Transformation
+    {
+    author = {Zhuang, Honglei and Wang, Xuanhui and Bendersky, Michael and Najork, Marc},
+    title = {Feature Transformation for Neural Ranking Models},
+    booktitle = {Proceedings of the 43rd SIGIR Conference},
+    pages = {1649–1652}
+    }
+    """
+    @staticmethod
+    def fit_transform(X):
+        return np.sign(X) * np.log(1.0 + np.abs(X))
 
 
 def get_data_meta(data_id=None):
@@ -168,10 +182,12 @@ def get_scaler(scaler_id):
         scaler = RobustScaler()
     elif scaler_id == 'StandardScaler':
         scaler = StandardScaler()
+    elif scaler_id == 'SLog1P':
+        scaler = SymmetricLog1pScaler()
 
     return scaler
 
-def get_default_scaler_setting(data_id, grid_search=False):
+def get_scaler_setting(data_id, grid_search=False, scaler_id=None):
     """
     A default scaler-setting for loading a dataset
     :param data_id:
@@ -186,25 +202,34 @@ def get_default_scaler_setting(data_id, grid_search=False):
          We note that ISTELLA contains extremely large features, e.g., 1.79769313486e+308, we replace features of this kind with a constant 1000000.
     '''
     if grid_search:
-        if data_id in MSLRWEB or data_id in ISTELLA_LTR:
-            choice_scale_data = [True]  # True, False
-            choice_scaler_id = ['StandardScaler']  # ['MinMaxScaler', 'RobustScaler', 'StandardScaler']
-            choice_scaler_level = ['QUERY']  # SCALER_LEVEL = ['QUERY', 'DATASET']
+        if scaler_id is None:
+            if data_id in MSLRWEB or data_id in ISTELLA_LTR:
+                choice_scale_data = [True]  # True, False
+                choice_scaler_id = ['StandardScaler']  # ['MinMaxScaler', 'RobustScaler', 'StandardScaler']
+                choice_scaler_level = ['QUERY']  # SCALER_LEVEL = ['QUERY', 'DATASET']
+            else:
+                choice_scale_data = [False]
+                choice_scaler_id = [None]
+                choice_scaler_level = [None]
         else:
-            choice_scale_data = [False]
-            choice_scaler_id = [None]
-            choice_scaler_level = [None]
+            choice_scale_data = [True]  # True, False
+            choice_scaler_id = [scaler_id]  # ['MinMaxScaler', 'RobustScaler', 'StandardScaler']
+            choice_scaler_level = ['QUERY']  # SCALER_LEVEL = ['QUERY', 'DATASET']
 
         return choice_scale_data, choice_scaler_id, choice_scaler_level
     else:
-        if data_id in MSLRWEB or data_id in ISTELLA_LTR:
-            scale_data = True
-            scaler_id = 'StandardScaler'  # ['MinMaxScaler', 'StandardScaler']
-            scaler_level = 'QUERY'  # SCALER_LEVEL = ['QUERY', 'DATASET']
+        if scaler_id is None:
+            if data_id in MSLRWEB or data_id in ISTELLA_LTR:
+                scale_data = True
+                scaler_id = 'StandardScaler'  # ['MinMaxScaler', 'StandardScaler']
+                scaler_level = 'QUERY'  # SCALER_LEVEL = ['QUERY', 'DATASET']
+            else:
+                scale_data = False
+                scaler_id = None
+                scaler_level = None
         else:
-            scale_data = False
-            scaler_id = None
-            scaler_level = None
+            scale_data = True
+            scaler_level = 'QUERY'
 
         return scale_data, scaler_id, scaler_level
 
@@ -434,6 +459,7 @@ def iter_queries(in_file, presort=None, data_dict=None, scale_data=None, scaler_
         clip_query = True
 
     list_Qs = []
+    print(in_file)
     with open(in_file, encoding='iso-8859-1') as file_obj:
         dict_data = dict()
         if has_comment:
@@ -663,11 +689,11 @@ class LTRDataset(data.Dataset):
         else:
             raise NotImplementedError
 
-    def get_default_data_dict(self, data_id):
+    def get_default_data_dict(self, data_id, scaler_id=None):
         ''' a default setting for loading a dataset '''
         min_docs = 1
         min_rele = -1 # with -1, it means that we don't care with dumb queries that has no relevant documents. Say, for checking the statistics of an original dataset
-        scale_data, scaler_id, scaler_level = get_default_scaler_setting(data_id=data_id)
+        scale_data, scaler_id, scaler_level = get_scaler_setting(data_id=data_id, scaler_id=scaler_id)
 
         train_presort = False if data_id in MSLETOR_SEMI else True
 
@@ -741,7 +767,7 @@ def letor_to_libsvm(doc_reprs=None, doc_labels=None, output_feature=None, output
 
 
 def load_letor_data_as_libsvm_data(in_file, split_type=None, data_id=None, min_docs=None, min_rele=None,
-                                   data_dict=None, eval_dict=None, need_group=True, presort=None):
+                                   data_dict=None, eval_dict=None, need_group=True, presort=None, scaler_id=None):
     """
     Load data by firstly converting letor data as libsvm data
     :param in_file:
@@ -754,7 +780,7 @@ def load_letor_data_as_libsvm_data(in_file, split_type=None, data_id=None, min_d
     """
     assert data_id is not None or data_dict is not None
     if data_dict is None:
-        scale_data, scaler_id, scaler_level = get_default_scaler_setting(data_id=data_id)
+        scale_data, scaler_id, scaler_level = get_scaler_setting(data_id=data_id, scaler_id=scaler_id)
         data_dict = dict(data_id=data_id, min_docs=min_docs, min_rele=min_rele, binary_rele=False,
                          unknown_as_zero = False, scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
         data_meta = get_data_meta(data_id=data_id)

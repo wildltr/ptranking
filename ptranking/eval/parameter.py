@@ -8,7 +8,7 @@ import json
 from itertools import product
 
 from ptranking.base.neural_utils import get_sf_str
-from ptranking.data.data_utils import get_default_scaler_setting, get_data_meta, MSLETOR_SEMI
+from ptranking.data.data_utils import get_scaler_setting, get_data_meta, MSLETOR_SEMI
 
 class Parameter(object):
     """

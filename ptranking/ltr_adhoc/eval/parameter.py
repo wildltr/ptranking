@@ -10,7 +10,7 @@ import json
 from itertools import product
 
 from ptranking.base.neural_utils import get_sf_str
-from ptranking.data.data_utils import get_default_scaler_setting, get_data_meta
+from ptranking.data.data_utils import get_scaler_setting, get_data_meta
 
 class Parameter(object):
     """
@@ -172,6 +172,7 @@ class EvalSetting(Parameter):
         else:
             self.use_json = True
             self.json_dict = self.load_para_json(para_json=eval_json)
+            self.dir_output = self.json_dict["dir_output"]
 
     def load_para_json(self, para_json):
         with open(para_json) as json_file:
@@ -284,6 +285,7 @@ class DataSetting(Parameter):
             self.use_json = True
             self.json_dict = self.load_para_json(para_json=data_json)
             self.data_id = self.json_dict["data_id"]
+            self.dir_data = self.json_dict["dir_data"]
 
     def load_para_json(self, para_json):
         with open(para_json) as json_file:
@@ -322,11 +324,12 @@ class DataSetting(Parameter):
         A default setting for data loading
         :return:
         """
+        scaler_id = None
         unknown_as_zero = False # using original labels, e.g., w.r.t. semi-supervised dataset
         binary_rele = False  # using original labels
         train_presort, validation_presort, test_presort = True, True, True
         train_batch_size, validation_batch_size, test_batch_size = 1, 1, 1
-        scale_data, scaler_id, scaler_level = get_default_scaler_setting(data_id=self.data_id)
+        scale_data, scaler_id, scaler_level = get_scaler_setting(data_id=self.data_id, scaler_id=scaler_id)
 
         # more data settings that are rarely changed
         self.data_dict = dict(data_id=self.data_id, dir_data=self.dir_data, min_docs=10, min_rele=1,
@@ -342,6 +345,7 @@ class DataSetting(Parameter):
 
     def grid_search(self):
         if self.use_json:
+            scaler_id = self.json_dict['scaler_id']
             choice_min_docs = self.json_dict['min_docs']
             choice_min_rele = self.json_dict['min_rele']
             choice_binary_rele = self.json_dict['binary_rele']
@@ -352,6 +356,7 @@ class DataSetting(Parameter):
             base_data_dict = dict(data_id=self.data_id, dir_data=self.json_dict["dir_data"], test_presort=True,
                                   validation_presort=True, validation_batch_size=1, test_batch_size=1)
         else:
+            scaler_id = None
             choice_min_docs = [10]
             choice_min_rele = [1]
             choice_binary_rele = [False]
@@ -365,7 +370,8 @@ class DataSetting(Parameter):
         data_meta = get_data_meta(data_id=self.data_id)  # add meta-information
         base_data_dict.update(data_meta)
 
-        choice_scale_data, choice_scaler_id, choice_scaler_level = get_default_scaler_setting(data_id=self.data_id, grid_search=True)
+        choice_scale_data, choice_scaler_id, choice_scaler_level = \
+            get_scaler_setting(data_id=self.data_id, grid_search=True, scaler_id=scaler_id)
 
         for min_docs, min_rele, train_batch_size in product(choice_min_docs, choice_min_rele, choice_train_batch_size):
             threshold_dict = dict(min_docs=min_docs, min_rele=min_rele, train_batch_size=train_batch_size)
@@ -373,8 +379,8 @@ class DataSetting(Parameter):
             for binary_rele, unknown_as_zero, train_presort in product(choice_binary_rele, choice_unknown_as_zero, choice_train_presort):
                 custom_dict = dict(binary_rele=binary_rele, unknown_as_zero=unknown_as_zero, train_presort=train_presort)
 
-                for scale_data, scaler_id, scaler_level in product(choice_scale_data, choice_scaler_id, choice_scaler_level):
-                    scale_dict = dict(scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
+                for scale_data, _scaler_id, scaler_level in product(choice_scale_data, choice_scaler_id, choice_scaler_level):
+                    scale_dict = dict(scale_data=scale_data, scaler_id=_scaler_id, scaler_level=scaler_level)
 
                     self.data_dict = dict()
                     self.data_dict.update(base_data_dict)
