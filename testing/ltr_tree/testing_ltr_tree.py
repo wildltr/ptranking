@@ -37,9 +37,9 @@ if __name__ == '__main__':
     
     """
 
-    debug = False  # in a debug mode, we just check whether the model can operate
+    debug = True  # in a debug mode, we just check whether the model can operate
 
-    config_with_json = True  # specify configuration with json files or not
+    config_with_json = False  # specify configuration with json files or not
 
     evaluator = TreeLTREvaluator()
 
@@ -58,17 +58,19 @@ if __name__ == '__main__':
 
         #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
         #dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
-        dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
+        #dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
         #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/MSLR-WEB30K/'
         #dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008-list/'
+        dir_data = '/Users/iimac/Workbench/Corpus/L2R/LETOR4.0/MQ2008/'
 
         #data_id  = 'Istella_S'
         #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/'
 
         ''' output directory '''
-        dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/'
+        #dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/'
         #dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Cmp_LTR_OptFrames/'
         #dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
+        dir_output = '/Users/iimac/Workbench/CodeBench/Output/NeuralLTR/'
 
         grid_search = False  # with grid_search, we can explore the effects of different hyper-parameters of a model
 

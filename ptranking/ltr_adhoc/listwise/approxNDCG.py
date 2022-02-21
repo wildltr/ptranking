@@ -10,29 +10,29 @@ Journal of Information Retrieval 13, 4 (2010), 375–397.
 import torch
 
 from ptranking.data.data_utils import LABEL_TYPE
-from ptranking.base.ranker import NeuralRanker
+from ptranking.base.adhoc_ranker import AdhocNeuralRanker
 from ptranking.ltr_adhoc.eval.parameter import ModelParameter
-from ptranking.metric.adhoc_metric import torch_dcg_at_k
-from ptranking.base.neural_utils import robust_sigmoid
+from ptranking.metric.adhoc.adhoc_metric import torch_dcg_at_k
+from ptranking.base.utils import robust_sigmoid
 
 
-def get_approx_ranks(input, alpha=10, gpu=False):
+def get_approx_ranks(input, alpha=10, device=None):
     ''' get approximated rank positions: Equation-11 in the paper'''
     batch_pred_diffs = torch.unsqueeze(input, dim=2) - torch.unsqueeze(input, dim=1)  # computing pairwise differences, i.e., Sij or Sxy
 
-    batch_indicators = robust_sigmoid(torch.transpose(batch_pred_diffs, dim0=1, dim1=2), alpha, gpu) # using {-1.0*} may lead to a poor performance when compared with the above way;
+    batch_indicators = robust_sigmoid(torch.transpose(batch_pred_diffs, dim0=1, dim1=2), alpha, device) # using {-1.0*} may lead to a poor performance when compared with the above way;
 
     batch_hat_pis = torch.sum(batch_indicators, dim=2) + 0.5  # get approximated rank positions, i.e., hat_pi(x)
 
     return batch_hat_pis
 
 
-def approxNDCG(batch_preds=None, batch_stds=None, alpha=10, label_type=None, gpu=False):
-    batch_hat_pis = get_approx_ranks(batch_preds, alpha=alpha, gpu=gpu)
+def approxNDCG(batch_preds=None, batch_stds=None, alpha=10, label_type=None, device=None):
+    batch_hat_pis = get_approx_ranks(batch_preds, alpha=alpha, device=device)
 
     ''' since the input standard labels are sorted in advance, thus directly used '''
     # sorted_labels, _ = torch.sort(batch_stds, dim=1, descending=True)  # for optimal ltr_adhoc based on standard labels
-    batch_idcgs = torch_dcg_at_k(batch_sorted_labels=batch_stds, cutoff=None, label_type=label_type)  # ideal dcg given standard labels
+    batch_idcgs = torch_dcg_at_k(batch_sorted_labels=batch_stds, cutoff=None, label_type=label_type, device=device)  # ideal dcg given standard labels
 
     batch_gains = torch.pow(2.0, batch_stds) - 1.0
 
@@ -42,29 +42,29 @@ def approxNDCG(batch_preds=None, batch_stds=None, alpha=10, label_type=None, gpu
     return batch_approx_nDCG
 
 
-def approxNDCG_loss(batch_preds=None, batch_stds=None, alpha=10, label_type=None, gpu=False):
-    batch_hat_pis = get_approx_ranks(batch_preds, alpha=alpha, gpu=gpu)
+def approxNDCG_loss(batch_preds=None, batch_ideal_rankings=None, alpha=10, label_type=None, device=None):
+    batch_hat_pis = get_approx_ranks(batch_preds, alpha=alpha, device=device)
 
     # ideal dcg given optimally ordered labels
-    batch_idcgs = torch_dcg_at_k(batch_sorted_labels=batch_stds, cutoff=None, label_type=label_type, gpu=gpu)
+    batch_idcgs = torch_dcg_at_k(batch_rankings=batch_ideal_rankings, cutoff=None, label_type=label_type, device=device)
 
     if LABEL_TYPE.MultiLabel == label_type:
-        batch_gains = torch.pow(2.0, batch_stds) - 1.0
+        batch_gains = torch.pow(2.0, batch_ideal_rankings) - 1.0
     elif LABEL_TYPE.Permutation == label_type:
-        batch_gains = batch_stds
+        batch_gains = batch_ideal_rankings
     else:
         raise NotImplementedError
 
     batch_dcg = torch.sum(torch.div(batch_gains, torch.log2(batch_hat_pis + 1)), dim=1)
     batch_approx_nDCG = torch.div(batch_dcg, batch_idcgs)
 
-    batch_loss = -torch.mean(batch_approx_nDCG)
+    batch_loss = -torch.sum(batch_approx_nDCG)
     return batch_loss
 
 
 
 
-class ApproxNDCG(NeuralRanker):
+class ApproxNDCG(AdhocNeuralRanker):
     '''
     Tao Qin, Tie-Yan Liu, and Hang Li. 2010.
     A general approximation framework for direct optimization of information retrieval measures.
@@ -75,22 +75,32 @@ class ApproxNDCG(NeuralRanker):
         super(ApproxNDCG, self).__init__(id='ApproxNDCG', sf_para_dict=sf_para_dict, gpu=gpu, device=device)
         self.alpha = model_para_dict['alpha']
 
-    def inner_train(self, batch_preds, batch_stds, **kwargs):
+    def uniform_eval_setting(self, **kwargs):
+        eval_dict = kwargs['eval_dict']
+        if eval_dict["do_validation"] and not eval_dict['vali_metric']=='nDCG':
+            eval_dict['vali_metric'] = "nDCG"
+
+    def custom_loss_function(self, batch_preds, batch_std_labels, **kwargs):
         '''
-        :param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents within a ltr_adhoc
-        :param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ltr_adhoc
-        :return:
+        @param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents associated with the same query
+        @param batch_std_labels: [batch, ranking_size] each row represents the standard relevance grades for documents associated with the same query
+        @param kwargs:
+        @return:
         '''
         label_type = kwargs['label_type']
         assert label_type == LABEL_TYPE.MultiLabel
 
         if 'presort' in kwargs and kwargs['presort']:
-            target_batch_preds, target_batch_stds = batch_preds, batch_stds
+            target_batch_preds, batch_ideal_rankings = batch_preds, batch_std_labels
         else:
-            target_batch_stds, batch_sorted_inds = torch.sort(batch_stds, dim=1, descending=True)
-            target_batch_preds = torch.gather(batch_preds, dim=1, index=batch_sorted_inds)
+            batch_ideal_rankings, batch_ideal_desc_inds = torch.sort(batch_std_labels, dim=1, descending=True)
+            target_batch_preds = torch.gather(batch_preds, dim=1, index=batch_ideal_desc_inds)
 
-        batch_loss = approxNDCG_loss(target_batch_preds, target_batch_stds, self.alpha, label_type=label_type, gpu=self.gpu)
+        '''
+        Given the ideal rankings, the optimization objective is to maximize the approximated nDCG based on differentiable rank positions
+        '''
+        batch_loss = approxNDCG_loss(batch_preds=target_batch_preds, batch_ideal_rankings=batch_ideal_rankings,
+                                     alpha=self.alpha, label_type=label_type, device=self.device)
 
         self.optimizer.zero_grad()
         batch_loss.backward()

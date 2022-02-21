@@ -187,7 +187,7 @@ def get_scaler(scaler_id):
 
     return scaler
 
-def get_scaler_setting(data_id, grid_search=False, scaler_id=None):
+def get_scaler_setting(data_id, scaler_id=None):
     """
     A default scaler-setting for loading a dataset
     :param data_id:
@@ -201,37 +201,20 @@ def get_scaler_setting(data_id, grid_search=False, scaler_id=None):
      --> For Istella! LETOR, the query-level normalization is not conducted yet.
          We note that ISTELLA contains extremely large features, e.g., 1.79769313486e+308, we replace features of this kind with a constant 1000000.
     '''
-    if grid_search:
-        if scaler_id is None:
-            if data_id in MSLRWEB or data_id in ISTELLA_LTR:
-                choice_scale_data = [True]  # True, False
-                choice_scaler_id = ['StandardScaler']  # ['MinMaxScaler', 'RobustScaler', 'StandardScaler']
-                choice_scaler_level = ['QUERY']  # SCALER_LEVEL = ['QUERY', 'DATASET']
-            else:
-                choice_scale_data = [False]
-                choice_scaler_id = [None]
-                choice_scaler_level = [None]
-        else:
-            choice_scale_data = [True]  # True, False
-            choice_scaler_id = [scaler_id]  # ['MinMaxScaler', 'RobustScaler', 'StandardScaler']
-            choice_scaler_level = ['QUERY']  # SCALER_LEVEL = ['QUERY', 'DATASET']
-
-        return choice_scale_data, choice_scaler_id, choice_scaler_level
-    else:
-        if scaler_id is None:
-            if data_id in MSLRWEB or data_id in ISTELLA_LTR:
-                scale_data = True
-                scaler_id = 'StandardScaler'  # ['MinMaxScaler', 'StandardScaler']
-                scaler_level = 'QUERY'  # SCALER_LEVEL = ['QUERY', 'DATASET']
-            else:
-                scale_data = False
-                scaler_id = None
-                scaler_level = None
-        else:
+    if scaler_id is None:
+        if data_id in MSLRWEB or data_id in ISTELLA_LTR:
             scale_data = True
-            scaler_level = 'QUERY'
+            scaler_id = 'StandardScaler'  # ['MinMaxScaler', 'StandardScaler']
+            scaler_level = 'QUERY'  # SCALER_LEVEL = ['QUERY', 'DATASET']
+        else:
+            scale_data = False
+            scaler_id = None
+            scaler_level = None
+    else:
+        scale_data = True
+        scaler_level = 'QUERY'
 
-        return scale_data, scaler_id, scaler_level
+    return scale_data, scaler_id, scaler_level
 
 def get_buffer_file_name(data_id, file, data_dict, presort=None):
     """ Generate the file name """
@@ -569,11 +552,10 @@ def iter_queries(in_file, presort=None, data_dict=None, scale_data=None, scaler_
 
 class LTRDataset(data.Dataset):
     """
-    Loading the specified dataset as data.Dataset, a pytorch format.
+    Loading the specified dataset as torch.utils.data.Dataset.
     We assume that checking the meaningfulness of given loading-setting is conducted beforehand.
     """
-    def __init__(self, split_type, file, data_id=None, data_dict=None, eval_dict=None, batch_size=1, presort=False,
-                 shuffle=False, hot=False, buffer=True):
+    def __init__(self, split_type, file, data_id=None, data_dict=None, eval_dict=None, presort=False, hot=False, buffer=True):
         assert data_id is not None or data_dict is not None
         if data_dict is None: data_dict = self.get_default_data_dict(data_id=data_id)
 
@@ -585,8 +567,6 @@ class LTRDataset(data.Dataset):
         ''' split-specific settings '''
         self.split_type = split_type
         self.presort = presort
-        self.shuffle = shuffle
-        self.batch_size = batch_size
         self.data_id = data_dict['data_id']
 
         if data_dict['data_id'] in MSLETOR or data_dict['data_id'] in MSLRWEB \
@@ -596,16 +576,10 @@ class LTRDataset(data.Dataset):
 
             perquery_file = get_buffer_file_name(data_id=data_id, file=file, data_dict=data_dict, presort=self.presort)
 
-            if self.batch_size>1:
-                if hot:
-                    torch_perquery_file = perquery_file.replace('.np', '_'.join(['Bat', str(self.batch_size), 'Hot', '.torch']))
-                else:
-                    torch_perquery_file = perquery_file.replace('.np', '_'.join(['Bat', str(self.batch_size), '.torch']))
+            if hot:
+                torch_perquery_file = perquery_file.replace('.np', '_Hot.torch')
             else:
-                if hot:
-                    torch_perquery_file = perquery_file.replace('.np', '_Hot.torch')
-                else:
-                    torch_perquery_file = perquery_file.replace('.np', '.torch')
+                torch_perquery_file = perquery_file.replace('.np', '.torch')
 
             if eval_dict is not None:
                 mask_label, mask_ratio, mask_type = eval_dict['mask_label'], eval_dict['mask_ratio'], eval_dict['mask_type']
@@ -630,45 +604,29 @@ class LTRDataset(data.Dataset):
                 for ind in list_inds:
                     qid, doc_reprs, doc_labels = list_Qs[ind]
 
-                    if self.batch_size > 1:
-                        if mask_label: raise NotImplementedError # not supported since it is rarely used.
+                    torch_q_doc_vectors = torch.from_numpy(doc_reprs).type(torch.FloatTensor)
+                    #torch_q_doc_vectors = torch.unsqueeze(torch_q_doc_vectors, dim=0)  # a default batch size of 1
 
-                        list_ranking = []
-                        list_labels = []
-                        for _ in range(self.batch_size):
-                            des_inds = np_arg_shuffle_ties(doc_labels, descending=True)  # sampling by shuffling ties
-                            list_ranking.append(doc_reprs[des_inds])
-                            list_labels.append(doc_labels[des_inds])
+                    torch_std_labels = torch.from_numpy(doc_labels).type(torch.FloatTensor)
+                    #torch_std_labels = torch.unsqueeze(torch_std_labels, dim=0) # a default batch size of 1
 
-                        batch_rankings = np.stack(list_ranking, axis=0)
-                        batch_std_labels = np.stack(list_labels, axis=0)
+                    if mask_label: # masking TODO to be double-checked
+                        if MASK_TYPE[mask_type] == MASK_TYPE.rand_mask_rele:
+                            torch_batch_rankings, torch_batch_std_labels = random_mask_rele_labels(
+                                batch_ranking=torch_batch_rankings, batch_label=torch_batch_std_labels,
+                                mask_ratio=mask_ratio, mask_value=0, presort=self.presort)
 
-                        torch_batch_rankings = torch.from_numpy(batch_rankings).type(torch.FloatTensor)
-                        torch_batch_std_labels = torch.from_numpy(batch_std_labels).type(torch.FloatTensor)
-                    else:
-                        torch_batch_rankings = torch.from_numpy(doc_reprs).type(torch.FloatTensor)
-                        torch_batch_rankings = torch.unsqueeze(torch_batch_rankings, dim=0)  # a consistent batch dimension of size 1
-
-                        torch_batch_std_labels = torch.from_numpy(doc_labels).type(torch.FloatTensor)
-                        torch_batch_std_labels = torch.unsqueeze(torch_batch_std_labels, dim=0)
-
-                        if mask_label: # masking
-                            if MASK_TYPE[mask_type] == MASK_TYPE.rand_mask_rele:
-                                torch_batch_rankings, torch_batch_std_labels = random_mask_rele_labels(
-                                    batch_ranking=torch_batch_rankings, batch_label=torch_batch_std_labels,
-                                    mask_ratio=mask_ratio, mask_value=0, presort=self.presort)
-
-                            elif MASK_TYPE[mask_type] == MASK_TYPE.rand_mask_all:
-                                masked_res = random_mask_all_labels(batch_ranking=torch_batch_rankings,
-                                    batch_label=torch_batch_std_labels, mask_ratio=mask_ratio, mask_value=0,
-                                                                    presort=self.presort)
-                                if masked_res is not None:
-                                    torch_batch_rankings, torch_batch_std_labels = masked_res
-                                else:
-                                    continue
+                        elif MASK_TYPE[mask_type] == MASK_TYPE.rand_mask_all:
+                            masked_res = random_mask_all_labels(batch_ranking=torch_batch_rankings,
+                                batch_label=torch_batch_std_labels, mask_ratio=mask_ratio, mask_value=0,
+                                                                presort=self.presort)
+                            if masked_res is not None:
+                                torch_batch_rankings, torch_batch_std_labels = masked_res
                             else:
-                                raise NotImplementedError
-                    if hot:
+                                continue
+                        else:
+                            raise NotImplementedError
+                    if hot: # TODO to be updated
                         assert mask_label is not True # not supported since it is rarely used.
                         max_rele_level = data_dict['max_rele_level']
                         assert max_rele_level is not None
@@ -678,7 +636,7 @@ class LTRDataset(data.Dataset):
 
                         self.list_torch_Qs.append((qid, torch_batch_rankings, torch_batch_std_labels, torch_batch_std_hot_labels, batch_cnts))
                     else:
-                        self.list_torch_Qs.append((qid, torch_batch_rankings, torch_batch_std_labels))
+                        self.list_torch_Qs.append((qid, torch_q_doc_vectors, torch_std_labels))
                 #buffer
                 #print('Num of q:', len(self.list_torch_Qs))
                 if buffer:
@@ -716,11 +674,187 @@ class LTRDataset(data.Dataset):
 
     def iter_hot(self):
         list_inds = list(range(len(self.list_torch_Qs)))
-        if self.shuffle: random.shuffle(list_inds)
-
         for ind in list_inds:
             qid, torch_batch_rankings, torch_batch_std_labels, torch_batch_std_hot_labels, batch_cnts = self.list_torch_Qs[ind]
             yield qid, torch_batch_rankings, torch_batch_std_labels, torch_batch_std_hot_labels, batch_cnts
+
+## Customize Sampler for Batch Processing ##
+
+def pre_allocate_batch(dict_univ_bin, num_docs_per_batch):
+    '''
+    Based on the expected number of documents to process within a single batch, we merge the queries that have the same number of documents to form a batch
+    @param dict_univ_bin: [unique_value, bin of index]
+    @param num_docs_per_batch:
+    @return:
+    '''
+    list_batch_inds = []
+
+    if 1 == num_docs_per_batch: # a simple but time-consuming per-query processing, namely the batch_size is always one
+        for univ in dict_univ_bin:
+            bin = dict_univ_bin[univ]
+            for index in bin:
+                single_ind_as_batch = [index]
+                list_batch_inds.append(single_ind_as_batch)
+
+        return list_batch_inds
+    else:
+        for univ in dict_univ_bin:
+            bin = dict_univ_bin[univ]
+            bin_length = len(bin)
+
+            if univ * bin_length < num_docs_per_batch: # merge all queries as one batch
+                list_batch_inds.append(bin)
+            else:
+                if univ < num_docs_per_batch: # split with an approximate value
+                    num_inds_per_batch = num_docs_per_batch // univ
+                    for i in range(0, bin_length, num_inds_per_batch):
+                        sub_bin = bin[i: min(i+num_inds_per_batch, bin_length)]
+                        list_batch_inds.append(sub_bin)
+                else: # one single query as a batch
+                    for index in bin:
+                        single_ind_as_batch = [index]
+                        list_batch_inds.append(single_ind_as_batch)
+
+        return list_batch_inds
+
+class LETORSampler(data.Sampler):
+    '''
+    Customized sampler for LETOR datasets based on the observation that:
+    though the number of documents per query may differ, there are many queries that have the same number of documents, especially with a big dataset.
+    '''
+    def __init__(self, data_source, rough_batch_size=None):
+        list_num_docs = []
+        for qid, torch_batch_rankings, torch_batch_std_labels in data_source:
+            list_num_docs.append(torch_batch_std_labels.size(0))
+
+        dict_univ_bin = {}
+        for ind, univ in enumerate(list_num_docs):
+            if univ in dict_univ_bin:
+                dict_univ_bin[univ].append(ind)
+            else:
+                bin = [ind]
+                dict_univ_bin[univ] = bin
+
+        self.list_batch_inds = pre_allocate_batch(dict_univ_bin=dict_univ_bin, num_docs_per_batch=rough_batch_size)
+
+    def __iter__(self):
+        for batch_inds in self.list_batch_inds:
+            yield batch_inds
+
+class LETORPercentSampler(data.Sampler):
+    '''
+    Customized sampler for LETOR datasets
+    '''
+    def __init__(self, data_source, percent=.01):
+        '''
+        @param data_source: dataset to sample from
+        @param percent: the ratio of being used part
+        '''
+        num_queries = data_source.__len__()
+        #print('num_queries', num_queries)
+        num_used_queries = int(num_queries * percent)
+        self.list_used_inds = list(np.random.permutation(num_queries)[0:num_used_queries])
+
+    def __iter__(self):
+        for ind in self.list_used_inds:
+            yield [ind]
+
+## ------ loading data for ltr_gbm ----- ##
+
+class GBMDataset():
+    """
+    Loading the specified dataset as gradient boosting machines.
+    We assume that checking the meaningfulness of given loading-setting is conducted beforehand.
+    """
+    def __init__(self, split_type, file, data_id=None, data_dict=None, eval_dict=None, presort=False, buffer=True):
+        assert data_id is not None or data_dict is not None
+        if data_dict is None: data_dict = self.get_default_data_dict(data_id=data_id)
+
+        ''' data property '''
+        self.label_type = data_dict['label_type']
+
+        ''' split-specific settings '''
+        self.split_type = split_type
+        self.presort = presort
+        self.data_id = data_dict['data_id']
+
+        if data_dict['data_id'] in MSLETOR or data_dict['data_id'] in MSLRWEB \
+                or data_dict['data_id'] in YAHOO_LTR or data_dict['data_id'] in YAHOO_LTR_5Fold \
+                or data_dict['data_id'] in ISTELLA_LTR \
+                or data_dict['data_id'] == 'IRGAN_MQ2008_Semi': # supported datasets
+
+            perquery_file = get_buffer_file_name(data_id=data_id, file=file, data_dict=data_dict, presort=self.presort)
+
+            if eval_dict is not None:
+                mask_label, mask_ratio, mask_type = eval_dict['mask_label'], eval_dict['mask_ratio'], eval_dict['mask_type']
+                if mask_label:
+                    mask_label_str = '_'.join([mask_type, 'Ratio', '{:,g}'.format(mask_ratio)])
+            else:
+                mask_label = False
+
+            self.list_torch_Qs = []
+
+            scale_data = data_dict['scale_data']
+            scaler_id = data_dict['scaler_id'] if 'scaler_id' in data_dict else None
+            list_Qs = iter_queries(in_file=file, presort=self.presort, data_dict=data_dict, scale_data=scale_data,
+                                   scaler_id=scaler_id, perquery_file=perquery_file, buffer=buffer)
+
+            num_queries, num_all_docs, num_features = len(list_Qs), 0, data_dict['num_features']
+            for _, _, doc_labels in list_Qs:
+                ranking_size = len(doc_labels)
+                num_all_docs += ranking_size
+
+            self.group = np.empty((num_queries,))
+            self.target = np.empty((num_all_docs,))
+            self.data = np.empty((num_all_docs, num_features))
+            head = 0
+            for i, entry in enumerate(list_Qs):
+                qid, doc_reprs, doc_labels = entry
+                if mask_label: # masking TODO to be added
+                    '''
+                    if MASK_TYPE[mask_type] == MASK_TYPE.rand_mask_rele:
+                        torch_batch_rankings, torch_batch_std_labels = random_mask_rele_labels(
+                            batch_ranking=torch_batch_rankings, batch_label=torch_batch_std_labels,
+                            mask_ratio=mask_ratio, mask_value=0, presort=self.presort)
+                    elif MASK_TYPE[mask_type] == MASK_TYPE.rand_mask_all:
+                        masked_res = random_mask_all_labels(batch_ranking=torch_batch_rankings,
+                            batch_label=torch_batch_std_labels, mask_ratio=mask_ratio, mask_value=0, presort=self.presort)
+                        if masked_res is not None:
+                            torch_batch_rankings, torch_batch_std_labels = masked_res
+                        else:
+                            continue
+                    else:
+                        raise NotImplementedError
+                    '''
+                ranking_size = len(doc_labels)
+                tail = head + ranking_size
+                self.group[i] = ranking_size
+                self.data[head:tail, :] = doc_reprs
+                self.target[head:tail] = doc_labels
+                head = tail
+        else:
+            raise NotImplementedError
+
+    def get_default_data_dict(self, data_id, scaler_id=None):
+        ''' a default setting for loading a dataset '''
+        min_docs = 1
+        min_rele = 1 # with -1, it means that we don't care with dumb queries that has no relevant documents. Say, for checking the statistics of an original dataset
+        scale_data, scaler_id, scaler_level = get_scaler_setting(data_id=data_id, scaler_id=scaler_id)
+
+        train_presort = False if data_id in MSLETOR_SEMI else True
+
+        data_dict = dict(data_id=data_id, min_docs=min_docs, min_rele=min_rele, binary_rele=False,unknown_as_zero=False,
+                         train_presort=train_presort, validation_presort=True, test_presort=True,
+                         train_batch_size=1, validation_batch_size=1, test_batch_size=1,
+                         scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
+
+        data_meta = get_data_meta(data_id=data_id)
+        data_dict.update(data_meta)
+
+        return data_dict
+
+    def get_data(self):
+        return (self.data, self.target, self.group)
 
 ## ------ loading letor data as libsvm data ----- ##
 

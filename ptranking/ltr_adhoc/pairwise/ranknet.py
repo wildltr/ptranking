@@ -9,10 +9,11 @@ Learning to rank using gradient descent. In Proceedings of the 22nd ICML. 89–9
 import torch
 import torch.nn.functional as F
 
-from ptranking.base.ranker import NeuralRanker
+from ptranking.base.adhoc_ranker import AdhocNeuralRanker
 from ptranking.ltr_adhoc.eval.parameter import ModelParameter
+from ptranking.ltr_adhoc.util.lambda_utils import get_pairwise_comp_probs
 
-class RankNet(NeuralRanker):
+class RankNet(AdhocNeuralRanker):
     '''
     Chris Burges, Tal Shaked, Erin Renshaw, Ari Lazier, Matt Deeds, Nicole Hamilton, and Greg Hullender. 2005.
     Learning to rank using gradient descent. In Proceedings of the 22nd ICML. 89–96.
@@ -21,21 +22,18 @@ class RankNet(NeuralRanker):
         super(RankNet, self).__init__(id='RankNet', sf_para_dict=sf_para_dict, gpu=gpu, device=device)
         self.sigma = model_para_dict['sigma']
 
-    def inner_train(self, batch_pred, batch_label, **kwargs):
+    def custom_loss_function(self, batch_preds, batch_std_labels, **kwargs):
         '''
-        :param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents within a ltr_adhoc
-        :param batch_label:  [batch, ranking_size] each row represents the standard relevance grades for documents within a ltr_adhoc
-        :return:
+        @param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents associated with the same query
+        @param batch_std_labels: [batch, ranking_size] each row represents the standard relevance grades for documents associated with the same query
+        @param kwargs:
+        @return:
         '''
-        batch_s_ij = torch.unsqueeze(batch_pred, dim=2) - torch.unsqueeze(batch_pred, dim=1)  # computing pairwise differences w.r.t. predictions, i.e., s_i - s_j
-        batch_p_ij = 1.0 / (torch.exp(-self.sigma * batch_s_ij) + 1.0)
-
-        batch_std_diffs = torch.unsqueeze(batch_label, dim=2) - torch.unsqueeze(batch_label, dim=1)  # computing pairwise differences w.r.t. standard labels, i.e., S_{ij}
-        batch_Sij = torch.clamp(batch_std_diffs, min=-1.0, max=1.0)  # ensuring S_{ij} \in {-1, 0, 1}
-        batch_std_p_ij = 0.5 * (1.0 + batch_Sij)
-
-        # about reduction, both mean & sum would work, mean seems straightforward due to the fact that the number of pairs differs from query to query
-        batch_loss = F.binary_cross_entropy(input=torch.triu(batch_p_ij, diagonal=1), target=torch.triu(batch_std_p_ij, diagonal=1), reduction='mean')
+        batch_p_ij, batch_std_p_ij = get_pairwise_comp_probs(batch_preds=batch_preds, batch_std_labels=batch_std_labels,
+                                                             sigma=self.sigma)
+        _batch_loss = F.binary_cross_entropy(input=torch.triu(batch_p_ij, diagonal=1),
+                                             target=torch.triu(batch_std_p_ij, diagonal=1), reduction='none')
+        batch_loss = torch.sum(torch.sum(_batch_loss, dim=(2, 1)))
 
         self.optimizer.zero_grad()
         batch_loss.backward()

@@ -23,22 +23,20 @@ tor_zero = tensor([0.0])
 # todo support GPU
 # todo dubble check the case of including '-1'
 
-def get_weighted_clipped_pos_diffs(sorted_std_labels):
-    #num_pos = torch.nonzero(sorted_std_labels).size(0)
-    #print('sorted_std_labels', sorted_std_labels)
-    num_pos = torch.gt(sorted_std_labels, 0).nonzero().size(0) # supporting the case of including '-1'
-
-    #total_items = sorted_std_labels.size(0)
-    total_items = torch.ge(sorted_std_labels, 0).nonzero().size(0)
-
+def get_weighted_clipped_pos_diffs(qid, sorted_std_labels, global_buffer=None):
+    '''
+    Get total true pairs based on explicit labels.
+    In particular, the difference values are discounted based on positions.
+    '''
+    num_pos, num_explicit, num_neg_unk, num_unk, num_unique_labels = global_buffer[qid]
     mat_diffs = torch.unsqueeze(sorted_std_labels, dim=1) - torch.unsqueeze(sorted_std_labels, dim=0)
     pos_diffs = torch.where(mat_diffs < 0, tor_zero, mat_diffs)
-    clipped_pos_diffs = pos_diffs[0:num_pos, 0:total_items]
-    #print('clipped_pos_diffs', clipped_pos_diffs)
 
-    total_true_pairs = torch.nonzero(clipped_pos_diffs).size(0)
+    clipped_pos_diffs = pos_diffs[0:num_pos, 0:num_explicit]
 
-    r_discounts = torch.arange(total_items).type(tensor)
+    total_true_pairs = torch.nonzero(clipped_pos_diffs, as_tuple=False).size(0)
+
+    r_discounts = torch.arange(num_explicit).type(tensor)
     r_discounts = torch.log2(2.0 + r_discounts)
     r_discounts = torch.unsqueeze(r_discounts, dim=0)
 
@@ -49,41 +47,33 @@ def get_weighted_clipped_pos_diffs(sorted_std_labels):
     weighted_clipped_pos_diffs = clipped_pos_diffs / r_discounts
     weighted_clipped_pos_diffs = weighted_clipped_pos_diffs / c_discounts
 
-    #print(weighted_clipped_pos_diffs)
-
-    return weighted_clipped_pos_diffs, total_true_pairs, total_items
+    return weighted_clipped_pos_diffs, total_true_pairs, num_explicit
 
 
-def generate_true_pairs(sorted_std_labels, num_pairs, qid, dict_weighted_clipped_pos_diffs=None):
-    if dict_weighted_clipped_pos_diffs is not None and qid in dict_weighted_clipped_pos_diffs:
-        weighted_clipped_pos_diffs, total_true_pairs, total_items = dict_weighted_clipped_pos_diffs[qid]
-        #k = min(num_pairs, total_true_pairs)
-        if total_true_pairs <= num_pairs:
-            res = torch.multinomial(weighted_clipped_pos_diffs.view(1, -1), num_pairs, replacement=True)
-        else:
-            res = torch.multinomial(weighted_clipped_pos_diffs.view(1, -1), num_pairs, replacement=False)
-
-        head_inds = res / total_items
-        tail_inds = res % total_items
-        return head_inds, tail_inds
-
-    else:
-        weighted_clipped_pos_diffs, total_true_pairs, total_items = get_weighted_clipped_pos_diffs(sorted_std_labels)
-        #buffer
-        if dict_weighted_clipped_pos_diffs is not None:
-            dict_weighted_clipped_pos_diffs[qid] = weighted_clipped_pos_diffs, total_true_pairs, total_items
-
-        if total_true_pairs <= num_pairs:
-            #print('weighted_clipped_pos_diffs', weighted_clipped_pos_diffs)
-            res = torch.multinomial(weighted_clipped_pos_diffs.view(1, -1), num_pairs, replacement=True)
-        else:
-            res = torch.multinomial(weighted_clipped_pos_diffs.view(1, -1), num_pairs, replacement=False)
-
+def generate_true_pairs(qid, sorted_std_labels, num_pairs, dict_diff=None, global_buffer=None):
+    assert dict_diff is not None
+    if qid in dict_diff:
+        weighted_clipped_pos_diffs, total_true_pairs, total_items = dict_diff[qid]
+        #valid_num = min(num_pairs, total_true_pairs)
+        res = torch.multinomial(weighted_clipped_pos_diffs.view(1, -1), num_pairs, replacement=True)
         res = torch.squeeze(res)
 
-        head_inds = res / total_items
+        #head_inds = res // total_items
+        head_inds = torch.div(res, total_items, rounding_mode='floor') # Equivalent to the // operator
         tail_inds = res % total_items
+        return head_inds, tail_inds
+    else:
+        weighted_clipped_pos_diffs, total_true_pairs, total_items = get_weighted_clipped_pos_diffs(qid=qid,
+                                                    sorted_std_labels=sorted_std_labels, global_buffer=global_buffer)
+        dict_diff[qid] = weighted_clipped_pos_diffs, total_true_pairs, total_items
 
+        #valid_num = min(num_pairs, total_true_pairs)
+        res = torch.multinomial(weighted_clipped_pos_diffs.view(1, -1), num_pairs, replacement=True)
+        res = torch.squeeze(res)
+
+        #head_inds = res // total_items
+        head_inds = torch.div(res, total_items, rounding_mode='floor')
+        tail_inds = res % total_items
         return head_inds, tail_inds
 
 def sample_pairs_gaussian(point_vals=None, num_pairs=None, sigma=None):
@@ -122,14 +112,11 @@ def sample_points_Bernoulli(mat_probs, num_pairs):
     total_items = mat_probs.size(0)
     B = tdist.Binomial(1, mat_probs.view(1, -1))
     b_res = B.sample()
-    num_unique_pairs = torch.nonzero(b_res).size(0)
-    if num_unique_pairs < num_pairs:
-        res = torch.multinomial(b_res, num_pairs, replacement=True)
-    else:
-        res = torch.multinomial(b_res, num_pairs, replacement=False)
 
+    res = torch.multinomial(b_res, num_pairs, replacement=True)
     res = torch.squeeze(res)
-    head_inds = res / total_items
+    #head_inds = res // total_items
+    head_inds = torch.div(res, total_items, rounding_mode='floor')
     tail_inds = res % total_items
 
     return head_inds, tail_inds

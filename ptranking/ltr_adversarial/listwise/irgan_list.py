@@ -32,8 +32,8 @@ class IRGAN_List(AdversarialMachine):
 
         # todo support all setting based Nan checking
         d_sf_para_dict = copy.deepcopy(g_sf_para_dict)
-        d_sf_para_dict['ffnns']['apply_tl_af'] = True
-        d_sf_para_dict['ffnns']['TL_AF'] = 'S'
+        d_sf_para_dict[sf_para_dict['sf_id']]['apply_tl_af'] = True
+        d_sf_para_dict[sf_para_dict['sf_id']]['TL_AF'] = 'S'
 
         self.generator = List_Generator(sf_para_dict=g_sf_para_dict, gpu=gpu, device=device)
         self.discriminator = List_Discriminator(sf_para_dict=d_sf_para_dict, gpu=gpu, device=device)
@@ -67,7 +67,7 @@ class IRGAN_List(AdversarialMachine):
                 qid, batch_ranking = entry[0], entry[1]
                 if self.gpu: batch_ranking = batch_ranking.to(self.device)
 
-                g_batch_pred = self.super_generator.predict(batch_ranking, train=True)
+                g_batch_pred = self.super_generator.predict(batch_ranking)
                 g_batch_log_ranking = log_ranking_prob_Plackett_Luce(g_batch_pred)
                 g_loss = -torch.mean(g_batch_log_ranking)
 
@@ -79,7 +79,7 @@ class IRGAN_List(AdversarialMachine):
                 g_loss.backward()
                 self.super_generator.optimizer.step()
 
-                d_batch_pred = self.super_discriminator.predict(batch_ranking, train=True)
+                d_batch_pred = self.super_discriminator.predict(batch_ranking)
 
                 if self.PL_discriminator:
                     d_batch_ranking_prob = log_ranking_prob_Plackett_Luce(d_batch_pred)
@@ -98,7 +98,7 @@ class IRGAN_List(AdversarialMachine):
 
     def fill_global_buffer(self, train_data, dict_buffer=None):
         """ for listwise, no particular global information is required """
-        assert train_data.presort is True
+        assert self.data_dict['train_presort'] is True
 
     def mini_max_train(self, train_data=None, generator=None, discriminator=None, global_buffer=None, per_query_ad_training=True):
         if per_query_ad_training:
@@ -134,6 +134,12 @@ class IRGAN_List(AdversarialMachine):
 
             if ad_training_order == 'DG':
                 # optimising discriminator
+                discriminator.train_mode()
+                if self.optimal_train:
+                    self.super_generator.eval_mode()
+                else:
+                    generator.eval_mode()
+
                 for d_epoch in range(per_query_d_epoch):
                     if d_epoch % g_mod == 0: # update generated data
                         if self.optimal_train:
@@ -154,6 +160,12 @@ class IRGAN_List(AdversarialMachine):
                                                  batch_gen_sample_ranking=batch_gen_sample_ranking,
                                                  replace_trick_4_discriminator=replace_trick_4_discriminator)
                 # optimising generator
+                generator.train_mode()
+                if self.optimal_train:
+                    self.super_discriminator.eval_mode()
+                else:
+                    discriminator.eval_mode()
+
                 for _ in range(per_query_g_epoch):
                     if self.optimal_train:
                         self.train_generator(batch_ranking=batch_ranking, generator=generator,
@@ -168,6 +180,12 @@ class IRGAN_List(AdversarialMachine):
                             drop_discriminator_log_4_reward=drop_discriminator_log_4_reward, temperature=temperature)
             else:
                 # optimising generator
+                generator.train_mode()
+                if self.optimal_train:
+                    self.super_discriminator.eval_mode()
+                else:
+                    discriminator.eval_mode()
+
                 if self.optimal_train:
                     for _ in range(per_query_g_epoch):
                         self.train_generator(batch_ranking=batch_ranking, generator=generator,
@@ -183,6 +201,12 @@ class IRGAN_List(AdversarialMachine):
                                              replace_trick_4_generator=replace_trick_4_generator,
                                              drop_discriminator_log_4_reward=drop_discriminator_log_4_reward)
                 # optimising discriminator
+                discriminator.train_mode()
+                if self.optimal_train:
+                    self.super_generator.eval_mode()
+                else:
+                    generator.eval_mode()
+
                 for d_epoch in range(per_query_d_epoch):
                     if d_epoch % g_mod == 0:
                         if self.optimal_train:
@@ -290,8 +314,8 @@ class IRGAN_List(AdversarialMachine):
 
     def train_discriminator(self, discriminator, batch_std_sample_ranking=None, batch_gen_sample_ranking=None, PL_discriminator=None, replace_trick_4_discriminator=None):
 
-        d_batch_preds_4_std = discriminator.predict(batch_std_sample_ranking, train=True)
-        d_batch_preds_4_gen = discriminator.predict(batch_gen_sample_ranking, train=True)
+        d_batch_preds_4_std = discriminator.predict(batch_std_sample_ranking)
+        d_batch_preds_4_gen = discriminator.predict(batch_gen_sample_ranking)
 
         # debugging
         # discriminator.stop_training(d_batch_preds_4_std)
@@ -322,7 +346,7 @@ class IRGAN_List(AdversarialMachine):
                         drop_discriminator_log_4_reward=None, temperature=None):
         # todo the variance issue really maters !
         # note that the ranking_size should be consistent between generator and discriminator
-        reward_d_preds_4_gen = discriminator.predict(batch_ranking, train=False)
+        reward_d_preds_4_gen = discriminator.predict(batch_ranking)
 
         if top_k is None:
             sorted_batch_gen_stochastic_probs, batch_gen_sto_sorted_inds = self.per_query_generation(
@@ -372,10 +396,10 @@ class IRGAN_List(AdversarialMachine):
 
 
     def reset_generator(self):
-        self.generator.reset_parameters()
+        self.generator.init()
 
     def reset_discriminator(self):
-        self.discriminator.reset_parameters()
+        self.discriminator.init()
 
     def get_generator(self, super=False):
         #print('super', super)

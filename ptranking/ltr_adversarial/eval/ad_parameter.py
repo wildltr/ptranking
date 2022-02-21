@@ -15,48 +15,27 @@ from ptranking.data.data_utils import get_scaler_setting, MSLETOR_SEMI, get_data
 
 class AdScoringFunctionParameter(ScoringFunctionParameter):
 	"""  """
-	def __init__(self, debug=False, data_dict=None, sf_json=None):
-		super(AdScoringFunctionParameter, self).__init__(debug=debug, data_dict=data_dict, sf_json=sf_json)
+	def __init__(self, debug=False, sf_id=None, sf_json=None):
+		super(AdScoringFunctionParameter, self).__init__(debug=debug, sf_id=sf_id, sf_json=sf_json)
 
-	def default_para_dict(self):
+	def default_pointsf_para_dict(self):
 		"""
 		A default setting of the hyper-parameters of the stump neural scoring function for adversarial ltr.
 		"""
-		ffnns_para_dict = dict(num_layers=5, HD_AF='R', HN_AF='R', TL_AF='S', apply_tl_af=True, BN=False, RD=False,
-							   FBN=False) # FBN = True leads to error like batchnorm.py"
-		sf_para_dict = dict()
-		sf_para_dict['id'] = 'ffnns'
-		sf_para_dict['ffnns'] = ffnns_para_dict
+		self.sf_para_dict = dict()
+		self.sf_para_dict['sf_id'] = self.sf_id
+		self.sf_para_dict['opt'] = 'Adam'  # Adam | RMS | Adagrad
+		self.sf_para_dict['lr'] = 0.001  # learning rate
 
-		self.sf_para_dict=sf_para_dict
+		pointsf_para_dict = dict(num_layers=5, AF='R', TL_AF='R', apply_tl_af=True,
+								 BN=False, bn_type='BN', bn_affine=True)
+		self.sf_para_dict[self.sf_id] = pointsf_para_dict
+
 		return self.sf_para_dict
 
-	def grid_search(self):
-		"""
-		Iterator of settinging of the hyper-parameters of the stump neural scoring function for adversarial ltr
-		"""
-		if self.use_json:
-			choice_BN = self.json_dict['BN']
-			choice_RD = self.json_dict['RD']
-			choice_layers = self.json_dict['layers']
-			choice_apply_tl_af = self.json_dict['apply_tl_af']
-			choice_hd_hn_tl_af = self.json_dict['hd_hn_tl_af']
-		else:
-			choice_BN = [False] if self.debug else [False]  # True, False
-			choice_RD = [False] if self.debug else [False]  # True, False
-			choice_layers = [3] if self.debug else [5]  # 1, 2, 3, 4
-			choice_hd_hn_tl_af = ['S'] if self.debug else ['S']
-			choice_apply_tl_af = [True]  # True, False
-
-		for BN, RD, num_layers, af, apply_tl_af in product(
-				choice_BN, choice_RD, choice_layers, choice_hd_hn_tl_af, choice_apply_tl_af):
-			ffnns_para_dict = dict(
-				FBN=False, BN=BN, RD=RD, num_layers=num_layers, HD_AF=af, HN_AF=af, TL_AF=af, apply_tl_af=apply_tl_af)
-			sf_para_dict = dict()
-			sf_para_dict['id'] = 'ffnns'
-			sf_para_dict['ffnns'] = ffnns_para_dict
-			self.sf_para_dict = sf_para_dict
-			yield sf_para_dict
+	def default_listsf_para_dict(self):
+		''' Not supported due to the inherent sampling mechanism '''
+		return NotImplementedError
 
 
 class AdEvalSetting(EvalSetting):
@@ -97,8 +76,8 @@ class AdEvalSetting(EvalSetting):
 		"""
 		do_log = False if self.debug else True
 		do_validation, do_summary = True, False
-		log_step = 2
-		epochs = 50
+		log_step = 1
+		epochs = 10 if self.debug else 50
 		vali_k = 5
 
 		'''on the usage of mask_label
@@ -145,7 +124,7 @@ class AdEvalSetting(EvalSetting):
 			do_validation = False if self.debug else True  # True, False
 			vali_k, cutoffs = 5, [1, 3, 5, 10, 20, 50]
 			do_log = False if self.debug else True
-			log_step = 2
+			log_step = 1
 			do_summary, loss_guided = False, False
 
 			mask_label = False if self.debug else False
@@ -188,14 +167,14 @@ class AdDataSetting(DataSetting):
 		s1, s2 = (':', '\n') if log else ('_', '_')
 
 		data_id, binary_rele = data_dict['data_id'], data_dict['binary_rele']
-		min_docs, min_rele, train_batch_size, train_presort = data_dict['min_docs'], data_dict['min_rele'],\
-													data_dict['train_batch_size'], data_dict['train_presort']
+		min_docs, min_rele, train_rough_batch_size, train_presort = data_dict['min_docs'], data_dict['min_rele'],\
+													data_dict['train_rough_batch_size'], data_dict['train_presort']
 
 		setting_string = s2.join([s1.join(['data_id', data_id]),
 							s1.join(['min_docs', str(min_docs)]),
 							s1.join(['min_rele', str(min_rele)]),
-							s1.join(['TrBat', str(train_batch_size)])]) if log \
-			else s1.join([data_id, 'MiD', str(min_docs), 'MiR', str(min_rele), 'TrBat', str(train_batch_size)])
+							s1.join(['TrBat', str(train_rough_batch_size)])]) if log \
+			else s1.join([data_id, 'MiD', str(min_docs), 'MiR', str(min_rele), 'TrBat', str(train_rough_batch_size)])
 
 		if train_presort:
 			tr_presort_str = s1.join(['train_presort', str(train_presort)]) if log else 'TrPresort'
@@ -211,22 +190,22 @@ class AdDataSetting(DataSetting):
 		"""
 		A default setting for data loading when performing adversarial ltr
 		"""
-		scaler_id = None
 		unknown_as_zero = False
 		binary_rele = False  # using the original values
 		train_presort, validation_presort, test_presort = True, True, True
-		train_batch_size, validation_batch_size, test_batch_size = 1, 1, 1
-
-		scale_data, scaler_id, scaler_level = get_scaler_setting(data_id=self.data_id, scaler_id=scaler_id)
+		train_rough_batch_size, validation_rough_batch_size, test_rough_batch_size = 1, 100, 100
+		scale_data, scaler_id, scaler_level = get_scaler_setting(data_id=self.data_id)
 
 		# more data settings that are rarely changed
 		self.data_dict = dict(data_id=self.data_id, dir_data=self.dir_data, min_docs=10, min_rele=1,
 				unknown_as_zero=unknown_as_zero, binary_rele=binary_rele, train_presort=train_presort,
-				validation_presort=validation_presort, test_presort=test_presort, train_batch_size=train_batch_size,
-				validation_batch_size=validation_batch_size, test_batch_size=test_batch_size,
-							  scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
+				validation_presort=validation_presort, test_presort=test_presort,
+			    train_rough_batch_size=train_rough_batch_size, validation_rough_batch_size=validation_rough_batch_size,
+			    test_rough_batch_size=test_rough_batch_size,
+			    scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
 
 		data_meta = get_data_meta(data_id=self.data_id)  # add meta-information
+		if self.debug: data_meta['fold_num'] = 2
 		self.data_dict.update(data_meta)
 
 		return self.data_dict
@@ -241,42 +220,34 @@ class AdDataSetting(DataSetting):
 			choice_min_rele = self.json_dict['min_rele']
 			choice_binary_rele = self.json_dict['binary_rele']
 			choice_unknown_as_zero = self.json_dict['unknown_as_zero']
-			choice_train_presort = self.json_dict['train_presort']
-			choice_train_batch_size = self.json_dict['train_batch_size']
-			base_data_dict = dict(data_id=self.data_id, dir_data=self.json_dict["dir_data"], test_presort=True,
-								  validation_presort=True, validation_batch_size=1, test_batch_size=1)
+			base_data_dict = dict(data_id=self.data_id, dir_data=self.json_dict["dir_data"],
+								  train_presort=True, test_presort=True, validation_presort=True,
+								  train_rough_batch_size=1, validation_rough_batch_size=100, test_rough_batch_size=100)
 		else:
 			scaler_id = None
 			choice_min_docs = [10]
 			choice_min_rele = [1]
 			choice_binary_rele = [False]
 			choice_unknown_as_zero = [False]
-			choice_train_presort = [True]
-			choice_train_batch_size = [1]  # number of sample rankings per query
-
-			base_data_dict = dict(data_id=self.data_id, dir_data=self.dir_data, test_presort=True,
-                                  validation_presort=True, validation_batch_size=1, test_batch_size=1)
+			base_data_dict = dict(data_id=self.data_id, dir_data=self.dir_data,
+								  train_presort=True, test_presort=True, validation_presort=True,
+								  train_rough_batch_size=1, validation_rough_batch_size=100, test_rough_batch_size=100)
 
 		data_meta = get_data_meta(data_id=self.data_id)  # add meta-information
 		base_data_dict.update(data_meta)
 
-		choice_scale_data, choice_scaler_id, choice_scaler_level = \
-			get_scaler_setting(data_id=self.data_id, grid_search=True, scaler_id=scaler_id)
+		scale_data, scaler_id, scaler_level = get_scaler_setting(data_id=self.data_id, scaler_id=scaler_id)
 
-		for min_docs, min_rele, train_batch_size in product(choice_min_docs, choice_min_rele, choice_train_batch_size):
-			threshold_dict = dict(min_docs=min_docs, min_rele=min_rele, train_batch_size=train_batch_size)
+		for min_docs, min_rele in product(choice_min_docs, choice_min_rele):
+			threshold_dict = dict(min_docs=min_docs, min_rele=min_rele)
 
-			for binary_rele, unknown_as_zero, train_presort in product(choice_binary_rele, choice_unknown_as_zero,
-																	   choice_train_presort):
-				custom_dict = dict(binary_rele=binary_rele, unknown_as_zero=unknown_as_zero, train_presort=train_presort)
+			for binary_rele, unknown_as_zero in product(choice_binary_rele, choice_unknown_as_zero):
+				custom_dict = dict(binary_rele=binary_rele, unknown_as_zero=unknown_as_zero)
+				scale_dict = dict(scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
 
-				for scale_data, scaler_id, scaler_level in product(choice_scale_data, choice_scaler_id,
-																   choice_scaler_level):
-					scale_dict = dict(scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
-
-					self.data_dict = dict()
-					self.data_dict.update(base_data_dict)
-					self.data_dict.update(threshold_dict)
-					self.data_dict.update(custom_dict)
-					self.data_dict.update(scale_dict)
-					yield self.data_dict
+				self.data_dict = dict()
+				self.data_dict.update(base_data_dict)
+				self.data_dict.update(threshold_dict)
+				self.data_dict.update(custom_dict)
+				self.data_dict.update(scale_dict)
+				yield self.data_dict

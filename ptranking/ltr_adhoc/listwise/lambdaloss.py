@@ -18,9 +18,9 @@ import torch
 from itertools import product
 
 from ptranking.data.data_utils import LABEL_TYPE
-from ptranking.base.ranker import NeuralRanker
+from ptranking.base.adhoc_ranker import AdhocNeuralRanker
 from ptranking.ltr_adhoc.eval.parameter import ModelParameter
-from ptranking.metric.adhoc_metric import torch_dcg_at_k
+from ptranking.metric.adhoc.adhoc_metric import torch_dcg_at_k
 from ptranking.ltr_global import epsilon
 
 LAMBDALOSS_TYPE = ['NDCG_Loss1', 'NDCG_Loss2', 'NDCG_Loss2++'] # todo add 'ARP_Loss1', 'ARP_Loss2',
@@ -58,7 +58,7 @@ def ndcg_loss2plusplus_power_weights(batch_n_gains=None, discounts=None, mu=5., 
     return power_weights
 
 
-class LambdaLoss(NeuralRanker):
+class LambdaLoss(AdhocNeuralRanker):
     '''
     author = {Wang, Xuanhui and Li, Cheng and Golbandi, Nadav and Bendersky, Michael and Najork, Marc},
     title = {The LambdaLoss Framework for Ranking Metric Optimization},
@@ -70,35 +70,36 @@ class LambdaLoss(NeuralRanker):
         self.k, self.sigma, self.loss_type = model_para_dict['k'], model_para_dict['sigma'], model_para_dict['loss_type']
         if 'NDCG_Loss2++' == self.loss_type: self.mu = model_para_dict['mu']
 
-    def inner_train(self, batch_preds, batch_stds, **kwargs):
+    def custom_loss_function(self, batch_preds, batch_std_labels, **kwargs):
         '''
-        per-query training process
-        :param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents within a ltr_adhoc
-        :param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ltr_adhoc
-        :return:
+        @param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents associated with the same query
+        @param batch_std_labels: [batch, ranking_size] each row represents the standard relevance grades for documents associated with the same query
+        @param kwargs:
+        @return:
         '''
         label_type = kwargs['label_type']
         assert label_type == LABEL_TYPE.MultiLabel
 
         if 'presort' in kwargs and kwargs['presort']:
-            target_batch_preds, target_batch_stds = batch_preds, batch_stds
+            target_batch_preds, batch_ideal_rankings = batch_preds, batch_std_labels
         else:
-            target_batch_stds, batch_sorted_inds = torch.sort(batch_stds, dim=1, descending=True)
-            target_batch_preds = torch.gather(batch_preds, dim=1, index=batch_sorted_inds)
+            batch_ideal_rankings, batch_ideal_desc_inds = torch.sort(batch_std_labels, dim=1, descending=True)
+            target_batch_preds = torch.gather(batch_preds, dim=1, index=batch_ideal_desc_inds)
 
-        batch_preds_sorted, batch_preds_sorted_inds = torch.sort(target_batch_preds, dim=1, descending=True)  # sort documents according to the predicted relevance
-        batch_stds_sorted_via_preds = torch.gather(target_batch_stds, dim=1, index=batch_preds_sorted_inds)  # reorder batch_stds correspondingly so as to make it consistent. BTW, batch_stds[batch_preds_sorted_inds] only works with 1-D tensor
+        batch_descending_preds, batch_pred_desc_inds = torch.sort(target_batch_preds, dim=1, descending=True)  # sort documents according to the predicted relevance
+        batch_predict_rankings = torch.gather(batch_ideal_rankings, dim=1, index=batch_pred_desc_inds)  # reorder batch_stds correspondingly so as to make it consistent. BTW, batch_stds[batch_preds_sorted_inds] only works with 1-D tensor
 
-        batch_std_ranks = torch.arange(target_batch_preds.size(1)).type(torch.cuda.FloatTensor) if self.gpu else torch.arange(target_batch_preds.size(1)).type(torch.FloatTensor)
+        #batch_std_ranks = torch.arange(target_batch_preds.size(1)).type(torch.cuda.FloatTensor) if self.gpu else torch.arange(target_batch_preds.size(1)).type(torch.FloatTensor)
+        batch_std_ranks = torch.arange(target_batch_preds.size(1), dtype=torch.float, device=self.device)
         dists_1D = 1.0 / torch.log2(batch_std_ranks + 2.0)  # discount co-efficients
 
         # ideal dcg values based on optimal order
-        batch_idcgs = torch_dcg_at_k(batch_sorted_labels=target_batch_stds, gpu=self.gpu)
+        batch_idcgs = torch_dcg_at_k(batch_rankings=batch_ideal_rankings, device=self.device)
 
         if label_type == LABEL_TYPE.MultiLabel:
-            batch_gains = torch.pow(2.0, batch_stds_sorted_via_preds) - 1.0
+            batch_gains = torch.pow(2.0, batch_predict_rankings) - 1.0
         elif label_type == LABEL_TYPE.Permutation:
-            batch_gains = batch_stds_sorted_via_preds
+            batch_gains = batch_predict_rankings
         else:
             raise NotImplementedError
 
@@ -111,7 +112,7 @@ class LambdaLoss(NeuralRanker):
         elif 'NDCG_Loss2++' == self.loss_type:
             power_weights = ndcg_loss2plusplus_power_weights(batch_n_gains=batch_n_gains, discounts=dists_1D, mu=self.mu)
 
-        batch_pred_diffs = (torch.unsqueeze(batch_preds_sorted, dim=2) - torch.unsqueeze(batch_preds_sorted, dim=1)).clamp(min=-1e8, max=1e8)  # computing pairwise differences, i.e., s_i - s_j
+        batch_pred_diffs = (torch.unsqueeze(batch_descending_preds, dim=2) - torch.unsqueeze(batch_descending_preds, dim=1)).clamp(min=-1e8, max=1e8)  # computing pairwise differences, i.e., s_i - s_j
         batch_pred_diffs[torch.isnan(batch_pred_diffs)] = 0.
 
         weighted_probas = (torch.sigmoid(self.sigma * batch_pred_diffs).clamp(min=epsilon) ** power_weights).clamp(min=epsilon)
@@ -122,7 +123,7 @@ class LambdaLoss(NeuralRanker):
         trunc_mask[:self.k, :self.k] = 1
 
         if self.loss_type in ['NDCG_Loss2', 'NDCG_Loss2++']:
-            batch_std_diffs = torch.unsqueeze(batch_stds_sorted_via_preds, dim=2) - torch.unsqueeze(batch_stds_sorted_via_preds, dim=1)  # standard pairwise differences, i.e., S_{ij}
+            batch_std_diffs = torch.unsqueeze(batch_predict_rankings, dim=2) - torch.unsqueeze(batch_predict_rankings, dim=1)  # standard pairwise differences, i.e., S_{ij}
             padded_pairs_mask = batch_std_diffs>0
             padded_log_weighted_probas = log_weighted_probas [padded_pairs_mask & trunc_mask]
         else:

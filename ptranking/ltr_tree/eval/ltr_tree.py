@@ -12,10 +12,10 @@ from ptranking.base.ranker import LTRFRAME_TYPE
 from ptranking.utils.bigdata.BigPickle import pickle_save
 from ptranking.data.data_utils import YAHOO_LTR, ISTELLA_LTR, MSLETOR, MSLRWEB
 from ptranking.ltr_tree.eval.tree_parameter import TreeDataSetting, TreeEvalSetting
-from ptranking.ltr_tree.lambdamart.lightgbm_lambdaMART import LightGBMLambdaMART, LightGBMLambdaMARTParameter
-from ptranking.metric.adhoc_metric import torch_nDCG_at_ks, torch_nerr_at_ks, torch_ap_at_ks, torch_precision_at_ks
+from ptranking.metric.adhoc.adhoc_metric import torch_ndcg_at_ks, torch_nerr_at_ks, torch_ap_at_ks, torch_precision_at_ks
 from ptranking.ltr_adhoc.eval.ltr import LTREvaluator
 from ptranking.data.data_utils import MSLETOR_SEMI, MSLETOR_LIST
+from ptranking.ltr_tree.lambdamart.lightgbm_lambdaMART import LightGBMLambdaMART, LightGBMLambdaMARTParameter
 
 LTR_TREE_MODEL = ['LightGBMLambdaMART']
 
@@ -50,7 +50,7 @@ class TreeLTREvaluator(LTREvaluator):
             assert data_dict['unknown_as_zero'] is not True  # since there is no non-labeled documents
 
         if data_dict['data_id'] in MSLETOR_LIST:  # for which the standard ltr_adhoc of each query is unique
-            assert 1 == data_dict['train_batch_size']
+            assert 1 == data_dict['train_rough_batch_size']
 
         if data_dict['scale_data']:
             scaler_level = data_dict['scaler_level'] if 'scaler_level' in data_dict else None
@@ -58,8 +58,8 @@ class TreeLTREvaluator(LTREvaluator):
 
         assert data_dict['validation_presort']  # Rule of thumb setting for adhoc learning-to-rank
         assert data_dict['test_presort']  # Rule of thumb setting for adhoc learning-to-rank
-        assert 1 == data_dict['validation_batch_size']  # Rule of thumb setting for adhoc learning-to-rank
-        assert 1 == data_dict['test_batch_size']  # Rule of thumb setting for adhoc learning-to-rank
+        assert 1 == data_dict['validation_rough_batch_size']  # Rule of thumb setting for adhoc learning-to-rank
+        assert 1 == data_dict['test_rough_batch_size']  # Rule of thumb setting for adhoc learning-to-rank
 
         ''' Part-2: evaluation setting '''
 
@@ -146,25 +146,25 @@ class TreeLTREvaluator(LTREvaluator):
 
             _, tor_sorted_inds = torch.sort(tor_per_query_preds, descending=True)
 
-            sys_sorted_labels = tor_per_query_std_labels[tor_sorted_inds]
-            ideal_sorted_labels, _ = torch.sort(tor_per_query_std_labels, descending=True)
+            batch_predict_rankings = tor_per_query_std_labels[tor_sorted_inds]
+            batch_ideal_rankings, _ = torch.sort(tor_per_query_std_labels, descending=True)
 
-            ndcg_at_ks = torch_nDCG_at_ks(batch_sys_sorted_labels=sys_sorted_labels.view(1, -1),
-                                          batch_ideal_sorted_labels=ideal_sorted_labels.view(1, -1), ks=ks, label_type=label_type)
+            ndcg_at_ks = torch_ndcg_at_ks(batch_predict_rankings=batch_predict_rankings.view(1, -1),
+                                          batch_ideal_rankings=batch_ideal_rankings.view(1, -1), ks=ks, label_type=label_type)
             ndcg_at_ks = torch.squeeze(ndcg_at_ks, dim=0)
             list_ndcg_at_ks_per_q.append(ndcg_at_ks.numpy())
 
-            nerr_at_ks = torch_nerr_at_ks(batch_sys_sorted_labels=sys_sorted_labels.view(1, -1),
-                                          batch_ideal_sorted_labels=ideal_sorted_labels.view(1, -1), ks=ks, label_type=label_type)
+            nerr_at_ks = torch_nerr_at_ks(batch_predict_rankings=batch_predict_rankings.view(1, -1),
+                                          batch_ideal_rankings=batch_ideal_rankings.view(1, -1), ks=ks, label_type=label_type)
             nerr_at_ks = torch.squeeze(nerr_at_ks, dim=0)
             list_err_at_ks_per_q.append(nerr_at_ks.numpy())
 
-            ap_at_ks = torch_ap_at_ks(batch_sys_sorted_labels=sys_sorted_labels.view(1, -1),
-                                      batch_ideal_sorted_labels=ideal_sorted_labels.view(1, -1), ks=ks)
+            ap_at_ks = torch_ap_at_ks(batch_predict_rankings=batch_predict_rankings.view(1, -1),
+                                      batch_ideal_rankings=batch_ideal_rankings.view(1, -1), ks=ks)
             ap_at_ks = torch.squeeze(ap_at_ks, dim=0)
             list_ap_at_ks_per_q.append(ap_at_ks.numpy())
 
-            p_at_ks = torch_precision_at_ks(batch_sys_sorted_labels=sys_sorted_labels.view(1, -1), ks=ks)
+            p_at_ks = torch_precision_at_ks(batch_predict_rankings=batch_predict_rankings.view(1, -1), ks=ks)
             p_at_ks = torch.squeeze(p_at_ks, dim=0)
             list_p_at_ks_per_q.append(p_at_ks.numpy())
 
@@ -377,3 +377,14 @@ class TreeLTREvaluator(LTREvaluator):
             for eval_dict in self.iterate_eval_setting():
                     for model_para_dict in self.iterate_model_setting():
                         self.kfold_cv_eval(data_dict=data_dict, eval_dict=eval_dict, model_para_dict=model_para_dict)
+
+    def run(self, debug=False, model_id=None, config_with_json=None, dir_json=None,
+            data_id=None, dir_data=None, dir_output=None, grid_search=False):
+        if config_with_json:
+            assert dir_json is not None
+            self.grid_run(debug=debug, model_id=model_id, dir_json=dir_json)
+        else:
+            if grid_search:
+                self.grid_run(debug=debug, model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output)
+            else:
+                self.point_run(debug=debug, model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output)

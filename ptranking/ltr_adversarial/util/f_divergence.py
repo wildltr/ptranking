@@ -54,7 +54,7 @@ def get_f_divergence_functions(f_div_str=None):
 
     elif 'JS' == f_div_str: # Jensen-Shannon
         def activation_f(v):
-            return torch.log(2.0) - torch.log(1.0 + torch.exp(-v))
+            return torch.log(torch.tensor(2.0)) - torch.log(1.0 + torch.exp(-v))
 
         def conjugate_f(t):
             return -torch.log(2.0 - torch.exp(t))

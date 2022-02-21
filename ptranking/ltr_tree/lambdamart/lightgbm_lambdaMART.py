@@ -179,7 +179,7 @@ class LightGBMLambdaMARTParameter(ModelParameter):
                               'num_threads': 16,
                               'min_data_in_leaf': 50,
                               'min_sum_hessian_in_leaf': 200,
-                              'eval_at': 1, # which matters much (early stopping), say setting as 5 is better than default
+                              'eval_at': 5, # which matters much (early stopping), say setting as 5 is better than default
                               # 'lambdamart_norm':False,
                               # 'is_training_metric':True,
                               'verbosity': -1}

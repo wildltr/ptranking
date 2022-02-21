@@ -2,10 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-"""Description
-
-"""
-
 class AdversarialMachine():
     '''
     An abstract adversarial learning-to-rank framework

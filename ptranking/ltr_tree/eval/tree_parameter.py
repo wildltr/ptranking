@@ -23,15 +23,15 @@ class TreeDataSetting(DataSetting):
         unknown_as_zero = True if self.data_id in MSLETOR_SEMI else False # since lambdaMART is a supervised method
         binary_rele = False  # using the original values
         train_presort, validation_presort, test_presort = False, False, False
-        train_batch_size, validation_batch_size, test_batch_size = 1, 1, 1
+        train_rough_batch_size, validation_rough_batch_size, test_rough_batch_size = 1, 1, 1
 
         scale_data, scaler_id, scaler_level = get_scaler_setting(data_id=self.data_id, scaler_id=scaler_id)
 
         # more data settings that are rarely changed
         self.data_dict = dict(data_id=self.data_id, dir_data=self.dir_data, min_docs=10, min_rele=1,
                 unknown_as_zero=unknown_as_zero, binary_rele=binary_rele, train_presort=train_presort,
-                validation_presort=validation_presort, test_presort=test_presort, train_batch_size=train_batch_size,
-                validation_batch_size=validation_batch_size, test_batch_size=test_batch_size,
+                validation_presort=validation_presort, test_presort=test_presort, train_rough_batch_size=train_rough_batch_size,
+                validation_rough_batch_size=validation_rough_batch_size, test_rough_batch_size=test_rough_batch_size,
                               scale_data=scale_data, scaler_id=scaler_id, scaler_level=scaler_level)
 
         data_meta = get_data_meta(data_id=self.data_id)  # add meta-information

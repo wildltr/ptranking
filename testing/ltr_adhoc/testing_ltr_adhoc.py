@@ -46,7 +46,9 @@ if __name__ == '__main__':
 
 	debug = True            # in a debug mode, we just check whether the model can operate
 
-	config_with_json = True # specify configuration with json files or not
+	config_with_json = False # specify configuration with json files or not
+
+	reproduce = False 		# given pre-trained models, reproduce experiments
 
 	models_to_run = [
 		#'RankMSE',
@@ -94,7 +96,12 @@ if __name__ == '__main__':
 			evaluator.run(debug=debug, model_id=model_id, config_with_json=config_with_json, dir_json=dir_json)
 
 	else: # specify configuration manually
+		''' pointsf | listsf, namely the type of neural scoring function '''
+		sf_id = 'pointsf'
+
 		''' Selected dataset '''
+		#data_id = 'Set1'
+		#data_id = 'MSLRWEB30K'
 		data_id = 'MQ2008_Super'
 
 		''' By grid_search, we can explore the effects of different hyper-parameters of a model '''
@@ -103,8 +110,8 @@ if __name__ == '__main__':
 		''' Location of the adopted data '''
 		#dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
 		#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
-		dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
-		#dir_data = '/Users/iimac/Workbench/Corpus/L2R/LETOR4.0/MQ2008/'
+		#dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
+		dir_data = '/Users/iimac/Workbench/Corpus/L2R/LETOR4.0/MQ2008/'
 
 		#data_id = 'Istella_X'
 		#dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/Istella_X/'
@@ -118,9 +125,9 @@ if __name__ == '__main__':
 		''' Output directory '''
 		#dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/'
 		#dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
-		dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
-		#dir_output = '/Users/iimac/Workbench/CodeBench/Output/NeuralLTR/'
+		#dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
+		dir_output = '/Users/iimac/Workbench/CodeBench/Output/NeuralLTR/'
 
 		for model_id in models_to_run:
-			evaluator.run(debug=debug, grid_search=grid_search,
-			              model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output)
+			evaluator.run(debug=debug, model_id=model_id, sf_id=sf_id, grid_search=grid_search,
+						  data_id=data_id, dir_data=dir_data, dir_output=dir_output, reproduce=reproduce)

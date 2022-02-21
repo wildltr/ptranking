@@ -12,13 +12,13 @@ pages = {61–69}
 import torch
 import torch.nn.functional as F
 
-from ptranking.base.ranker import NeuralRanker
+from ptranking.base.adhoc_ranker import AdhocNeuralRanker
 from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 
 
 EPS = 1e-20
 
-class STListNet(NeuralRanker):
+class STListNet(AdhocNeuralRanker):
     '''
     author = {Bruch, Sebastian and Han, Shuguang and Bendersky, Michael and Najork, Marc},
     title = {A Stochastic Treatment of Learning to Rank Scoring Functions},
@@ -30,16 +30,15 @@ class STListNet(NeuralRanker):
         super(STListNet, self).__init__(id='STListNet', sf_para_dict=sf_para_dict, gpu=gpu, device=device)
         self.temperature = model_para_dict['temperature']
 
-    def inner_train(self, batch_preds, batch_stds, **kwargs):
+    def custom_loss_function(self, batch_preds, batch_std_labels, **kwargs):
         '''
         The Top-1 approximated ListNet loss, which reduces to a softmax and simple cross entropy.
-        :param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents within a ltr_adhoc
-        :param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ltr_adhoc
-        :return:
+        @param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents associated with the same query
+        @param batch_std_labels: [batch, ranking_size] each row represents the standard relevance grades for documents associated with the same query
+        @param kwargs:
+        @return:
         '''
-
-        unif = torch.rand(batch_preds.size())  # [num_samples_per_query, ranking_size]
-        if self.gpu: unif = unif.to(self.device)
+        unif = torch.rand(batch_preds.size(), device=self.device)  # [batch_size, ranking_size]
 
         gumbel = -torch.log(-torch.log(unif + EPS) + EPS)  # Sample from gumbel distribution
 
@@ -47,7 +46,7 @@ class STListNet(NeuralRanker):
 
         # todo-as-note: log(softmax(x)), doing these two operations separately is slower, and numerically unstable.
         # c.f. https://pytorch.org/docs/stable/_modules/torch/nn/functional.html
-        batch_loss = torch.sum(-torch.sum(F.softmax(batch_stds, dim=1) * F.log_softmax(batch_preds, dim=1), dim=1))
+        batch_loss = torch.sum(-torch.sum(F.softmax(batch_std_labels, dim=1) * F.log_softmax(batch_preds, dim=1), dim=1))
 
         self.optimizer.zero_grad()
         batch_loss.backward()

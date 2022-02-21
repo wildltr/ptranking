@@ -2,14 +2,13 @@
 # -*- coding: utf-8 -*-
 
 """Description
-
 """
 import numpy as np
 
 import torch
 import torch.nn.functional as F
 
-from ptranking.metric.adhoc_metric import rele_gain
+from ptranking.metric.adhoc.adhoc_metric import rele_gain
 
 def tor_sum_norm(histogram):
     probs = torch.div(histogram, torch.sum(histogram, dim=1, keepdim=True))
@@ -19,7 +18,6 @@ def _cost_mat_group(cpu_tor_batch_std_label_vec, non_rele_gap=100.0, var_penalty
     """
     Numpy reference
     Take into account the group information among documents, namely whether two documents are of the same standard relevance degree
-
     @param non_rele_gap the gap between a relevant document and an irrelevant document
     @param var_penalty variance penalty
     @param gain_base the base for computing gain value

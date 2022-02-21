@@ -6,20 +6,20 @@
 Hai-Tao Yu, Adam Jatowt, Hideo Joho, Joemon Jose, Xiao Yang and Long Chen. WassRank: Listwise Document Ranking Using Optimal Transport Theory.
 Proceedings of the 12th International Conference on Web Search and Data Mining (WSDM), 2019.2.
 """
-#import ot
 import numpy as np
 from itertools import product
 
 import torch
 
-from ptranking.base.ranker import NeuralRanker
+from ptranking.base.list_ranker import ListNeuralRanker
+from ptranking.base.adhoc_ranker import AdhocNeuralRanker
 from ptranking.ltr_adhoc.eval.parameter import ModelParameter
-from ptranking.ltr_adhoc.listwise.wassrank.wasserstein_loss_layer import Y_WassersteinLossStab, EntropicOTLoss
+from ptranking.ltr_adhoc.listwise.wassrank.pytorch_wasserstein import SinkhornOT, EntropicOT, OldSinkhornOT
 from ptranking.ltr_adhoc.listwise.wassrank.wasserstein_cost_mat import get_explicit_cost_mat, get_normalized_histograms
 
-wasserstein_distance = Y_WassersteinLossStab.apply
+wasserstein_distance = OldSinkhornOT.apply
 
-class WassRank(NeuralRanker):
+class WassRank(AdhocNeuralRanker):
     '''
     Hai-Tao Yu, Adam Jatowt, Hideo Joho, Joemon Jose, Xiao Yang and Long Chen. WassRank: Listwise Document Ranking Using Optimal Transport Theory.
     Proceedings of the 12th International Conference on Web Search and Data Mining (WSDM), 2019.2.
@@ -35,37 +35,49 @@ class WassRank(NeuralRanker):
         if dict_std_dists is not None:
             self.dict_std_dists = dict_std_dists
 
-        if 'EOTLossSta' == self.wass_para_dict['mode']:
-            self.entropic_ot_loss = EntropicOTLoss(eps=self.wass_para_dict['lam'], max_iter=self.wass_para_dict['sh_itr'])
+        if 'EntropicOT' == self.wass_para_dict['mode']:
+            self.entropic_ot_loss = EntropicOT(eps=self.wass_para_dict['lam'], max_iter=self.wass_para_dict['sh_itr'])
             self.pi = None
 
 
-    def inner_train(self, batch_preds, batch_stds, **kwargs):
-        qid = kwargs['qid']
+    def custom_loss_function(self, batch_preds, batch_stds, **kwargs):
+        batch_ids = kwargs['batch_ids']
+        #print('batch_ids', batch_ids)
+        print('batch_preds', batch_preds.size(), batch_preds)
+        #print('batch_stds', batch_stds.size(), batch_stds)
+        if len(batch_ids) == 1:
+            qid = batch_ids[0]
+        else:
+            qid = '_'.join(batch_ids)
+
+        #print('qid', qid)
+
+        '''
         if qid in self.dict_cost_mats:
             batch_cost_mats = self.dict_cost_mats[qid]  # using buffered cost matrices to avoid re-computation
         else:
             batch_cost_mats = get_explicit_cost_mat(batch_stds, wass_para_dict=self.wass_para_dict, gpu=self.gpu)
             self.dict_cost_mats[qid] = batch_cost_mats
+        '''
+
+        batch_cost_mats = get_explicit_cost_mat(batch_stds, wass_para_dict=self.wass_para_dict, gpu=self.gpu)
 
         batch_std_hists, batch_pred_hists = get_normalized_histograms(batch_std_labels=batch_stds, batch_preds=batch_preds,
                                                                       wass_dict_std_dists=self.dict_std_dists, qid=qid,
                                                                       wass_para_dict=self.wass_para_dict, TL_AF=self.TL_AF)
 
-        #'''
         wass_mode = self.wass_para_dict['mode']
-        if wass_mode == 'WassLossSta':
+        if wass_mode == 'SinkhornOT':
             sh_itr, lam = self.wass_para_dict['sh_itr'], self.wass_para_dict['lam']
             if self.gpu: batch_std_hists = batch_std_hists.type(torch.cuda.FloatTensor)
-            batch_loss, = wasserstein_distance(batch_pred_hists, batch_std_hists, torch.squeeze(batch_cost_mats, dim=0), lam, sh_itr)
+            batch_loss = wasserstein_distance(batch_pred_hists, batch_std_hists, torch.squeeze(batch_cost_mats, dim=0), lam, sh_itr)
 
-        elif wass_mode == 'EOTLossSta':
+        elif wass_mode == 'EntropicOT':
             if self.gpu: batch_std_hists = batch_std_hists.type(torch.cuda.FloatTensor)
             batch_loss, self.pi = self.entropic_ot_loss(batch_pred_hists, batch_std_hists, batch_cost_mats)
 
         else:
             raise NotImplementedError
-        #'''
 
         self.optimizer.zero_grad()
         batch_loss.backward()
@@ -84,10 +96,10 @@ class WassRankParameter(ModelParameter):
 
     def default_para_dict(self):
         """
-        Default parameter setting for WassRank
+        Default parameter setting for WassRank. EntropicOT | SinkhornOT
         :return:
         """
-        self.wass_para_dict = dict(model_id=self.model_id, mode='EOTLossSta', sh_itr=20, lam=0.1, smooth_type='ST',
+        self.wass_para_dict = dict(model_id=self.model_id, mode='SinkhornOT', sh_itr=20, lam=0.1, smooth_type='ST',
                                    norm_type='BothST', cost_type='eg', non_rele_gap=100, var_penalty=np.e, gain_base=4)
         return self.wass_para_dict
 

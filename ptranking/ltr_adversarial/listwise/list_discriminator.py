@@ -11,5 +11,5 @@ class List_Discriminator(AdversarialPlayer):
     '''
     A listwise discriminator
     '''
-    def __init__(self, sf_para_dict=None, opt='RMS', gpu=False, device=None):
-        super(List_Discriminator, self).__init__(sf_para_dict=sf_para_dict, opt=opt, gpu=gpu, device=device)
+    def __init__(self, sf_para_dict=None, gpu=False, device=None):
+        super(List_Discriminator, self).__init__(sf_para_dict=sf_para_dict, gpu=gpu, device=device)

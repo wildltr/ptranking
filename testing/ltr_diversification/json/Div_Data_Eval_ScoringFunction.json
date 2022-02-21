@@ -1,0 +1,49 @@
+{
+  "DivDataSetting": {
+    "data_id":"WT_Div_0912_Implicit",
+    "dir_data":"/Users/iimac/Workbench/Corpus/L2R/TREC_WebTrack_Div_2009_2012_Implicit/"
+  },
+
+  "DivEvalSetting": {
+    "dir_output":"/Users/iimac/Workbench/CodeBench/Output/DivLTR/",
+    "epochs":100,
+
+    "do_validation":true,
+
+    "vali_k":5,
+    "cutoffs":[1, 3, 5, 10, 20, 50],
+
+    "loss_guided":false,
+
+    "do_log":true,
+    "log_step":1,
+    "do_summary":false
+  },
+
+  "DivSFParameter": {
+    "opt":["Adam"],
+    "lr":[0.01],
+    "sf_id":"listsf",
+    "pointsf":{
+      "BN":[true],
+      "bn_type":["BN"],
+      "bn_affine":[true],
+      "RD":[false],
+      "layers":[5],
+      "apply_tl_af":[true],
+      "hd_hn_tl_af":["GE"]
+    },
+    "listsf":{
+      "encoder_type":["DASALC"],
+      "encoder_layers":[3],
+      "n_heads":[2],
+      "BN":[true],
+      "bn_type":["BN"],
+      "bn_affine":[true],
+      "RD":[false],
+      "ff_dims":[128, 256, 512],
+      "apply_tl_af":[false],
+      "AF":["R"]
+    }
+  }
+}

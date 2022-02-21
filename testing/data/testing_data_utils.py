@@ -196,10 +196,10 @@ def check_dataset_statistics(data_id, dir_data, buffer=False):
 if __name__ == '__main__':
     # 1
     data_id  = 'MQ2007_Super'
-    dir_data = '/Users/dryuhaitao/WorkBench/Corpus/LETOR4.0/MQ2007/'
-    dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
+    dir_data = '/Users/iimac/Workbench/Corpus/L2R/LETOR4.0/MQ2007/'
+    #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
 
-    #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
     ''' results as below
     Total queries:	 1692
         Train: 1017 Vali: 339 Test: 336
@@ -312,7 +312,7 @@ if __name__ == '__main__':
 
     data_id  = 'MSLRWEB30K'
     dir_data = '/home/dl-box/WorkBench/Datasets/L2R/MSLR-WEB30K/'
-    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
     '''
     Dataset:	 MSLRWEB30K
     Total queries:	 31531

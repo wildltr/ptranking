@@ -16,12 +16,7 @@ class IRGAN_Pair_Generator(AdversarialPlayer):
         super(IRGAN_Pair_Generator, self).__init__(sf_para_dict=sf_para_dict, gpu=gpu, device=device)
         self.temperature = temperature
 
-    def predict(self, batch_ranking, train=False):
-        if train:
-            self.train_mode()  # training mode for training
-        else:
-            self.eval_mode()  # evaluation mode for testing
-
+    def predict(self, batch_ranking):
         batch_pred = self.forward(batch_ranking)
 
         if self.temperature is not None and 1.0 != self.temperature:
@@ -33,8 +28,8 @@ class IRGAN_Pair_Generator(AdversarialPlayer):
 class IRGAN_Pair_Discriminator(AdversarialPlayer):
     def __init__(self, sf_para_dict=None, gpu=False, device=None):
         super(IRGAN_Pair_Discriminator, self).__init__(sf_para_dict=sf_para_dict, gpu=gpu, device=device)
-        self.torch_one = torch.cuda.FloatTensor([1.0]) if self.gpu else torch.FloatTensor([1.0])
-        self.torch_zero = torch.cuda.FloatTensor([0.0]) if self.gpu else torch.FloatTensor([0.0])
+        self.torch_one = torch.tensor([1.0], device=self.device)
+        self.torch_zero = torch.tensor([0.0], device=self.device)
 
     def get_reward(self, pos_docs=None, neg_docs=None, loss_type='svm'):
         ''' used by irgan '''
@@ -61,15 +56,15 @@ class IRGAN_Pair(AdversarialMachine):
         '''
         super(IRGAN_Pair, self).__init__(eval_dict=eval_dict, data_dict=data_dict, gpu=gpu, device=device)
 
-        self.torch_one  = torch.cuda.FloatTensor([1.0]) if self.gpu else torch.FloatTensor([1.0])
-        self.torch_zero = torch.cuda.FloatTensor([0.0]) if self.gpu else torch.FloatTensor([0.0])
+        self.torch_one = torch.tensor([1.0], device=self.device)
+        self.torch_zero = torch.tensor([0.0], device=self.device)
 
-        sf_para_dict['ffnns']['apply_tl_af'] = True
+        sf_para_dict[sf_para_dict['sf_id']]['apply_tl_af'] = True
 
         g_sf_para_dict = sf_para_dict
 
         d_sf_para_dict = copy.deepcopy(g_sf_para_dict)
-        d_sf_para_dict['ffnns']['apply_tl_af'] = False
+        d_sf_para_dict[sf_para_dict['sf_id']]['apply_tl_af'] = False
         #d_sf_para_dict['ffnns']['TL_AF'] = 'S'  # as required by the IRGAN model
 
         self.generator     = IRGAN_Pair_Generator(sf_para_dict=g_sf_para_dict, temperature=ad_para_dict['temperature'], gpu=gpu, device=device)
@@ -84,7 +79,7 @@ class IRGAN_Pair(AdversarialMachine):
 
     def fill_global_buffer(self, train_data, dict_buffer=None):
         ''' Buffer the number of positive documents, and the number of non-positive documents per query '''
-        assert train_data.presort is True  # this is required for efficient truth exampling
+        assert self.data_dict['train_presort'] is True  # this is required for efficient truth exampling
 
         for entry in train_data:
             qid, _, batch_label = entry[0], entry[1], entry[2]
@@ -129,6 +124,8 @@ class IRGAN_Pair(AdversarialMachine):
         This is a re-implementation as the released irgan-tensorflow, but it seems that this part of irgan-tensorflow
         is not consistent with the discription of the paper (i.e., the description below Eq. 7)
         '''
+        generator.eval_mode()
+
         generated_data = dict()
         for entry in train_data:
             qid, batch_ranking, batch_label = entry[0], entry[1], entry[2]
@@ -165,6 +162,8 @@ class IRGAN_Pair(AdversarialMachine):
 
 
     def train_discriminator(self, train_data=None, generated_data=None, discriminator=None, **kwargs):
+        discriminator.train_mode()
+
         for entry in train_data:
             qid, batch_ranking = entry[0], entry[1]
 
@@ -175,8 +174,8 @@ class IRGAN_Pair(AdversarialMachine):
                 pos_docs = batch_ranking[:, pos_inds, :]
                 neg_docs = batch_ranking[:, neg_inds, :]
 
-                batch_pos_preds = discriminator.predict(pos_docs, train=True) # [batch, size_ranking]
-                batch_neg_preds = discriminator.predict(neg_docs, train=True) # [batch, size_ranking]
+                batch_pos_preds = discriminator.predict(pos_docs) # [batch, size_ranking]
+                batch_neg_preds = discriminator.predict(neg_docs) # [batch, size_ranking]
 
                 if 'svm' == self.loss_type:
                     #dis_loss = torch.mean(torch.max(torch.zeros(1), 1.0-(batch_pos_preds-batch_neg_preds)))
@@ -191,8 +190,10 @@ class IRGAN_Pair(AdversarialMachine):
                 discriminator.optimizer.step()
 
 
-    def train_generator(self, train_data=None, generated_data=None, generator=None, discriminator=None,
-                        global_buffer=None):
+    def train_generator(self, train_data=None, generated_data=None, generator=None, discriminator=None, global_buffer=None):
+        generator.train_mode()
+        discriminator.eval_mode()
+
         for entry in train_data:
             qid, batch_ranking, batch_label = entry[0], entry[1], entry[2]
             if self.gpu: batch_ranking = batch_ranking.to(self.device)
@@ -205,7 +206,7 @@ class IRGAN_Pair(AdversarialMachine):
 
             pos_inds = torch.randperm(num_pos)[0:valid_num]  # randomly select positive documents
 
-            g_preds = generator.predict(batch_ranking, train=True)
+            g_preds = generator.predict(batch_ranking)
             g_probs = torch.sigmoid(torch.squeeze(g_preds))
             neg_inds = torch.multinomial(g_probs, valid_num, replacement=False)
 
@@ -221,10 +222,10 @@ class IRGAN_Pair(AdversarialMachine):
             generator.optimizer.step()
 
     def reset_generator(self):
-        self.generator.reset_parameters()
+        self.generator.init()
 
     def reset_discriminator(self):
-        self.discriminator.reset_parameters()
+        self.discriminator.init()
 
     def get_generator(self):
         return self.generator

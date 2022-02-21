@@ -13,17 +13,20 @@ from ptranking.utils.bigdata.BigPickle import pickle_save
 
 from ptranking.base.ranker import LTRFRAME_TYPE
 from ptranking.ltr_adhoc.eval.ltr import LTREvaluator
-from ptranking.ltr_adversarial.pointwise.irgan_point import IRGAN_Point, IRGAN_PointParameter
-from ptranking.ltr_adversarial.pairwise.irgan_pair   import IRGAN_Pair, IRGAN_PairParameter
-from ptranking.ltr_adversarial.listwise.irgan_list   import IRGAN_List, IRGAN_ListParameter
 
 from ptranking.data.data_utils import MSLETOR_SEMI
 from ptranking.metric.metric_utils import metric_results_to_string
-from ptranking.ltr_adhoc.eval.eval_utils import ndcg_at_ks, ndcg_at_k
 from ptranking.ltr_adversarial.eval.ad_parameter import AdDataSetting, AdEvalSetting, AdScoringFunctionParameter
 
+from ptranking.ltr_adversarial.pointwise.irgan_point import IRGAN_Point, IRGAN_PointParameter
+from ptranking.ltr_adversarial.pointwise.irfgan_point import IRFGAN_Point, IRFGAN_PointParameter
+from ptranking.ltr_adversarial.pairwise.irgan_pair import IRGAN_Pair, IRGAN_PairParameter
+from ptranking.ltr_adversarial.pairwise.irfgan_pair import IRFGAN_PairParameter, IRFGAN_Pair
+from ptranking.ltr_adversarial.listwise.irgan_list import IRGAN_List, IRGAN_ListParameter
+from ptranking.ltr_adversarial.listwise.irfgan_list import IRFGAN_List, IRFGAN_ListParameter
 
-LTR_ADVERSARIAL_MODEL = ['IRGAN_Point', 'IRGAN_Pair', 'IRGAN_List']
+LTR_ADVERSARIAL_MODEL = ['IRGAN_Point', 'IRGAN_Pair', 'IRGAN_List',
+                         'IRFGAN_Point', 'IRFGAN_Pair', 'IRFGAN_List']
 
 class AdLTREvaluator(LTREvaluator):
     """
@@ -37,7 +40,7 @@ class AdLTREvaluator(LTREvaluator):
         Check whether the settings are reasonable in the context of adversarial learning-to-rank
         """
         ''' Part-1: data loading '''
-        assert 1 == data_dict['train_batch_size']  # the required setting w.r.t. adversarial LTR
+        assert 1 == data_dict['train_rough_batch_size']  # the required setting w.r.t. adversarial LTR
 
         if data_dict['data_id'] == 'Istella':
             assert eval_dict['do_validation'] is not True  # since there is no validation data
@@ -51,16 +54,10 @@ class AdLTREvaluator(LTREvaluator):
 
         assert data_dict['validation_presort']  # Rule of thumb, as validation and test data are for metric-performance
         assert data_dict['test_presort']  # Rule of thumb, as validation and test data are for metric-performance
-        assert 1 == data_dict['validation_batch_size']  # Rule of thumb, as validation and test data are for metric-performance
-        assert 1 == data_dict['test_batch_size']  # Rule of thumb, as validation and test data are for metric-performance
 
         ''' Part-2: evaluation setting '''
         if eval_dict['mask_label']:  # True is aimed to use supervised data to mimic semi-supervised data by masking
             assert not data_dict['data_id'] in MSLETOR_SEMI
-
-        ''' Part-1: network setting '''
-        assert sf_para_dict['ffnns']['BN'] == False # since the feature matrix will dynamically change
-
 
     def get_ad_machine(self, eval_dict=None, data_dict=None, sf_para_dict=None, ad_para_dict=None):
         """
@@ -72,7 +69,7 @@ class AdLTREvaluator(LTREvaluator):
         :return:
         """
         model_id = ad_para_dict['model_id']
-        if model_id in ['IRGAN_Point', 'IRGAN_Pair', 'IRGAN_List']:
+        if model_id in ['IRGAN_Point', 'IRGAN_Pair', 'IRGAN_List', 'IRFGAN_Point', 'IRFGAN_Pair', 'IRFGAN_List']:
             ad_machine = globals()[model_id](eval_dict=eval_dict, data_dict=data_dict, gpu=self.gpu, device=self.device,
                                              sf_para_dict=sf_para_dict, ad_para_dict=ad_para_dict)
         else:
@@ -99,11 +96,6 @@ class AdLTREvaluator(LTREvaluator):
         epochs, loss_guided = eval_dict['epochs'], eval_dict['loss_guided']
         vali_k, log_step, cutoffs = eval_dict['vali_k'], eval_dict['log_step'], eval_dict['cutoffs']
         do_vali, do_summary = eval_dict['do_validation'], eval_dict['do_summary']
-
-        if sf_para_dict['id'] == 'ffnns':
-            sf_para_dict['ffnns'].update(dict(num_features=data_dict['num_features']))
-        else:
-            raise NotImplementedError
 
         ad_machine = self.get_ad_machine(eval_dict=eval_dict, data_dict=data_dict, sf_para_dict=sf_para_dict, ad_para_dict=ad_para_dict)
 
@@ -154,10 +146,8 @@ class AdLTREvaluator(LTREvaluator):
 
                 if (do_summary or do_vali) and (epoch_k % log_step == 0 or epoch_k == 1):  # stepwise check
                     if do_vali:
-                        g_vali_eval_tmp = ndcg_at_k(ranker=g_ranker, test_data=vali_data, k=vali_k, gpu=self.gpu, device=self.device,
-                                                    label_type=self.data_setting.data_dict['label_type'])
-                        d_vali_eval_tmp = ndcg_at_k(ranker=d_ranker, test_data=vali_data, k=vali_k, gpu=self.gpu, device=self.device,
-                                                    label_type=self.data_setting.data_dict['label_type'])
+                        g_vali_eval_tmp = g_ranker.ndcg_at_k(test_data=vali_data, k=vali_k, label_type=self.data_setting.data_dict['label_type'])
+                        d_vali_eval_tmp = d_ranker.ndcg_at_k(test_data=vali_data, k=vali_k, label_type=self.data_setting.data_dict['label_type'])
                         g_vali_eval_v, d_vali_eval_v = g_vali_eval_tmp.data.numpy(), d_vali_eval_tmp.data.numpy()
 
                         if epoch_k > 1:
@@ -218,12 +208,10 @@ class AdLTREvaluator(LTREvaluator):
                 d_ranker.save(dir=self.dir_run + fold_optimal_checkpoint + '/', name='_'.join(['net_params_epoch', str(epoch_k), 'D']) + '.pkl')
                 d_fold_optimal_ranker = d_ranker
 
-            g_torch_fold_ndcg_ks = ndcg_at_ks(ranker=g_fold_optimal_ranker, test_data=test_data, ks=cutoffs, gpu=self.gpu, device=self.device,
-                                              label_type=self.data_setting.data_dict['label_type'])
+            g_torch_fold_ndcg_ks = g_fold_optimal_ranker.ndcg_at_ks(test_data=test_data, ks=cutoffs, label_type=self.data_setting.data_dict['label_type'])
             g_fold_ndcg_ks = g_torch_fold_ndcg_ks.data.numpy()
 
-            d_torch_fold_ndcg_ks = ndcg_at_ks(ranker=d_fold_optimal_ranker, test_data=test_data, ks=cutoffs, gpu=self.gpu, device=self.device,
-                                              label_type=self.data_setting.data_dict['label_type'])
+            d_torch_fold_ndcg_ks = d_fold_optimal_ranker.ndcg_at_ks(test_data=test_data, ks=cutoffs, label_type=self.data_setting.data_dict['label_type'])
             d_fold_ndcg_ks = d_torch_fold_ndcg_ks.data.numpy()
 
             performance_list = [' Fold-' + str(fold_k)]  # fold-wise performance
@@ -277,13 +265,11 @@ class AdLTREvaluator(LTREvaluator):
     def per_epoch_summary_step1(self, ranker, train_data, list_fold_k_train_eval_track,
                           test_data, list_fold_k_test_eval_track, vali_eval_v, list_fold_k_vali_eval_track, cutoffs, do_vali):
 
-        fold_k_epoch_k_train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs, gpu=self.gpu, device=self.device,
-                                                  label_type=self.data_setting.data_dict['label_type'])
+        fold_k_epoch_k_train_ndcg_ks = ranker.ndcg_at_ks(test_data=train_data, ks=cutoffs, label_type=self.data_setting.data_dict['label_type'])
         np_fold_k_epoch_k_train_ndcg_ks = fold_k_epoch_k_train_ndcg_ks.cpu().numpy() if self.gpu else fold_k_epoch_k_train_ndcg_ks.data.numpy()
         list_fold_k_train_eval_track.append(np_fold_k_epoch_k_train_ndcg_ks)
 
-        fold_k_epoch_k_test_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs, gpu=self.gpu, device=self.device,
-                                                 label_type=self.data_setting.data_dict['label_type'])
+        fold_k_epoch_k_test_ndcg_ks = ranker.ndcg_at_ks(test_data=test_data, ks=cutoffs, label_type=self.data_setting.data_dict['label_type'])
         np_fold_k_epoch_k_test_ndcg_ks = fold_k_epoch_k_test_ndcg_ks.cpu().numpy() if self.gpu else fold_k_epoch_k_test_ndcg_ks.data.numpy()
         list_fold_k_test_eval_track.append(np_fold_k_epoch_k_test_ndcg_ks)
 
@@ -322,11 +308,11 @@ class AdLTREvaluator(LTREvaluator):
         else:
             self.eval_setting = AdEvalSetting(debug=debug, dir_output=dir_output)
 
-    def set_scoring_function_setting(self, debug=None, data_dict=None, sf_json=None):
+    def set_scoring_function_setting(self, debug=None, sf_id=None, sf_json=None):
         if sf_json is not None:
             self.sf_parameter = AdScoringFunctionParameter(sf_json=sf_json)
         else:
-            self.sf_parameter = AdScoringFunctionParameter(debug=debug, data_dict=data_dict)
+            self.sf_parameter = AdScoringFunctionParameter(debug=debug, sf_id=sf_id)
 
     def iterate_scoring_function_setting(self):
         return self.sf_parameter.grid_search()
@@ -364,7 +350,7 @@ class AdLTREvaluator(LTREvaluator):
                                         sf_para_dict=sf_para_dict, ad_para_dict=ad_para_dict)
 
 
-    def point_run(self, debug=False, model_id=None, data_id=None, dir_data=None, dir_output=None):
+    def point_run(self, debug=False, model_id=None, sf_id=None, data_id=None, dir_data=None, dir_output=None):
         """
 
         :param debug:
@@ -380,7 +366,7 @@ class AdLTREvaluator(LTREvaluator):
         data_dict = self.get_default_data_setting()
         eval_dict = self.get_default_eval_setting()
 
-        self.set_scoring_function_setting(debug=debug, data_dict=data_dict)
+        self.set_scoring_function_setting(debug=debug, sf_id=sf_id)
         sf_para_dict = self.get_default_scoring_function_setting()
 
         self.set_model_setting(debug=debug, model_id=model_id)
@@ -388,3 +374,20 @@ class AdLTREvaluator(LTREvaluator):
 
         self.ad_cv_eval(data_dict=data_dict, eval_dict=eval_dict, sf_para_dict=sf_para_dict,
                         ad_para_dict=ad_model_para_dict)
+
+    def run(self, debug=False, model_id=None, sf_id=None, config_with_json=None, dir_json=None,
+            data_id=None, dir_data=None, dir_output=None, grid_search=False):
+        if config_with_json:
+            assert dir_json is not None
+            self.grid_run(debug=debug, model_id=model_id, dir_json=dir_json)
+        else:
+            assert sf_id in ['pointsf', 'listsf']
+            if not model_id.endswith('List'):
+                assert sf_id == 'pointsf'
+
+            if grid_search:
+                self.grid_run(debug=debug, model_id=model_id, sf_id=sf_id,
+                              data_id=data_id, dir_data=dir_data, dir_output=dir_output)
+            else:
+                self.point_run(debug=debug, model_id=model_id, sf_id=sf_id,
+                               data_id=data_id, dir_data=dir_data, dir_output=dir_output)

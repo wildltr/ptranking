@@ -59,8 +59,10 @@ def torch_batch_triu(batch_mats=None, k=0, pair_type='All', batch_std_labels=Non
         row_inds = [e[0] for e in pairs]
         col_inds = [e[1] for e in pairs]
 
-    tor_row_inds = torch.LongTensor(row_inds).to(device) if gpu else torch.LongTensor(row_inds)
-    tor_col_inds = torch.LongTensor(col_inds).to(device) if gpu else torch.LongTensor(col_inds)
+    #tor_row_inds = torch.LongTensor(row_inds).to(device) if gpu else torch.LongTensor(row_inds)
+    #tor_col_inds = torch.LongTensor(col_inds).to(device) if gpu else torch.LongTensor(col_inds)
+    tor_row_inds = torch.LongTensor(row_inds, device)
+    tor_col_inds = torch.LongTensor(col_inds, device)
     batch_triu = batch_mats[:, tor_row_inds, tor_col_inds]
 
     return batch_triu # shape: [batch_size, number of pairs]
@@ -133,8 +135,10 @@ def torch_triu_indice(k=0, pair_type='All', batch_label=None, gpu=False, device=
     else:
         raise NotImplementedError
 
-    tor_row_inds = torch.LongTensor(row_inds).to(device) if gpu else torch.LongTensor(row_inds)
-    tor_col_inds = torch.LongTensor(col_inds).to(device) if gpu else torch.LongTensor(col_inds)
+    #tor_row_inds = torch.LongTensor(row_inds).to(device) if gpu else torch.LongTensor(row_inds)
+    #tor_col_inds = torch.LongTensor(col_inds).to(device) if gpu else torch.LongTensor(col_inds)
+    tor_row_inds = torch.LongTensor(row_inds, device)
+    tor_col_inds = torch.LongTensor(col_inds, device)
     #batch_triu = batch_mats[:, tor_row_inds, tor_col_inds]
 
     return tor_row_inds, tor_col_inds  # shape: [number of pairs]

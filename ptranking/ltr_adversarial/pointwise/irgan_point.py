@@ -21,16 +21,11 @@ dis_loss_function = nn.BCEWithLogitsLoss()
 
 
 class IRGAN_Point_Generator(AdversarialPlayer):
-    def __init__(self, sf_para_dict=None, temperature=0.2, gpu=False, device=None):
+    def __init__(self, sf_para_dict=None, temperature=0.5, gpu=False, device=None):
         super(IRGAN_Point_Generator, self).__init__(sf_para_dict=sf_para_dict, gpu=gpu, device=device)
         self.temperature = temperature
 
-    def predict(self, batch_ranking, train=False):
-        if train:
-            self.train_mode()  # training mode for training
-        else:
-            self.eval_mode()  # evaluation mode for testing
-
+    def predict(self, batch_ranking):
         batch_pred = self.forward(batch_ranking)
         if self.temperature is not None and 1.0 != self.temperature:
                 batch_pred = batch_pred / self.temperature
@@ -59,15 +54,14 @@ class IRGAN_Point(AdversarialMachine):
 
         ''' required final layer setting for Point_IR_GAN '''
         # the setting of 'apply_tl_af=False' is due to the later application of softmax function w.r.t. all documents
-        # todo experiments show it is quite important to be True, otherwise will be nan issues.
-
-        assert sf_para_dict['ffnns']['apply_tl_af'] == True # local assignment affects the grid-evaluation
+        # TODO experiments show it is quite important to be True, otherwise will be nan issues.
+        assert sf_para_dict[sf_para_dict['sf_id']]['apply_tl_af'] == True # local assignment affects the grid-evaluation
 
         g_sf_para_dict = sf_para_dict
 
         d_sf_para_dict = copy.deepcopy(g_sf_para_dict)
         #d_sf_para_dict['ffnns']['apply_tl_af'] = True
-        d_sf_para_dict['ffnns']['TL_AF'] = 'S' # as required by the IRGAN model
+        d_sf_para_dict[sf_para_dict['sf_id']]['TL_AF'] = 'S' # as required by the IRGAN model
 
         self.generator = IRGAN_Point_Generator(sf_para_dict=g_sf_para_dict, temperature=ad_para_dict['temperature'], gpu=gpu, device=device)
         self.discriminator = IRGAN_Point_Discriminator(sf_para_dict=d_sf_para_dict, gpu=gpu, device=device)
@@ -80,7 +74,7 @@ class IRGAN_Point(AdversarialMachine):
 
     def fill_global_buffer(self, train_data, dict_buffer=None):
         ''' Buffer the number of positive documents per query '''
-        assert train_data.presort is True  # this is required for efficient truth exampling
+        assert self.data_dict['train_presort'] is True  # this is required for efficient truth exampling
 
         for entry in train_data:
             qid, _, batch_label = entry[0], entry[1], entry[2]
@@ -121,12 +115,12 @@ class IRGAN_Point(AdversarialMachine):
 
     def generate_data(self, train_data=None, generator=None, global_buffer=None):
         ''' Sampling for training discriminator '''
+        generator.eval_mode()
+
         generated_data = dict()
         for entry in train_data:
             qid, batch_ranking, batch_label = entry[0], entry[1], entry[2]
-
-            samples = self.per_query_generation(qid=qid, batch_ranking=batch_ranking, generator=generator,
-                                                global_buffer=global_buffer)
+            samples = self.per_query_generation(qid=qid, batch_ranking=batch_ranking, generator=generator, global_buffer=global_buffer)
 
             if samples is not None: generated_data[qid] = samples
 
@@ -153,6 +147,7 @@ class IRGAN_Point(AdversarialMachine):
 
 
     def train_discriminator(self, train_data=None, generated_data=None, discriminator=None, **kwargs):
+        discriminator.train_mode()
         for entry in train_data:
             qid, batch_ranking = entry[0], entry[1]
 
@@ -168,7 +163,7 @@ class IRGAN_Point(AdversarialMachine):
                 batch_label = torch.unsqueeze(torch.cat((torch.ones(num), torch.zeros(num)), dim=0), dim=0)  # corresponding labels
                 if self.gpu: batch_label = batch_label.to(self.device)
 
-                batch_pred = discriminator.predict(batch_docs, train=True)
+                batch_pred = discriminator.predict(batch_docs)
 
                 # based on inbuilt BCELoss, since both generator and discriminator include the sigmoid layer as the last layer
                 dis_loss = dis_loss_function(batch_pred, batch_label)
@@ -180,6 +175,8 @@ class IRGAN_Point(AdversarialMachine):
 
     def train_generator(self, train_data=None, generated_data=None, generator=None, discriminator=None,
                         global_buffer=None):
+        generator.train_mode()
+        discriminator.eval_mode()
         for entry in train_data:
             qid, batch_ranking, batch_label = entry[0], entry[1], entry[2]
             if self.gpu: batch_ranking = batch_ranking.to(self.device)
@@ -190,7 +187,7 @@ class IRGAN_Point(AdversarialMachine):
             ranking_inds = torch.arange(batch_ranking.size(1))
             pos_inds = ranking_inds[0:num_pos]
 
-            g_preds = generator.predict(batch_ranking, train=True)
+            g_preds = generator.predict(batch_ranking)
             if torch.isnan(g_preds).any():
                 print('Including NaN error.')
                 print('g_preds', g_preds)
@@ -223,10 +220,10 @@ class IRGAN_Point(AdversarialMachine):
         return stop_training
 
     def reset_generator(self):
-        self.generator.reset_parameters()
+        self.generator.init()
 
     def reset_discriminator(self):
-        self.discriminator.reset_parameters()
+        self.discriminator.init()
 
     def get_generator(self):
         return self.generator
@@ -250,9 +247,9 @@ class IRGAN_PointParameter(ModelParameter):
         ad_training_order = 'DG' # 'GD'
         samples_per_query = 5
 
-        self.ad_para_dict = dict(model_id=self.model_id, d_epoches=d_epoches, g_epoches=g_epoches,
-                                 temperature=temperature, ad_training_order=ad_training_order,
-                                 samples_per_query=samples_per_query)
+        self.ad_para_dict = dict(model_id=self.model_id,
+                                 ad_training_order=ad_training_order, d_epoches=d_epoches, g_epoches=g_epoches,
+                                 temperature=temperature, samples_per_query=samples_per_query)
         return self.ad_para_dict
 
     def to_para_string(self, log=False, given_para_dict=None):

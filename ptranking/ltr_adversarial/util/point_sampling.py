@@ -27,7 +27,7 @@ def generate_true_docs(qid, truth_label, num_samples, dict_true_inds=None):
         return true_inds[rand_inds]
     else:
         # [z, n] If input has n dimensions, then the resulting indices tensor out is of size (z×n), where z is the total number of non-zero elements in the input tensor.
-        true_inds = torch.gt(truth_label, 0).nonzero()
+        true_inds = torch.nonzero(torch.gt(truth_label, 0), as_tuple=False)
 
         size_unique = true_inds.size(0)
         true_inds = true_inds[:, 0]
