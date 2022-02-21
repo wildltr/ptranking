@@ -449,13 +449,67 @@
       <input class="md-nav__toggle md-toggle" data-md-toggle="nav-6" type="checkbox" id="nav-6">
     
     <label class="md-nav__link" for="nav-6">
+      LTR_Diversification
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="LTR_Diversification" data-md-level="1">
+      <label class="md-nav__title" for="nav-6">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        LTR_Diversification
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="ltr_diversification/about/" title="About" class="md-nav__link">
+      About
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="ltr_diversification/Direct_Metric_Optimization/" title="Direct Metric Optimization" class="md-nav__link">
+      Direct Metric Optimization
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-7" type="checkbox" id="nav-7">
+    
+    <label class="md-nav__link" for="nav-7">
       LTR_Adversarial
       <span class="md-nav__icon md-icon">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
       </span>
     </label>
     <nav class="md-nav" aria-label="LTR_Adversarial" data-md-level="1">
-      <label class="md-nav__title" for="nav-6">
+      <label class="md-nav__title" for="nav-7">
         <span class="md-nav__icon md-icon">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
         </span>
@@ -500,16 +554,16 @@
 
   <li class="md-nav__item md-nav__item--nested">
     
-      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-7" type="checkbox" id="nav-7">
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-8" type="checkbox" id="nav-8">
     
-    <label class="md-nav__link" for="nav-7">
+    <label class="md-nav__link" for="nav-8">
       LTR_Tree
       <span class="md-nav__icon md-icon">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
       </span>
     </label>
     <nav class="md-nav" aria-label="LTR_Tree" data-md-level="1">
-      <label class="md-nav__title" for="nav-7">
+      <label class="md-nav__title" for="nav-8">
         <span class="md-nav__icon md-icon">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
         </span>
@@ -675,7 +729,7 @@
 <p>Please refer to the Github Repository <a href="https://github.com/wildltr/ptranking/">PT-Ranking</a> for detailed implementations.</p>
 <h2 id="implemented-models">Implemented models<a class="headerlink" href="#implemented-models" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Optimization based on Empirical Risk Minimization</li>
+<li>Typical Learning-to-Rank Methods for Ad-hoc Ranking</li>
 </ul>
 <table>
 <thead>
@@ -700,7 +754,24 @@
 </tbody>
 </table>
 <ul>
-<li>Adversarial Optimization</li>
+<li>Learning-to-Rank Methods for Search Result Diversification</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th align="left"></th>
+<th align="left">Model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">score-and-sort strategy</td>
+<td align="left">MO4SRD ・ DALETOR</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Adversarial Learning-to-Rank Methods for Ad-hoc Ranking</li>
 </ul>
 <table>
 <thead>
@@ -725,7 +796,7 @@
 </tbody>
 </table>
 <ul>
-<li>Tree-based Model (provided by LightGBM)</li>
+<li>Learning-to-rank Methods Based on Gradient Boosting Decision Trees (GBDT) (based on LightGBM)</li>
 </ul>
 <table>
 <thead>
@@ -779,6 +850,14 @@
 </li>
 <li>
 <p>Bruch, Sebastian and Han, Shuguang and Bendersky, Michael and Najork, Marc. A Stochastic Treatment of Learning to Rank Scoring Functions. Proceedings of the 13th International Conference on Web Search and Data Mining (WSDM), 61–69, 2020.</p>
+</li>
+<li>
+<p><strong>MO4SRD</strong> Hai-Tao Yu. Optimize What You EvaluateWith: Search Result Diversification Based on Metric
+Optimization. The 36th AAAI Conference on Artificial Intelligence, 2022.</p>
+</li>
+<li>
+<p><strong>DALETOR</strong> Le Yan, Zhen Qin, Rama Kumar Pasumarthi, Xuanhui Wang, Michael Bendersky. Diversification-Aware Learning to Rank
+using Distributed Representation. In Proceedings of the Web Conference 2021, 127–136.</p>
 </li>
 </ul>
 <h2 id="test-setting">Test Setting<a class="headerlink" href="#test-setting" title="Permanent link">&para;</a></h2>
