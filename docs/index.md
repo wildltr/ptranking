@@ -1,14 +1,14 @@
-# Learning to Rank in PyTorch
+# Learning-to-Rank in PyTorch
 
 ## Introduction
 
-This open-source project, referred to as **PTRanking** (Learning to Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets, leading to an in-depth understanding of previous learning-to-rank methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank.
+This open-source project, referred to as **PTRanking** (Learning-to-Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets, leading to an in-depth understanding of previous learning-to-rank methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank.
 
 **Key Features**:
 
-- A number of representative learning-to-rank models, including not only the traditional optimization framework via empirical risk minimization but also the adversarial optimization framework
+- A number of representative learning-to-rank models for addressing **Ad-hoc Ranking** and **Search Result Diversification**, including not only the traditional optimization framework via empirical risk minimization but also the adversarial optimization framework
 - Supports widely used benchmark datasets. Meanwhile, random masking of the ground-truth labels with a specified ratio is also supported
-- Supports different metrics, such as Precision, MAP, nDCG and nERR
+- Supports different metrics, such as Precision, MAP, nDCG, nERR, alpha-nDCG and ERR-IA.
 - Highly configurable functionalities for fine-tuning hyper-parameters, e.g., grid-search over hyper-parameters of a specific model
 - Provides easy-to-use APIs for developing a new learning-to-rank model
 
@@ -18,7 +18,7 @@ Please refer to the Github Repository [PT-Ranking](https://github.com/wildltr/pt
 
 ## Implemented models
 
-- Optimization based on Empirical Risk Minimization
+- Typical Learning-to-Rank Methods for Ad-hoc Ranking
 
 | |Model|
 |:----|:----|
@@ -26,7 +26,13 @@ Please refer to the Github Repository [PT-Ranking](https://github.com/wildltr/pt
 | Pairwise  | RankNet |
 | Listwise  | ListNet ・ ListMLE ・ RankCosine ・  LambdaRank ・ ApproxNDCG ・  WassRank ・ STListNet ・ LambdaLoss|
 
-- Adversarial Optimization
+- Learning-to-Rank Methods for Search Result Diversification
+
+| |Model|
+|:----|:----|
+| Score-and-sort strategy | MO4SRD ・ DALETOR|
+
+- Adversarial Learning-to-Rank Methods for Ad-hoc Ranking
 
 | |Model|
 |:----|:----|
@@ -34,7 +40,7 @@ Please refer to the Github Repository [PT-Ranking](https://github.com/wildltr/pt
 | Pairwise  | IR_GAN_Pair |
 | Listwise  | IR_GAN_List |
 
-- Tree-based Model (provided by LightGBM)
+- Learning-to-rank Methods Based on Gradient Boosting Decision Trees (GBDT) (based on LightGBM)
 
 | |Model|
 |:----|:----|
@@ -67,6 +73,11 @@ Please refer to the Github Repository [PT-Ranking](https://github.com/wildltr/pt
 
 - Bruch, Sebastian and Han, Shuguang and Bendersky, Michael and Najork, Marc. A Stochastic Treatment of Learning to Rank Scoring Functions. Proceedings of the 13th International Conference on Web Search and Data Mining (WSDM), 61–69, 2020.
 
+- **MO4SRD**: Hai-Tao Yu. Optimize What You EvaluateWith: Search Result Diversification Based on Metric
+Optimization. The 36th AAAI Conference on Artificial Intelligence, 2022.
+
+- **DALETOR**: Le Yan, Zhen Qin, Rama Kumar Pasumarthi, Xuanhui Wang, Michael Bendersky. Diversification-Aware Learning to Rank
+using Distributed Representation. In Proceedings of the Web Conference 2021, 127–136.
 
 ## Test Setting
 
