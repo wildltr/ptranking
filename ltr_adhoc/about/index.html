@@ -369,7 +369,7 @@
       
         <li class="md-nav__item">
   <a href="#about-ltr_adhoc" class="md-nav__link">
-    About ltr_adhoc
+    About LTR_Adhoc
   </a>
   
 </li>
@@ -529,13 +529,13 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_8" type="checkbox" id="__nav_8" >
       
       <label class="md-nav__link" for="__nav_8">
-        LTR_Tree
+        LTR_GBM
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="LTR_Tree" data-md-level="1">
+      <nav class="md-nav" aria-label="LTR_GBM" data-md-level="1">
         <label class="md-nav__title" for="__nav_8">
           <span class="md-nav__icon md-icon"></span>
-          LTR_Tree
+          LTR_GBM
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -544,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../ltr_tree/about/" class="md-nav__link">
+      <a href="../../ltr_gbm/about/" class="md-nav__link">
         About
       </a>
     </li>
@@ -556,7 +556,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../ltr_tree/LambdaMART/" class="md-nav__link">
+      <a href="../../ltr_gbm/LambdaMART/" class="md-nav__link">
         LambdaMART
       </a>
     </li>
@@ -594,7 +594,7 @@
       
         <li class="md-nav__item">
   <a href="#about-ltr_adhoc" class="md-nav__link">
-    About ltr_adhoc
+    About LTR_Adhoc
   </a>
   
 </li>
@@ -625,11 +625,11 @@
                 
                   <h1>About</h1>
                 
-                <h2 id="about-ltr_adhoc">About ltr_adhoc<a class="headerlink" href="#about-ltr_adhoc" title="Permanent link">&para;</a></h2>
-<p>By <strong>ltr_adhoc</strong>, we refer to the traditional learning-to-rank methods based on the Empirical Risk Minimization Framework, which is detailed in <a href="https://github.com/ptranking/ptranking.github.io/raw/master/tutorial/">ptranking_empirical_risk_minimization.ipynb</a>.</p>
-<p>Major learning-to-rank approaches can be classified into three categories: <strong>pointwise</strong>, <strong>pairwise</strong>, and <strong>listwise</strong>. The key distinctions are the underlying hypotheses, loss functions, the input and output spaces. </p>
-<p>The typical pointwise approaches include regression-based [1], classification-based [2], and ordinal regression-based algorithms [3, 4]. The loss functions of these algorithms is defined on the basis of each individual document. </p>
-<p>The pairwise approaches care about the relative order between two documents. The goal of learning is to maximize the number of correctly ordered document pairs. The assumption is that the optimal ranking of documents can be achieved if all the document pairs are correctly ordered. Towards this end, many representative methods have been proposed [5,6,7,8,9]. </p>
+                <h2 id="about-ltr_adhoc">About LTR_Adhoc<a class="headerlink" href="#about-ltr_adhoc" title="Permanent link">&para;</a></h2>
+<p>By <strong>LTR_Adhoc</strong>, we refer to the traditional learning-to-rank methods based on the Empirical Risk Minimization Framework, which is detailed in <a href="https://github.com/ptranking/ptranking.github.io/raw/master/tutorial/">ptranking_empirical_risk_minimization.ipynb</a>.</p>
+<p>Major learning-to-rank approaches can be classified into three categories: <strong>pointwise</strong>, <strong>pairwise</strong>, and <strong>listwise</strong>. The key distinctions are the underlying hypotheses, loss functions, the input and output spaces.</p>
+<p>The typical pointwise approaches include regression-based [1], classification-based [2], and ordinal regression-based algorithms [3, 4]. The loss functions of these algorithms is defined on the basis of each individual document.</p>
+<p>The pairwise approaches care about the relative order between two documents. The goal of learning is to maximize the number of correctly ordered document pairs. The assumption is that the optimal ranking of documents can be achieved if all the document pairs are correctly ordered. Towards this end, many representative methods have been proposed [5,6,7,8,9].</p>
 <p>The listwise approaches take all the documents associated with the same query in the training data as the input. In particular, there are two types of loss functions when performing listwise learning. For the first type, the loss function is related to a specific evaluation metric (e.g., nDCG and ERR). Due to the non-differentiability and non-decomposability of the commonly used metrics, the methods of this type either try to optimize the upper bounds as surrogate objective functions [10, 11, 12] or approximate the target metric using some smooth
 functions [13, 14, 15]. However, there are still some open issues regarding the first type methods. On one hand, some adopted surrogate functions or approximated metrics are not convex, which makes it hard to optimize. On the other hand, the relationship between the surrogate function and the adopted metric has not been sufficiently investigated, which makes it unclear whether optimizing the surrogate functions can indeed optimize the target metric. For the second type, the loss function is not explicitly related to a specific evaluation metric. The loss function reflects the discrepancy between the predicted ranking and the ground-truth ranking. Example algorithms include []. Although no particular evaluation metrics are directly involved and optimized here, it is possible that the learned ranking function can achieve good performance in terms of evaluation metrics.</p>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
