@@ -2,6 +2,8 @@
 
 - The recent representative methods (such as [MO4SRD](https://wildltr.github.io/ptranking/) and [DALETOR](https://dl.acm.org/doi/abs/10.1145/3442381.3449831)) for Search Result Diversification by directly optimizing the evaluation metric (e.g., alpha-nDCG) have been added. (02/22/2022)
 
+- Different types of neural scoring functions are supported now, namely **pointwise neural scoring function** (mainly consists of feedforward layers) and **listwise neural scoring function** (mainly builds upon multi-head self-attention Layer). (02/22/2022)
+
 
 # Introduction
 
