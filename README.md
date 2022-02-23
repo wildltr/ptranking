@@ -1,6 +1,11 @@
+# What's New?
+
+- The recent representative methods (such as [MO4SRD](https://wildltr.github.io/ptranking/) and [DALETOR](https://dl.acm.org/doi/abs/10.1145/3442381.3449831)) for Search Result Diversification by directly optimizing the evaluation metric (e.g., alpha-nDCG) have been added. (02/22/2022)
+
+
 # Introduction
 
-This open-source project, referred to as **PTRanking** (Learning-to-Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous learning-to-rank methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank. 
+This open-source project, referred to as **PTRanking** (Learning-to-Rank in PyTorch) aims to provide scalable and extendable implementations of typical learning-to-rank methods based on PyTorch. On one hand, this project enables a uniform comparison over several benchmark datasets leading to an in-depth understanding of previous learning-to-rank methods. On the other hand, this project makes it easy to develop and incorporate newly proposed models, so as to expand the territory of techniques on learning-to-rank.
 
 **Key Features**:
 
