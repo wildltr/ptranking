@@ -1,22 +1,19 @@
 {
   "DataSetting": {
     "data_id":"MQ2008_Super",
-    "dir_data":"/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/",
-
+    "dir_data":"/Users/iimac/Workbench/Corpus/L2R/LETOR4.0/MQ2008/",
     "min_docs":[10],
     "min_rele":[1],
-    "train_batch_size":[1],
-    "scaler_id":"SLog1P",
+    "scaler_id":"StandardScaler",
 
     "binary_rele":[false],
     "unknown_as_zero":[false],
-    "train_presort":[true]
+    "tr_batch_size":[100]
   },
 
   "EvalSetting": {
-    "dir_output":"/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/",
-
-    "epochs":100,
+    "dir_output":"/Users/iimac/Workbench/CodeBench/Output/NeuralLTR/",
+    "epochs":2,
 
     "do_validation":true,
 
@@ -25,8 +22,8 @@
 
     "loss_guided":false,
 
-    "do_log":false,
-    "log_step":2,
+    "do_log":true,
+    "log_step":1,
     "do_summary":false,
 
     "mask":{
@@ -37,10 +34,29 @@
   },
 
   "SFParameter": {
-    "BN":[true],
-    "RD":[false],
-    "layers":[5],
-    "apply_tl_af":[true],
-    "hd_hn_tl_af":["R", "GE"]
+    "sf_id":"pointsf",
+    "opt":["Adam"],
+    "lr":[0.001],
+    "pointsf":{
+      "BN":[true],
+      "bn_type":["BN"],
+      "bn_affine":[true],
+      "layers":[5],
+      "AF":["GE"],
+      "TL_AF":["GE"],
+      "apply_tl_af":[true]
+    },
+    "listsf":{
+      "BN":[true],
+      "bn_type":["BN2"],
+      "bn_affine":[false],
+      "RD":[false],
+      "apply_tl_af":[false],
+      "AF":["R"],
+      "ff_dims":[128, 256, 512],
+      "encoder_type":["DASALC"],
+      "encoder_layers":[3],
+      "n_heads":[2]
+    }
   }
 }

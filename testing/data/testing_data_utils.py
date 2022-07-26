@@ -152,9 +152,9 @@ def check_dataset_statistics(data_id, dir_data, buffer=False):
         sum_bin_cnts = get_label_distribution(train_dataset=train_dataset, test_dataset=test_dataset,
                                               semi_supervised=False, max_lavel=max_rele_label)
     else:
-        train_dataset = LTRDataset(split_type=SPLIT_TYPE.Train, file=file_train, data_id=data_id, shuffle=False, buffer=buffer)
-        vali_dataset =  LTRDataset(split_type=SPLIT_TYPE.Validation, file=file_vali, data_id=data_id, shuffle=False, buffer=buffer)
-        test_dataset =  LTRDataset(split_type=SPLIT_TYPE.Test, file=file_test, data_id=data_id, shuffle=False, buffer=buffer)
+        train_dataset = LTRDataset(split_type=SPLIT_TYPE.Train, file=file_train, data_id=data_id, buffer=buffer)
+        vali_dataset =  LTRDataset(split_type=SPLIT_TYPE.Validation, file=file_vali, data_id=data_id, buffer=buffer)
+        test_dataset =  LTRDataset(split_type=SPLIT_TYPE.Test, file=file_test, data_id=data_id, buffer=buffer)
 
         num_queries = train_dataset.__len__() + vali_dataset.__len__() + test_dataset.__len__()
         print('Dataset:\t', data_id)
@@ -195,11 +195,11 @@ def check_dataset_statistics(data_id, dir_data, buffer=False):
 
 if __name__ == '__main__':
     # 1
-    data_id  = 'MQ2007_Super'
-    dir_data = '/Users/iimac/Workbench/Corpus/L2R/LETOR4.0/MQ2007/'
+    #data_id  = 'MQ2007_Super'
+    #dir_data = '/Users/iimac/Workbench/Corpus/L2R/LETOR4.0/MQ2007/'
     #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
 
-    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
     ''' results as below
     Total queries:	 1692
         Train: 1017 Vali: 339 Test: 336
@@ -211,8 +211,8 @@ if __name__ == '__main__':
     
     '''
 
-    data_id = 'MQ2008_Super'
-    dir_data = '/Users/dryuhaitao/WorkBench/Corpus/LETOR4.0/MQ2008/'
+    #data_id = 'MQ2008_Super'
+    #dir_data = '/Users/dryuhaitao/WorkBench/Corpus/LETOR4.0/MQ2008/'
     #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
     '''
     Dataset:	 MQ2008_Super
@@ -311,8 +311,9 @@ if __name__ == '__main__':
     '''
 
     data_id  = 'MSLRWEB30K'
-    dir_data = '/home/dl-box/WorkBench/Datasets/L2R/MSLR-WEB30K/'
-    #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/MSLR-WEB30K/'
+    dir_data = '/Users/iimac/Workbench/Corpus/L2R/MSLR-WEB30K/'
+    check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
     '''
     Dataset:	 MSLRWEB30K
     Total queries:	 31531
@@ -326,8 +327,9 @@ if __name__ == '__main__':
     '''
 
     data_id  = 'Set1'
-    dir_data = '/home/dl-box/WorkBench/Datasets/L2R/Yahoo_L2R_Set_1/'
-    #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=False)
+    #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/Yahoo_L2R_Set_1/'
+    #dir_data = '/Users/iimac/Workbench/Corpus/L2R/Yahoo_L2R_Set_1/'
+    #check_dataset_statistics(data_id=data_id, dir_data=dir_data, buffer=True)
     '''
     Dataset:	 Set1
     Total queries:	 29921

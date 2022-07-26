@@ -650,7 +650,7 @@ class LTRDataset(data.Dataset):
     def get_default_data_dict(self, data_id, scaler_id=None):
         ''' a default setting for loading a dataset '''
         min_docs = 1
-        min_rele = -1 # with -1, it means that we don't care with dumb queries that has no relevant documents. Say, for checking the statistics of an original dataset
+        min_rele = 1 # with -1, it means that we don't care with dumb queries that has no relevant documents. Say, for checking the statistics of an original dataset
         scale_data, scaler_id, scaler_level = get_scaler_setting(data_id=data_id, scaler_id=scaler_id)
 
         train_presort = False if data_id in MSLETOR_SEMI else True

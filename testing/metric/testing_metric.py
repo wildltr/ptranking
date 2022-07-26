@@ -10,8 +10,8 @@ import torch
 
 from scipy import stats
 
-from ptranking.metric.adhoc_metric import torch_ap_at_k, torch_nDCG_at_k, torch_nerr_at_k, \
-    torch_ap_at_ks, torch_nDCG_at_ks, torch_kendall_tau, torch_nerr_at_ks
+from ptranking.metric.adhoc.adhoc_metric import torch_ap_at_k, torch_ndcg_at_k, torch_nerr_at_k, \
+    torch_ap_at_ks, torch_ndcg_at_ks, torch_kendall_tau, torch_nerr_at_ks
 
 
 def test_ap():
@@ -42,9 +42,9 @@ def test_ap():
 def test_ndcg():
     sys_sorted_labels = torch.Tensor([1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0])
     std_sorted_labels = torch.Tensor([1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
-    ndcg_at_ks = torch_nDCG_at_ks(sys_sorted_labels.view(1, -1), std_sorted_labels.view(1, -1), ks=[1, 2, 3, 4, 5, 6, 7])
+    ndcg_at_ks = torch_ndcg_at_ks(sys_sorted_labels.view(1, -1), std_sorted_labels.view(1, -1), ks=[1, 2, 3, 4, 5, 6, 7])
     print(ndcg_at_ks.size(), ndcg_at_ks) # tensor([1.0000, 1.0000, 0.7654, 0.8048, 0.8048, 0.8048, 0.9349])
-    ndcg_at_k = torch_nDCG_at_k(sys_sorted_labels.view(1, -1), std_sorted_labels.view(1, -1), k=4)
+    ndcg_at_k = torch_ndcg_at_k(sys_sorted_labels.view(1, -1), std_sorted_labels.view(1, -1), k=4)
     print(ndcg_at_k.size(), ndcg_at_k)  # tensor([1.0000, 1.0000, 0.7654, 0.8048, 0.8048, 0.8048, 0.9349])
     print()
 
